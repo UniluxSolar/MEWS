@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import {
-    FaCamera, FaEdit, FaCheckCircle, FaSave, FaTimes
+    FaCamera, FaEdit, FaCheckCircle, FaSave, FaTimes, FaArrowLeft
 } from 'react-icons/fa';
+import LivePhotoCapture from '../components/LivePhotoCapture';
 
 const InputField = ({ label, value, type = "text", verified }) => (
     <div className="flex-1 min-w-[300px]">
@@ -41,21 +42,66 @@ const SelectField = ({ label, options, value }) => (
 
 const ProfileSettings = () => {
     const [activeTab, setActiveTab] = useState('Personal Info');
+    const [showCamera, setShowCamera] = useState(false);
+    const [profileImage, setProfileImage] = useState("/assets/images/user-profile.png");
+
+    const handlePhotoCapture = (imgSrc) => {
+        if (imgSrc) {
+            setProfileImage(imgSrc);
+            // In real app, close modal after brief success or let user review
+        }
+    };
 
     return (
-        <div className="max-w-5xl mx-auto space-y-6 pb-12">
+        <div className="w-full space-y-6 pb-12 relative">
+
+            {/* Camera Overlay */}
+            {showCamera && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+                    <div className="bg-white rounded-xl p-6 w-full max-w-lg">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-bold text-lg text-gray-800">Update Profile Photo</h3>
+                            <button onClick={() => setShowCamera(false)} className="text-gray-500 hover:text-red-500">
+                                <FaTimes size={20} />
+                            </button>
+                        </div>
+                        <LivePhotoCapture
+                            isRequired={false}
+                            onCapture={handlePhotoCapture}
+                            onUpload={(file) => {
+                                // Simulate upload read
+                                const reader = new FileReader();
+                                reader.onloadend = () => setProfileImage(reader.result);
+                                reader.readAsDataURL(file);
+                            }}
+                        />
+                        <div className="flex justify-end mt-4">
+                            <button
+                                onClick={() => setShowCamera(false)}
+                                className="px-4 py-2 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Profile Header Card */}
             <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-8">
                 <div className="relative">
-                    <div className="w-32 h-32 rounded-full p-1 border-2 border-dashed border-gray-300">
+                    <div className="w-32 h-32 rounded-full p-1 border-2 border-dashed border-gray-300 overflow-hidden">
                         <img
-                            src="/assets/images/user-profile.png"
+                            src={profileImage}
                             alt="Profile"
-                            className="w-full h-full object-cover rounded-full"
+                            className="w-full h-full object-cover rounded-full bg-gray-50"
                         />
                     </div>
-                    <button className="absolute bottom-1 right-1 w-8 h-8 bg-[#1e2a4a] text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm hover:bg-[#2a3b66] transition">
+                    <button
+                        onClick={() => setShowCamera(true)}
+                        className="absolute bottom-1 right-1 w-8 h-8 bg-[#1e2a4a] text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm hover:bg-[#2a3b66] transition"
+                        title="Change Photo"
+                    >
                         <FaCamera size={12} />
                     </button>
                 </div>

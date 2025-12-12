@@ -58,7 +58,7 @@ const LegalAid = () => {
     const [description, setDescription] = useState('');
 
     return (
-        <div className="max-w-5xl mx-auto pb-12 space-y-8">
+        <div className="w-full pb-12 space-y-8">
 
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

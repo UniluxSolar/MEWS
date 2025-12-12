@@ -295,7 +295,7 @@ const JobsEvents = () => {
     const [showModal, setShowModal] = useState(false);
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6 pb-12 relative">
+        <div className="w-full space-y-6 pb-12 relative">
 
             {/* Modal */}
             {showModal && (

@@ -27,7 +27,7 @@ const EventDetail = () => {
     const navigate = useNavigate();
 
     return (
-        <div className="max-w-7xl mx-auto pb-12 relative">
+        <div className="w-full pb-12 relative">
             {showModal && (
                 <RegistrationSuccessModal
                     onClose={() => setShowModal(false)}

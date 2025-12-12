@@ -85,7 +85,7 @@ const ApplicationDetail = () => {
     const { id } = useParams();
 
     return (
-        <div className="max-w-7xl mx-auto pb-12">
+        <div className="w-full pb-12">
             {/* Back Link */}
             <div className="mb-6">
                 <Link to="/dashboard/applications" className="text-gray-500 hover:text-primary text-sm flex items-center gap-2 font-bold transition">

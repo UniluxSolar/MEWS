@@ -1,58 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
     FaInfoCircle, FaCheckCircle, FaClock, FaCamera, FaCloudUploadAlt,
-    FaFileAlt, FaChevronDown, FaChevronUp, FaCommentDots
+    FaChevronDown, FaChevronUp, FaCommentDots
 } from 'react-icons/fa';
-
-const DocumentItem = ({ title, status, isRequired, savedFile }) => (
-    <div className={`border border-dashed rounded-lg p-6 mb-6 ${status === 'Uploaded' ? 'border-green-200 bg-green-50/30' : 'border-gray-300 bg-gray-50'}`}>
-        <div className="flex justify-between items-start mb-4">
-            <div>
-                <h4 className="font-bold text-gray-800">{title}</h4>
-                {isRequired && <span className="text-xs text-red-500 font-semibold">(Required)</span>}
-            </div>
-            {status === 'Uploaded' ? (
-                <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full flex items-center gap-1">
-                    <FaCheckCircle /> Uploaded
-                </span>
-            ) : (
-                <span className="px-3 py-1 bg-gray-200 text-gray-600 text-xs font-bold rounded-full flex items-center gap-1">
-                    <FaClock /> Pending
-                </span>
-            )}
-        </div>
-
-        {status === 'Uploaded' ? (
-            <div className="flex items-center gap-4">
-                <div className="w-24 h-16 bg-white border border-gray-200 rounded flex items-center justify-center p-1">
-                    {/* Placeholder for uploaded image thumbnail */}
-                    <FaFileAlt className="text-gray-300 text-2xl" />
-                </div>
-                <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-700">{savedFile}</p>
-                    <p className="text-xs text-gray-400">Uploaded on Jan 15, 2025</p>
-                </div>
-                <div className="flex flex-col gap-2">
-                    <button className="px-3 py-1.5 border border-gray-300 rounded text-xs font-bold text-gray-600 hover:bg-gray-100 flex items-center gap-2">
-                        <FaCloudUploadAlt /> Re-upload
-                    </button>
-                    <button className="text-xs text-red-500 hover:text-red-700 font-bold">Remove</button>
-                </div>
-            </div>
-        ) : (
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center bg-white">
-                <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-primary mb-3">
-                    <FaCloudUploadAlt size={20} />
-                </div>
-                <h5 className="font-bold text-gray-700 mb-1">Upload Document</h5>
-                <p className="text-xs text-gray-500 mb-4">Drag & drop or click to browse</p>
-                <button className="px-4 py-2 bg-[#1e2a4a] text-white text-sm font-bold rounded-lg hover:bg-[#2a3b66] transition">
-                    Choose File
-                </button>
-            </div>
-        )}
-    </div>
-);
+import FileUploader from '../components/FileUploader';
+import LivePhotoCapture from '../components/LivePhotoCapture';
 
 const FAQItem = ({ question, isOpen, onClick }) => (
     <div className="border border-gray-200 rounded-lg mb-2 overflow-hidden bg-white">
@@ -74,8 +27,29 @@ const FAQItem = ({ question, isOpen, onClick }) => (
 const KYCVerification = () => {
     const [openFAQ, setOpenFAQ] = useState(0);
 
+    // State to track upload status of each required document
+    const [documents, setDocuments] = useState({
+        'Aadhar Card - Front Side': false,
+        'Aadhar Card - Back Side': false,
+        'Community Certificate': false,
+        'Live Photo': false,
+        'Bank Passbook or Cancelled Cheque': false
+    });
+
+    // Calculate progress
+    const totalDocs = Object.keys(documents).length;
+    const uploadedDocs = Object.values(documents).filter(Boolean).length;
+    const progress = Math.round((uploadedDocs / totalDocs) * 100);
+
+    const handleUploadStatusChange = (title, isUploaded) => {
+        setDocuments(prev => ({
+            ...prev,
+            [title]: isUploaded
+        }));
+    };
+
     return (
-        <div className="max-w-5xl mx-auto space-y-8 pb-12">
+        <div className="w-full space-y-8 pb-12">
 
             {/* Header Section */}
             <div>
@@ -90,12 +64,15 @@ const KYCVerification = () => {
                 <div className="mt-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                     <div className="flex justify-between items-end mb-2">
                         <span className="font-bold text-gray-700">Overall Progress</span>
-                        <span className="font-bold text-primary">60%</span>
+                        <span className="font-bold text-primary">{progress}%</span>
                     </div>
                     <div className="w-full bg-gray-100 rounded-full h-3">
-                        <div className="bg-[#f59e0b] h-3 rounded-full transition-all duration-1000" style={{ width: '60%' }}></div>
+                        <div
+                            className="bg-[#f59e0b] h-3 rounded-full transition-all duration-500 ease-out"
+                            style={{ width: `${progress}%` }}
+                        ></div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">3 of 5 documents uploaded</p>
+                    <p className="text-xs text-gray-500 mt-2">{uploadedDocs} of {totalDocs} documents uploaded</p>
                 </div>
             </div>
 
@@ -115,92 +92,39 @@ const KYCVerification = () => {
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
                 <h3 className="text-xl font-bold text-gray-800 mb-6">Personal Identity Documents</h3>
 
-                <DocumentItem
+                <FileUploader
                     title="Aadhar Card - Front Side"
                     isRequired={true}
-                    status="Uploaded"
-                    savedFile="aadhar_front_scan.jpg"
+                    onUploadStatusChange={handleUploadStatusChange}
                 />
-                <DocumentItem
+                <FileUploader
                     title="Aadhar Card - Back Side"
                     isRequired={true}
-                    status="Uploaded"
-                    savedFile="aadhar_back_scan.jpg"
+                    onUploadStatusChange={handleUploadStatusChange}
                 />
-                <DocumentItem
+                <FileUploader
                     title="Community Certificate"
                     isRequired={true}
-                    status="Uploaded"
-                    savedFile="community_cert_v2.pdf"
+                    onUploadStatusChange={handleUploadStatusChange}
                 />
 
-                {/* Live Photo Special Case */}
-                <div className="border border-dashed border-gray-300 bg-gray-50 rounded-lg p-6 mb-6">
-                    <div className="flex justify-between items-start mb-4">
-                        <div>
-                            <h4 className="font-bold text-gray-800">Live Photo Verification</h4>
-                            <span className="text-xs text-red-500 font-semibold">(Required)</span>
-                            <p className="text-xs text-gray-500 mt-1">Ensure clear face visibility, good lighting</p>
-                        </div>
-                        <span className="px-3 py-1 bg-gray-200 text-gray-600 text-xs font-bold rounded-full flex items-center gap-1">
-                            <FaClock /> Pending
-                        </span>
-                    </div>
+                {/* Live Photo Section */}
+                <LivePhotoCapture
+                    isRequired={true}
+                    onCapture={(img) => handleUploadStatusChange('Live Photo', !!img)}
+                    onUpload={(file) => handleUploadStatusChange('Live Photo', !!file)}
+                />
 
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-10 flex flex-col items-center justify-center bg-white relative">
-                        <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-primary mb-4">
-                            <FaCamera size={24} />
-                        </div>
-                        <h5 className="font-bold text-gray-700 mb-2">Capture Live Photo</h5>
-                        <p className="text-xs text-gray-500 mb-6">Take a selfie or upload a recent photo</p>
-                        <div className="flex gap-3">
-                            <button className="px-4 py-2 bg-[#1e2a4a] text-white text-sm font-bold rounded-lg hover:bg-[#2a3b66] transition flex items-center gap-2">
-                                <FaCamera /> Capture from Webcam
-                            </button>
-                            <button className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 transition flex items-center gap-2">
-                                <FaCloudUploadAlt /> Upload Photo
-                            </button>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             {/* Bank Verification */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
                 <h3 className="text-xl font-bold text-gray-800 mb-6">Bank Account Verification</h3>
-                <DocumentItem
+                <FileUploader
                     title="Bank Passbook or Cancelled Cheque"
                     isRequired={true}
-                    status="Pending"
+                    onUploadStatusChange={handleUploadStatusChange}
                 />
-            </div>
-
-            {/* Verification Progress Timeline */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
-                <h3 className="text-xl font-bold text-gray-800 mb-6">Verification Progress</h3>
-                <div className="relative pl-4 space-y-8 before:absolute before:left-[23px] before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-200">
-                    <div className="relative flex items-center gap-4">
-                        <div className="w-5 h-5 rounded-full bg-green-500 z-10 box-content border-4 border-white"></div>
-                        <div>
-                            <h4 className="font-bold text-gray-800 text-sm">Uploaded</h4>
-                            <p className="text-xs text-gray-500">Jan 15, 2025 at 2:30 PM</p>
-                        </div>
-                    </div>
-                    <div className="relative flex items-center gap-4">
-                        <div className="w-5 h-5 rounded-full bg-[#f59e0b] z-10 box-content border-4 border-white"></div>
-                        <div>
-                            <h4 className="font-bold text-gray-800 text-sm">Under Review</h4>
-                            <p className="text-xs text-gray-500">Expected by Jan 20, 2025</p>
-                        </div>
-                    </div>
-                    <div className="relative flex items-center gap-4 opacity-50">
-                        <div className="w-5 h-5 rounded-full bg-gray-300 z-10 box-content border-4 border-white"></div>
-                        <div>
-                            <h4 className="font-bold text-gray-800 text-sm">Approved</h4>
-                            <p className="text-xs text-gray-500">Pending verification completion</p>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             {/* Action Buttons */}
@@ -210,9 +134,21 @@ const KYCVerification = () => {
                     <button className="px-6 py-2.5 border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition">
                         Save Draft
                     </button>
-                    <button className="px-6 py-2.5 bg-gray-200 text-gray-400 font-bold rounded-lg cursor-not-allowed">
+                    <Link
+                        to={progress === 100 ? "/dashboard/kyc/success" : "#"}
+                        onClick={(e) => {
+                            if (progress < 100) {
+                                e.preventDefault();
+                                alert("Please upload all required documents (including Live Photo) to proceed.");
+                            }
+                        }}
+                        className={`px-6 py-2.5 font-bold rounded-lg transition shadow-md ${progress === 100
+                                ? 'bg-[#1e2a4a] text-white hover:bg-[#2a3b66]'
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                    >
                         Submit for Verification
-                    </button>
+                    </Link>
                 </div>
             </div>
 

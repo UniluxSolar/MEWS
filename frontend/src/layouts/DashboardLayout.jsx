@@ -44,11 +44,11 @@ const DashboardLayout = () => {
                     <SidebarItem to="/dashboard/donate" icon={FaHeart} label="Donate / Sponsor" active={isActive('donate')} collapsed={collapsed} />
                     <SidebarItem to="/dashboard/health" icon={FaNotesMedical} label="Health Assistance" active={isActive('health')} collapsed={collapsed} />
                     <SidebarItem to="/dashboard/legal" icon={FaBalanceScale} label="Legal Aid" active={isActive('legal')} collapsed={collapsed} />
-                    <SidebarItem to="#" icon={FaHandHoldingUsd} label="My Donations" collapsed={collapsed} />
-                    <SidebarItem to="#" icon={FaHeadset} label="Helpdesk" collapsed={collapsed} />
+                    <SidebarItem to="/dashboard/donations" icon={FaHandHoldingUsd} label="My Donations" active={isActive('donations')} collapsed={collapsed} />
+                    <SidebarItem to="/dashboard/helpdesk" icon={FaHeadset} label="Helpdesk" active={isActive('helpdesk')} collapsed={collapsed} />
 
                     <div className="my-4 border-t border-gray-700 mx-2"></div>
-                    <SidebarItem to="#" icon={FaQuestionCircle} label="Help & Support" collapsed={collapsed} />
+                    <SidebarItem to="/dashboard/support" icon={FaQuestionCircle} label="Help & Support" active={isActive('support')} collapsed={collapsed} />
                 </div>
 
                 <div className="p-4 text-xs text-gray-500 text-center border-t border-gray-700">

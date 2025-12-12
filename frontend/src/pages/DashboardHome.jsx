@@ -56,7 +56,7 @@ const JobEventCard = ({ title, date, location, seats }) => (
 
 const DashboardHome = () => {
     return (
-        <div className="max-w-7xl mx-auto space-y-8">
+        <div className="w-full space-y-8">
             {/* Welcome Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
