@@ -25,6 +25,50 @@ const DashboardLayout = () => {
 
     const isActive = (path) => location.pathname.includes(path);
 
+    // Dynamic Breadcrumb Logic
+    const getBreadcrumbs = () => {
+        const pathSegments = location.pathname.split('/').filter(Boolean);
+        // pathSegments[0] is always 'dashboard'
+
+        const breadcrumbs = [];
+
+        // Root Dashboard
+        breadcrumbs.push({ label: 'Dashboard', path: '/dashboard' });
+
+        if (pathSegments.length > 1) {
+            const segment = pathSegments[1];
+
+            if (segment === 'applications') {
+                breadcrumbs.push({ label: 'My Applications', path: '/dashboard/applications' });
+                if (pathSegments.includes('new')) breadcrumbs.push({ label: 'New Application', path: '' });
+                else if (pathSegments.length > 2) breadcrumbs.push({ label: 'Application Details', path: '' });
+            }
+            else if (segment === 'kyc') {
+                breadcrumbs.push({ label: 'KYC Status', path: '/dashboard/kyc' });
+                if (pathSegments.includes('success')) breadcrumbs.push({ label: 'Verification Complete', path: '' });
+            }
+            else if (segment === 'jobs') {
+                breadcrumbs.push({ label: 'Jobs & Events', path: '/dashboard/jobs' });
+                if (pathSegments.length > 2) breadcrumbs.push({ label: 'Event Details', path: '' });
+            }
+            else if (segment === 'donate') {
+                breadcrumbs.push({ label: 'Donate / Sponsor', path: '/dashboard/donate' });
+                if (pathSegments.includes('checkout')) breadcrumbs.push({ label: 'Checkout', path: '' });
+                else if (pathSegments.includes('success')) breadcrumbs.push({ label: 'Donation Success', path: '' });
+            }
+            else if (segment === 'donations') breadcrumbs.push({ label: 'My Donations', path: '/dashboard/donations' });
+            else if (segment === 'health') breadcrumbs.push({ label: 'Health Assistance', path: '/dashboard/health' });
+            else if (segment === 'legal') breadcrumbs.push({ label: 'Legal Aid', path: '/dashboard/legal' });
+            else if (segment === 'helpdesk') breadcrumbs.push({ label: 'Helpdesk', path: '/dashboard/helpdesk' });
+            else if (segment === 'support') breadcrumbs.push({ label: 'Help & Support', path: '/dashboard/support' });
+            else if (segment === 'profile') breadcrumbs.push({ label: 'Profile Settings', path: '/dashboard/profile' });
+        }
+
+        return breadcrumbs;
+    };
+
+    const breadcrumbs = getBreadcrumbs();
+
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
             {/* Sidebar */}
@@ -64,14 +108,26 @@ const DashboardLayout = () => {
                         <button onClick={() => setCollapsed(!collapsed)} className="text-gray-400 hover:text-white transition">
                             <FaBars size={20} />
                         </button>
+
+                        {/* Dynamic Breadcrumbs */}
                         <div className="hidden md:flex items-center text-sm text-gray-300">
-                            <span className="font-semibold text-white">Dashboard</span>
-                            {location.pathname.includes('applications') && (
-                                <>
-                                    <span className="mx-2">›</span>
-                                    <span className="text-secondary">My Applications</span>
-                                </>
-                            )}
+                            {breadcrumbs.map((crumb, index) => {
+                                const isLast = index === breadcrumbs.length - 1;
+                                return (
+                                    <React.Fragment key={index}>
+                                        {index > 0 && <span className="mx-2">›</span>}
+                                        {isLast || !crumb.path ? (
+                                            <span className={`${isLast ? 'text-secondary font-bold' : 'text-gray-300 font-semibold'}`}>
+                                                {crumb.label}
+                                            </span>
+                                        ) : (
+                                            <Link to={crumb.path} className="text-gray-300 hover:text-white font-semibold transition-colors hover:underline">
+                                                {crumb.label}
+                                            </Link>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -89,10 +145,10 @@ const DashboardLayout = () => {
                     </div>
 
                     <div className="flex items-center gap-6">
-                        <button className="relative text-gray-300 hover:text-white">
+                        <Link to="/dashboard/notifications" className="relative text-gray-300 hover:text-white">
                             <FaBell size={18} />
-                            <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-primary">3</span>
-                        </button>
+                            <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-primary">4</span>
+                        </Link>
                         <Link to="/dashboard/profile" className="flex items-center gap-2 cursor-pointer border-l border-gray-600 pl-6 group">
                             <img src="/assets/images/user-profile.png" alt="Profile" className="w-8 h-8 rounded-full border border-gray-500 group-hover:border-white transition" />
                             <FaChevronDown size={12} className="text-gray-400 group-hover:text-white transition" />

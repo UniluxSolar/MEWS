@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import {
     FaCheckCircle, FaMapMarkerAlt, FaEye, FaShareAlt, FaMapMarkedAlt,
     FaUniversity, FaUserGraduate, FaChartLine, FaRupeeSign, FaShieldAlt,
-    FaLock, FaPaperPlane, FaFileInvoice, FaChevronRight, FaTrophy, FaBookReader
+    FaLock, FaPaperPlane, FaFileInvoice, FaChevronRight, FaTrophy, FaBookReader, FaChevronLeft
 } from 'react-icons/fa';
 
 const StudentProfile = () => {
@@ -39,8 +39,8 @@ const StudentProfile = () => {
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-                <Link to="/dashboard/donate" className="inline-flex items-center gap-2 text-sm text-primary font-bold mb-6 hover:underline">
-                    <FaChevronRight className="rotate-180" size={10} /> Back to Sponsorships
+                <Link to="/dashboard/donate" className="inline-flex items-center gap-2 text-sm text-gray-500 font-bold mb-6 hover:text-[#1e2a4a] transition">
+                    <FaChevronLeft size={10} /> Back to Sponsorships
                 </Link>
 
                 {/* Main Content Grid */}

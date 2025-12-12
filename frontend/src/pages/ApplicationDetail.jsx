@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
     FaArrowLeft, FaPrint, FaDownload, FaTrash, FaPhoneAlt, FaEnvelope, FaClock,
-    FaFilePdf, FaEye, FaCheckCircle, FaPaperclip, FaPaperPlane, FaUserTie
+    FaFilePdf, FaEye, FaCheckCircle, FaPaperclip, FaPaperPlane, FaUserTie, FaChevronLeft
 } from 'react-icons/fa';
 
 const InfoRow = ({ label, value }) => (
@@ -89,7 +89,7 @@ const ApplicationDetail = () => {
             {/* Back Link */}
             <div className="mb-6">
                 <Link to="/dashboard/applications" className="text-gray-500 hover:text-primary text-sm flex items-center gap-2 font-bold transition">
-                    <FaArrowLeft /> Back to My Applications
+                    <FaChevronLeft size={10} /> Back to My Applications
                 </Link>
             </div>
 

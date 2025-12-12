@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import FileUploader from '../components/FileUploader';
 import {
     FaBalanceScale, FaLandmark, FaBriefcase, FaUsers, FaQuestionCircle,
-    FaCloudUploadAlt, FaPaperclip, FaChevronRight, FaSave, FaInfoCircle, FaPhoneAlt, FaComments
+    FaCloudUploadAlt, FaPaperclip, FaChevronRight, FaSave, FaInfoCircle, FaPhoneAlt, FaComments, FaChevronLeft
 } from 'react-icons/fa';
 
 const StepIndicator = ({ step, title, subtext, currentStep }) => {
@@ -63,6 +65,9 @@ const LegalAid = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
+                    <Link to="/dashboard" className="flex items-center gap-2 text-gray-500 hover:text-[#1e2a4a] text-sm font-bold mb-2 transition">
+                        <FaChevronLeft size={10} /> Back to Dashboard
+                    </Link>
                     <h1 className="text-2xl font-bold text-[#1e2a4a]">Legal Aid Application</h1>
                     <p className="text-gray-500 text-sm mt-1">Fill out the form below to apply for legal assistance</p>
                 </div>
@@ -147,17 +152,10 @@ const LegalAid = () => {
                 {/* FIR Upload */}
                 <div>
                     <h3 className="text-sm font-bold text-gray-900 mb-2">FIR/Petition Document</h3>
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition cursor-pointer">
-                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3 text-blue-500">
-                            <FaCloudUploadAlt size={24} />
-                        </div>
-                        <h4 className="font-bold text-gray-800 text-sm mb-1">Upload FIR or Petition</h4>
-                        <p className="text-xs text-gray-500 mb-4">Drag and drop your file here, or click to browse</p>
-                        <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 shadow-sm">
-                            Choose File
-                        </button>
-                        <p className="text-[10px] text-gray-400 mt-4">Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)</p>
-                    </div>
+                    <FileUploader
+                        label="Upload FIR or Petition"
+                        onUploadComplete={(file) => console.log('FIR Uploaded', file)}
+                    />
                 </div>
 
                 {/* Location Preference */}
@@ -176,21 +174,10 @@ const LegalAid = () => {
                 {/* Supporting Docs */}
                 <div>
                     <h3 className="text-sm font-bold text-gray-900 mb-2">Additional Supporting Documents</h3>
-                    <div className="border border-gray-200 rounded-xl p-4 flex items-center justify-between bg-gray-50">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-gray-400 border border-gray-200">
-                                <FaPaperclip />
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-sm text-gray-800">Upload Additional Documents</h4>
-                                <p className="text-xs text-gray-400">Evidence, contracts, correspondence, etc.</p>
-                            </div>
-                        </div>
-                        <button className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 shadow-sm">
-                            Add Files
-                        </button>
-                    </div>
-                    <p className="text-[10px] text-gray-400 mt-2">You can upload multiple files. Total size limit: 50MB</p>
+                    <FileUploader
+                        label="Upload Additional Documents (Optional)"
+                        onUploadComplete={(file) => console.log('Supporting Doc Uploaded', file)}
+                    />
                 </div>
 
                 {/* Form Navigation */}
@@ -222,9 +209,9 @@ const LegalAid = () => {
                 <div className="flex gap-4 text-xs font-bold text-blue-700">
                     <span className="flex items-center gap-1 cursor-pointer hover:underline"><FaPhoneAlt /> Call Support: 1800-MEWS-AID</span>
                     <span className="w-px h-4 bg-blue-200"></span>
-                    <span className="flex items-center gap-1 cursor-pointer hover:underline"><FaComments /> Live Chat</span>
+                    <Link to="/dashboard/support" className="flex items-center gap-1 cursor-pointer hover:underline"><FaComments /> Live Chat</Link>
                     <span className="w-px h-4 bg-blue-200"></span>
-                    <span className="cursor-pointer hover:underline">FAQ</span>
+                    <Link to="/dashboard/support" className="cursor-pointer hover:underline">FAQ</Link>
                 </div>
             </div>
 

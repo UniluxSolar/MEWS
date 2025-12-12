@@ -10,7 +10,7 @@ const SummaryItem = ({ icon: Icon, value, label }) => (
 
 const StatsSummary = () => {
     return (
-        <section className="bg-white py-12">
+        <section className="bg-white py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex gap-8 flex-col lg:flex-row">
                     {/* Left: Welfare Card (Matching dashboard style roughly) */}
@@ -50,7 +50,7 @@ const StatsSummary = () => {
                         <div className="relative z-10">
                             <div className="flex items-center gap-3 mb-8">
                                 <FaGlobe className="text-[#3b82f6]" size={24} />
-                                <h2 className="text-xl font-bold">Overall Impact Summary</h2>
+                                <h2 className="text-lg font-bold">Overall Impact Summary</h2>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">

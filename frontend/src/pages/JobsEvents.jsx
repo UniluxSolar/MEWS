@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
     FaSearch, FaCalendarAlt, FaMapMarkerAlt, FaUsers, FaTh, FaList, FaCalendar,
@@ -80,13 +79,13 @@ const EventCard = ({
     );
 };
 
-const MyEventCard = ({ image, title, organizer, type, date, location }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col hover:shadow-md transition">
+const MyEventCard = ({ image, title, organizer, type, date, location, isPast }) => (
+    <div className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col hover:shadow-md transition ${isPast ? 'opacity-75 grayscale' : ''}`}>
         <div className="h-48 bg-gray-200 relative">
             <img src={image} alt={title} className="w-full h-full object-cover" />
             <div className="absolute top-3 right-3">
-                <span className="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full shadow-sm">
-                    Registered
+                <span className={`px-3 py-1 text-white text-xs font-bold rounded-full shadow-sm ${isPast ? 'bg-gray-500' : 'bg-green-500'}`}>
+                    {isPast ? 'Completed' : 'Registered'}
                 </span>
             </div>
         </div>
@@ -112,20 +111,24 @@ const MyEventCard = ({ image, title, organizer, type, date, location }) => (
             </div>
 
             <div className="mt-auto space-y-3">
-                <button className="w-full py-3 bg-[#1e2a4a] text-white text-sm font-bold rounded-lg hover:bg-[#2a3b66] transition flex items-center justify-center gap-2 shadow-sm">
-                    <FaQrcode /> View QR Code
+                <button className="w-full py-3 bg-[#1e2a4a] text-white text-sm font-bold rounded-lg hover:bg-[#2a3b66] transition flex items-center justify-center gap-2 shadow-sm" disabled={isPast}>
+                    <FaQrcode /> {isPast ? 'Certificate Available' : 'View QR Code'}
                 </button>
                 <div className="grid grid-cols-2 gap-3">
                     <button className="py-2.5 border border-gray-200 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2">
-                        <FaCalendar /> Add to Calendar
+                        <FaCalendar /> {isPast ? 'View Summary' : 'Add to Calendar'}
                     </button>
-                    <button className="py-2.5 border border-gray-200 text-blue-600 text-xs font-bold rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2">
-                        <FaMapMarkedAlt /> Directions
-                    </button>
+                    {!isPast && (
+                        <button className="py-2.5 border border-gray-200 text-blue-600 text-xs font-bold rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2">
+                            <FaMapMarkedAlt /> Directions
+                        </button>
+                    )}
                 </div>
-                <button className="w-full py-2 text-red-500 text-xs font-bold hover:text-red-700 transition flex items-center justify-center gap-1">
-                    Cancel Registration
-                </button>
+                {!isPast && (
+                    <button className="w-full py-2 text-red-500 text-xs font-bold hover:text-red-700 transition flex items-center justify-center gap-1">
+                        Cancel Registration
+                    </button>
+                )}
             </div>
         </div>
     </div>
@@ -250,45 +253,79 @@ const UpcomingEventsView = ({ onRegister }) => (
     </div>
 );
 
-const MyEventsView = ({ onBrowseAll }) => (
-    <div className="space-y-6">
-        <div className="flex items-center gap-2 mb-2">
-            <button className="px-4 py-2 bg-[#1e2a4a] text-white text-xs font-bold rounded-lg shadow-sm">
-                Upcoming Events
-            </button>
-            <button className="px-4 py-2 bg-white border border-gray-200 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-50 transition">
-                Past Events
-            </button>
-        </div>
+const MyEventsView = ({ onBrowseAll }) => {
+    const [subTab, setSubTab] = useState('upcoming'); // upcoming, past
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <MyEventCard
-                image="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
-                title="Tech Recruitment Drive 2025"
-                organizer="MEWS x TechCorp"
-                type="Job Mela"
-                date="25 Nov 2025, 10:00 AM - 4:00 PM"
-                location="JNTU Campus, Warangal"
-            />
-            <MyEventCard
-                image="https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
-                title="Skill Development Workshop - Digital Marketing"
-                organizer="MEWS Training Center"
-                type="Workshop"
-                date="05 Dec 2025, 2:00 PM - 5:00 PM"
-                location="MEWS Community Center, Nizamabad"
-            />
-            <MyEventCard
-                image="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
-                title="Healthcare Jobs Fair"
-                organizer="MEWS x Health Department"
-                type="Training"
-                date="12 Dec 2025, 9:00 AM - 3:00 PM"
-                location="Government Hospital, Hyderabad"
-            />
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center gap-2 mb-2">
+                <button
+                    onClick={() => setSubTab('upcoming')}
+                    className={`px-4 py-2 text-xs font-bold rounded-lg transition ${subTab === 'upcoming' ? 'bg-[#1e2a4a] text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                >
+                    Upcoming Events
+                </button>
+                <button
+                    onClick={() => setSubTab('past')}
+                    className={`px-4 py-2 text-xs font-bold rounded-lg transition ${subTab === 'past' ? 'bg-[#1e2a4a] text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                >
+                    Past Events
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {subTab === 'upcoming' ? (
+                    <>
+                        <MyEventCard
+                            image="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
+                            title="Tech Recruitment Drive 2025"
+                            organizer="MEWS x TechCorp"
+                            type="Job Mela"
+                            date="25 Nov 2025, 10:00 AM - 4:00 PM"
+                            location="JNTU Campus, Warangal"
+                        />
+                        <MyEventCard
+                            image="https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
+                            title="Skill Development Workshop"
+                            organizer="MEWS Training Center"
+                            type="Workshop"
+                            date="05 Dec 2025, 2:00 PM - 5:00 PM"
+                            location="MEWS Community Center"
+                        />
+                    </>
+                ) : (
+                    <>
+                        <MyEventCard
+                            image="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
+                            title="Healthcare Jobs Fair"
+                            organizer="MEWS x Health Department"
+                            type="Training"
+                            date="12 Oct 2025, 9:00 AM - 3:00 PM"
+                            location="Government Hospital, Hyderabad"
+                            isPast={true}
+                        />
+                        <MyEventCard
+                            image="https://images.unsplash.com/photo-1517048676732-d65bc937f952?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
+                            title="Annual Career Guidance Seminar"
+                            organizer="MEWS Central"
+                            type="Seminar"
+                            date="15 Sep 2025, 10:00 AM"
+                            location="Town Hall, Karimnagar"
+                            isPast={true}
+                        />
+                    </>
+                )}
+            </div>
+
+            {subTab === 'upcoming' && (
+                <div className="text-center py-8">
+                    <p className="text-gray-500 text-sm mb-4">Looking for more events?</p>
+                    <button onClick={onBrowseAll} className="text-primary font-bold hover:underline">Browse All Upcoming Jobs & Events</button>
+                </div>
+            )}
         </div>
-    </div>
-);
+    );
+};
 
 const JobsEvents = () => {
     const [activeTab, setActiveTab] = useState('upcoming');
@@ -339,15 +376,15 @@ const JobsEvents = () => {
             <div className="flex items-center gap-4 border-b border-gray-200">
                 <button
                     onClick={() => setActiveTab('upcoming')}
-                    className={`px - 4 py - 3 text - sm font - bold transition - colors border - b - 2
-                    ${activeTab === 'upcoming' ? 'text-[#1e2a4a] border-[#1e2a4a]' : 'text-gray-400 border-transparent hover:text-gray-600'} `}
+                    className={`px-4 py-3 text-sm font-bold transition-colors border-b-2
+                    ${activeTab === 'upcoming' ? 'text-[#1e2a4a] border-[#1e2a4a]' : 'text-gray-400 border-transparent hover:text-gray-600'}`}
                 >
                     Upcoming Events
                 </button>
                 <button
                     onClick={() => setActiveTab('my_events')}
-                    className={`px - 4 py - 3 text - sm font - bold transition - colors border - b - 2 flex items - center gap - 2
-                    ${activeTab === 'my_events' ? 'text-[#1e2a4a] border-[#1e2a4a]' : 'text-gray-400 border-transparent hover:text-gray-600'} `}
+                    className={`px-4 py-3 text-sm font-bold transition-colors border-b-2 flex items-center gap-2
+                    ${activeTab === 'my_events' ? 'text-[#1e2a4a] border-[#1e2a4a]' : 'text-gray-400 border-transparent hover:text-gray-600'}`}
                 >
                     My Events <span className="w-5 h-5 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center text-[10px]">3</span>
                 </button>

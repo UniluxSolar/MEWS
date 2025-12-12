@@ -1,11 +1,23 @@
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import UserLandingPage from './pages/UserLandingPage';
 import LoginPage from './pages/LoginPage';
+import AdminLoginPage from './pages/AdminLoginPage';
+import AdminDashboard from './pages/AdminDashboard';
+import MemberManagement from './pages/MemberManagement';
+import MemberRegistration from './pages/MemberRegistration';
+import MemberProfile from './pages/MemberProfile';
+import EditMember from './pages/EditMember';
+import GenerateIDCard from './pages/GenerateIDCard';
+import InstitutionManagement from './pages/InstitutionManagement';
+import InstitutionRegistration from './pages/InstitutionRegistration';
+import SOSManagement from './pages/SOSManagement';
 import DashboardLayout from './layouts/DashboardLayout';
 import MyApplications from './pages/MyApplications';
 import DashboardHome from './pages/DashboardHome';
 import KYCVerification from './pages/KYCVerification';
 import KYCSuccess from './pages/KYCSuccess';
+import Notifications from './pages/Notifications';
 import Helpdesk from './pages/Helpdesk';
 import HelpSupport from './pages/HelpSupport';
 import JobsEvents from './pages/JobsEvents';
@@ -27,6 +39,16 @@ function App() {
             <Routes>
                 <Route path="/" element={<UserLandingPage />} />
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/admin/login" element={<AdminLoginPage />} />
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/members" element={<MemberManagement />} />
+                <Route path="/admin/members/new" element={<MemberRegistration />} />
+                <Route path="/admin/members/generate-id" element={<GenerateIDCard />} />
+                <Route path="/admin/institutions" element={<InstitutionManagement />} />
+                <Route path="/admin/institutions/new" element={<InstitutionRegistration />} />
+                <Route path="/admin/sos" element={<SOSManagement />} />
+                <Route path="/admin/members/:id" element={<MemberProfile />} />
+                <Route path="/admin/members/edit/:id" element={<EditMember />} />
                 <Route path="/about" element={<div className="p-10 text-center">About Page Coming Soon</div>} />
                 <Route path="/benefits" element={<div className="p-10 text-center">Benefits Page Coming Soon</div>} />
                 <Route path="/donate" element={<div className="p-10 text-center">Donate Page Coming Soon</div>} />
@@ -51,6 +73,7 @@ function App() {
                     <Route path="donate/success" element={<DonationSuccess />} />
                     <Route path="helpdesk" element={<Helpdesk />} />
                     <Route path="support" element={<HelpSupport />} />
+                    <Route path="notifications" element={<Notifications />} />
                 </Route>
             </Routes>
         </BrowserRouter>

@@ -198,8 +198,14 @@ const NewApplication = () => {
                                     <input type="text" className="w-full border border-gray-300 rounded-lg p-3" placeholder="Enter college/school name" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Course / Grade</label>
                                     <input type="text" className="w-full border border-gray-300 rounded-lg p-3" placeholder="e.g. B.Tech Computer Science" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Reason for Assistance</label>
+                                    <textarea
+                                        className="w-full border border-gray-300 rounded-lg p-3 h-32 resize-none"
+                                        placeholder="Please describe why you need this scholarship..."
+                                    ></textarea>
                                 </div>
                             </div>
                         </div>
@@ -274,8 +280,8 @@ const NewApplication = () => {
                             onClick={handleNext}
                             disabled={currentStep === 1 && !selectedType}
                             className={`flex items-center gap-2 px-8 py-3 rounded-lg text-sm font-bold text-white transition-all shadow-md ${(currentStep === 1 && !selectedType)
-                                    ? 'bg-gray-300 cursor-not-allowed shadow-none'
-                                    : 'bg-primary hover:bg-[#151f38] cursor-pointer'
+                                ? 'bg-gray-300 cursor-not-allowed shadow-none'
+                                : 'bg-primary hover:bg-[#151f38] cursor-pointer'
                                 }`}
                         >
                             {currentStep === 4 ? 'Submit Application' : 'Continue'} <FaArrowRight size={12} />

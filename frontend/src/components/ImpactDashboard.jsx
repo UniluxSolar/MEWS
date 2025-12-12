@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaGraduationCap, FaHeartbeat, FaBalanceScale, FaBriefcase } from 'react-icons/fa';
+import { FaGraduationCap, FaHeartbeat, FaBalanceScale, FaBriefcase, FaChartLine } from 'react-icons/fa';
 
 const StatCard = ({ icon: Icon, title, color, stats, linkText, borderColor }) => (
     <div className={`bg-white rounded-xl shadow-sm border-t-4 ${borderColor} p-6 h-full flex flex-col`}>
@@ -58,11 +58,12 @@ const ImpactDashboard = () => {
     ];
 
     return (
-        <section className="bg-gray-50 py-16 -mt-10 relative z-20">
+        <section className="bg-gray-50 py-8 relative z-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-12">
-                    <div className="inline-flex items-center gap-2 text-[#1e2a4a] font-bold text-lg mb-2">
-                        <span className="text-[#3b82f6]">See</span> Community Impact Dashboard
+                    <div className="flex items-center justify-center gap-3 text-[#1e2a4a] mb-3">
+                        <FaChartLine className="text-[#3b82f6] text-2xl" />
+                        <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">Community Impact Dashboard</h2>
                     </div>
                     <p className="text-gray-500 text-sm">Real-time metrics showing our collective progress</p>
                     <div className="w-16 h-1 bg-[#1e2a4a] mx-auto mt-4 rounded-full"></div>
