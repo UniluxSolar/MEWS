@@ -11,7 +11,11 @@ import EditMember from './pages/EditMember';
 import GenerateIDCard from './pages/GenerateIDCard';
 import InstitutionManagement from './pages/InstitutionManagement';
 import InstitutionRegistration from './pages/InstitutionRegistration';
+import InstitutionDetail from './pages/InstitutionDetail';
+import EditInstitution from './pages/EditInstitution';
 import SOSManagement from './pages/SOSManagement';
+import FundingRequests from './pages/FundingRequests';
+import ReportsAnalytics from './pages/ReportsAnalytics';
 import DashboardLayout from './layouts/DashboardLayout';
 import MyApplications from './pages/MyApplications';
 import DashboardHome from './pages/DashboardHome';
@@ -46,7 +50,11 @@ function App() {
                 <Route path="/admin/members/generate-id" element={<GenerateIDCard />} />
                 <Route path="/admin/institutions" element={<InstitutionManagement />} />
                 <Route path="/admin/institutions/new" element={<InstitutionRegistration />} />
+                <Route path="/admin/institutions/:id" element={<InstitutionDetail />} />
+                <Route path="/admin/institutions/edit/:id" element={<EditInstitution />} />
                 <Route path="/admin/sos" element={<SOSManagement />} />
+                <Route path="/admin/funding" element={<FundingRequests />} />
+                <Route path="/admin/reports" element={<ReportsAnalytics />} />
                 <Route path="/admin/members/:id" element={<MemberProfile />} />
                 <Route path="/admin/members/edit/:id" element={<EditMember />} />
                 <Route path="/about" element={<div className="p-10 text-center">About Page Coming Soon</div>} />

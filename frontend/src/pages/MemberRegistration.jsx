@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import API from '../api';
+import axios from 'axios'; // Direct import for file upload to bypass interceptor issues
 import { Link, useNavigate } from 'react-router-dom';
 import {
     FaArrowLeft, FaShieldAlt, FaSave, FaEraser, FaUpload,
@@ -62,7 +64,11 @@ const FormSelect = ({ label, options, required = false, colSpan = "col-span-1", 
                 className={`w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all appearance-none cursor-pointer ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
             >
                 <option value="">Select {label}</option>
-                {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                {options.map(opt => {
+                    const optionValue = typeof opt === 'object' ? opt.value : opt;
+                    const optionLabel = typeof opt === 'object' ? opt.label : opt;
+                    return <option key={optionValue} value={optionValue}>{optionLabel}</option>
+                })}
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                 <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -72,7 +78,7 @@ const FormSelect = ({ label, options, required = false, colSpan = "col-span-1", 
 );
 
 // File Upload Component
-const FileUpload = ({ label, colSpan = "col-span-1" }) => (
+const FileUpload = ({ label, name, onChange, colSpan = "col-span-1" }) => (
     <div className={colSpan}>
         <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
             {label}
@@ -82,7 +88,12 @@ const FileUpload = ({ label, colSpan = "col-span-1" }) => (
                 <FaUpload size={14} />
                 <span className="text-xs font-bold">Choose File</span>
             </div>
-            <input type="file" className="opacity-0 absolute inset-0 cursor-pointer" />
+            <input
+                type="file"
+                name={name}
+                onChange={onChange}
+                className="opacity-0 absolute inset-0 cursor-pointer"
+            />
         </div>
     </div>
 );
@@ -92,9 +103,17 @@ const MemberRegistration = () => {
 
     // Form State
     const [formData, setFormData] = useState({
+        surname: '',
+        name: '',
+        fatherName: '',
         dob: '',
         age: '',
-        maritalStatus: '',
+        gender: '',
+        mobileNumber: '',
+        bloodGroup: '',
+        alternateMobile: '',
+        email: '',
+        aadhaarNumber: '',
 
         // Present Address
         presentDistrict: '',
@@ -114,24 +133,190 @@ const MemberRegistration = () => {
         permStreet: '',
         permLandmark: '',
         permPincode: '',
+
+        // Caste
+        caste: '',
+        subCaste: '',
+        communityCertNumber: '',
+
+        // Marriage
+        maritalStatus: '',
+        partnerName: '',
+        partnerCaste: '',
+        partnerSubCaste: '',
+        isInterCaste: '',
+        marriageCertNumber: '',
+        marriageDate: '',
+
+        // Family
+        fatherOccupation: '',
+        motherOccupation: '',
+        annualIncome: '',
+        memberCount: '',
+        dependentCount: '',
+        rationCardTypeFamily: '', // unique name to avoid conflict
+
+        // Ration Card
+        rationCardNumber: '',
+        rationCardType: '',
+        rationCardHolderName: '',
+
+        // Voter ID
+        epicNumber: '',
+        voterName: '',
+        pollingBooth: '',
+
+        // Bank
+        bankName: '',
+        branchName: '',
+        accountNumber: '',
+        ifscCode: '',
+        holderName: '',
+        presentState: 'Telangana',
+        permState: 'Telangana'
     });
 
+    const [files, setFiles] = useState({});
+    const [loading, setLoading] = useState(false);
     const [sameAsPresent, setSameAsPresent] = useState(false);
 
-    // Handle Input Change
+    // Location Lists
+    const [districts, setDistricts] = useState([]);
+    const [mandals, setMandals] = useState([]);
+    const [villages, setVillages] = useState([]);
+
+    const [permMandals, setPermMandals] = useState([]);
+    const [permVillages, setPermVillages] = useState([]);
+
+    // Fetch Districts on Mount (Specifically for Telangana)
+    useEffect(() => {
+        const fetchDistricts = async () => {
+            try {
+                // Get all states
+                const { data: states } = await API.get('/locations?type=STATE');
+
+                // Find Telangana specifically
+                const telangana = states.find(s => s.name === 'Telangana');
+
+                if (telangana) {
+                    const { data: dists } = await API.get(`/locations?parent=${telangana._id}`);
+                    setDistricts(dists);
+                } else if (states.length > 0) {
+                    // Fallback to first state if Telangana not found (though it should be)
+                    const { data: dists } = await API.get(`/locations?parent=${states[0]._id}`);
+                    setDistricts(dists);
+                }
+            } catch (error) {
+                console.error("Error fetching locations", error);
+            }
+        };
+        fetchDistricts();
+    }, []);
+
+    // Handle Present Address District Change
+    const handleDistrictChange = async (e) => {
+        const districtId = e.target.value;
+        console.log(`[UI] District ID Selected: ${districtId}`);
+
+        // Store ID directly in formData
+        setFormData(prev => ({
+            ...prev,
+            presentDistrict: districtId,
+            presentMandal: '',
+            presentVillage: ''
+        }));
+        setMandals([]);
+        setVillages([]);
+
+        if (districtId) {
+            try {
+                // Fetch children using ID directly
+                const { data } = await API.get(`/locations?parent=${districtId}`);
+                console.log(`[API] Fetched ${data.length} mandals`);
+                setMandals(data);
+            } catch (error) {
+                console.error("[API] Error fetching mandals", error);
+            }
+        }
+    };
+
+    // Handle Present Address Mandal Change
+    const handleMandalChange = async (e) => {
+        const mandalId = e.target.value;
+        console.log(`[UI] Mandal ID Selected: ${mandalId}`);
+
+        setFormData(prev => ({
+            ...prev,
+            presentMandal: mandalId,
+            presentVillage: ''
+        }));
+        setVillages([]);
+
+        if (mandalId) {
+            try {
+                const { data } = await API.get(`/locations?parent=${mandalId}`);
+                console.log(`[API] Fetched ${data.length} villages`);
+                setVillages(data);
+            } catch (error) {
+                console.error("[API] Error fetching villages", error);
+            }
+        }
+    };
+
+    // Handle Permanent Address District Change
+    const handlePermDistrictChange = async (e) => {
+        const districtId = e.target.value;
+
+        setFormData(prev => ({ ...prev, permDistrict: districtId, permMandal: '', permVillage: '' }));
+        setPermMandals([]);
+        setPermVillages([]);
+
+        if (districtId) {
+            try {
+                const { data } = await API.get(`/locations?parent=${districtId}`);
+                setPermMandals(data);
+            } catch (error) {
+                console.error("Error fetching perm mandals", error);
+            }
+        }
+    };
+
+    // Handle Permanent Address Mandal Change
+    const handlePermMandalChange = async (e) => {
+        const mandalId = e.target.value;
+
+        setFormData(prev => ({ ...prev, permMandal: mandalId, permVillage: '' }));
+        setPermVillages([]);
+
+        if (mandalId) {
+            try {
+                const { data } = await API.get(`/locations?parent=${mandalId}`);
+                setPermVillages(data);
+            } catch (error) {
+                console.error("Error fetching perm villages", error);
+            }
+        }
+    };
+
+    // Handle Input Change (Generalized)
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => {
             const newData = { ...prev, [name]: value };
-
-            // If sameAsPresent is true and we are changing a present address field, update permanent address too
             if (sameAsPresent && name.startsWith('present')) {
                 const permField = name.replace('present', 'perm');
                 newData[permField] = value;
             }
-
             return newData;
         });
+    };
+
+    // Handle File Change
+    const handleFileChange = (e) => {
+        const { name, files: selectedFiles } = e.target;
+        if (selectedFiles && selectedFiles[0]) {
+            setFiles(prev => ({ ...prev, [name]: selectedFiles[0] }));
+        }
     };
 
     // Handle Checkbox Change
@@ -169,12 +354,45 @@ const MemberRegistration = () => {
         }
     }, [formData.dob]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Here you would typically send data to backend
-        // For now, we simulate success and redirect
-        // Passing the form data to the next page
-        navigate('/admin/members/generate-id', { state: { newMember: formData } });
+
+        try {
+            // Manual Validation for Mandatory Fields not covered by HTML5 required
+            if (!files.photo) {
+                alert("Please upload a Member Photo.");
+                return;
+            }
+            if (!formData.gender) {
+                alert("Please select a Gender.");
+                return;
+            }
+
+            const dataPayload = new FormData();
+
+            // Append all text data
+            Object.keys(formData).forEach(key => {
+                dataPayload.append(key, formData[key]);
+            });
+
+            // Append files (only if they exist)
+            Object.keys(files).forEach(key => {
+                const file = files[key];
+                if (file instanceof File) {
+                    dataPayload.append(key, file);
+                }
+            });
+
+            // Standard Axios call - let it handle headers automatically
+            // USING DIRECT AXIOS CALL to avoid any global interceptor interference with FormData
+            const { data } = await axios.post('http://localhost:5000/api/members', dataPayload);
+
+            // Passing the ACTUAL created member data (with ID) to next page
+            navigate('/admin/members/generate-id', { state: { newMember: data } });
+        } catch (error) {
+            console.error(error);
+            alert('Failed to register member: ' + (error.response?.data?.message || error.message));
+        }
     };
 
     return (
@@ -279,6 +497,7 @@ const MemberRegistration = () => {
                                 value={formData.fatherName || ''}
                                 onChange={handleChange}
                                 placeholder="Enter father's name"
+                                required
                             />
 
                             <FormInput
@@ -297,39 +516,46 @@ const MemberRegistration = () => {
                                 disabled={true}
                             />
                             <div className="col-span-1">
-                                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Gender <span className="text-red-500">*</span></label>
+                                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Gender</label>
                                 <div className="flex items-center gap-6 mt-3">
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Male</span></label>
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Female</span></label>
-                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Other</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Male" onChange={handleChange} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Male</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Female" onChange={handleChange} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Female</span></label>
+                                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Other" onChange={handleChange} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Other</span></label>
                                 </div>
                             </div>
 
-                            <FormInput label="Mobile Number" placeholder="Enter 10-digit mobile number" required />
-                            <FormSelect label="Blood Group" options={["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]} />
-                            <FormInput label="Alternate Mobile Number" placeholder="Enter alternate mobile number" />
+                            <FormInput label="Mobile Number" name="mobileNumber" value={formData.mobileNumber} onChange={handleChange} placeholder="Enter 10-digit mobile number" required />
+                            <FormSelect label="Blood Group" name="bloodGroup" value={formData.bloodGroup} onChange={handleChange} options={["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]} />
+                            <FormInput label="Alternate Mobile Number" name="alternateMobile" value={formData.alternateMobile} onChange={handleChange} placeholder="Enter alternate mobile number" />
 
-                            <FormInput label="Email Address" placeholder="Enter email address" colSpan="md:col-span-2" />
-                            <FormInput label="Aadhar Number" placeholder="Enter 12-digit Aadhar number" />
+                            <FormInput label="Email Address" name="email" value={formData.email} onChange={handleChange} placeholder="Enter email address" colSpan="md:col-span-2" />
+                            <FormInput label="Aadhar Number" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleChange} placeholder="Enter 12-digit Aadhar number" required />
                         </div>
 
                         {/* Present Address Info */}
                         <SectionHeader title="Present Address" icon={FaMapMarkerAlt} />
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <FormInput
+                                label="State"
+                                name="presentState"
+                                value="Telangana"
+                                disabled={true}
+                                placeholder="Telangana"
+                            />
                             <FormSelect
                                 label="District"
                                 name="presentDistrict"
                                 value={formData.presentDistrict}
-                                onChange={handleChange}
-                                options={["Nalgonda", "Suryapet", "Yadadri Bhuvanagiri", "Ranga Reddy", "Hyderabad"]}
+                                onChange={handleDistrictChange}
+                                options={districts.map(d => ({ value: d._id, label: d.name }))}
                                 required
                             />
                             <FormSelect
                                 label="Mandal"
                                 name="presentMandal"
                                 value={formData.presentMandal}
-                                onChange={handleChange}
-                                options={["Chityal", "Narketpally", "Nakrekal", "Kakatipally", "Munugode"]}
+                                onChange={handleMandalChange}
+                                options={mandals.map(m => ({ value: m._id, label: m.name }))}
                                 required
                             />
                             <FormSelect
@@ -337,7 +563,7 @@ const MemberRegistration = () => {
                                 name="presentVillage"
                                 value={formData.presentVillage}
                                 onChange={handleChange}
-                                options={["Peddakaparthy", "Veliminedu", "Aitipamula", "Chityal Town", "Gundlapally"]}
+                                options={villages.map(v => ({ value: v._id, label: v.name }))}
                                 required
                             />
 
@@ -347,6 +573,7 @@ const MemberRegistration = () => {
                                 value={formData.presentHouseNo}
                                 onChange={handleChange}
                                 placeholder="e.g. 1-123"
+                                required
                             />
                             <FormInput
                                 label="Street Name / Colony"
@@ -354,6 +581,7 @@ const MemberRegistration = () => {
                                 value={formData.presentStreet}
                                 onChange={handleChange}
                                 placeholder="e.g. Main Road, Ambedkar Colony"
+                                required
                             />
                             <FormInput
                                 label="Landmark"
@@ -361,6 +589,7 @@ const MemberRegistration = () => {
                                 value={formData.presentLandmark}
                                 onChange={handleChange}
                                 placeholder="e.g. Near Water Tank"
+                                required
                             />
 
                             <FormInput
@@ -369,6 +598,7 @@ const MemberRegistration = () => {
                                 value={formData.presentPincode}
                                 onChange={handleChange}
                                 placeholder="Enter pincode"
+                                required
                             />
 
                             <div className="col-span-1 md:col-span-2">
@@ -401,31 +631,42 @@ const MemberRegistration = () => {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <FormInput
+                                label="State"
+                                name="permState"
+                                value="Telangana"
+                                disabled={true}
+                                placeholder="Telangana"
+                            />
                             <FormSelect
                                 label="District"
                                 name="permDistrict"
                                 value={formData.permDistrict}
-                                onChange={handleChange}
-                                options={["Nalgonda", "Suryapet", "Yadadri Bhuvanagiri", "Ranga Reddy", "Hyderabad"]}
-                                required
+                                onChange={handlePermDistrictChange}
+                                options={districts.map(d => ({ value: d._id, label: d.name }))}
                                 disabled={sameAsPresent}
+                                required={!sameAsPresent}
                             />
                             <FormSelect
                                 label="Mandal"
                                 name="permMandal"
                                 value={formData.permMandal}
-                                onChange={handleChange}
-                                options={["Chityal", "Narketpally", "Nakrekal", "Kakatipally", "Munugode"]}
-                                required
+                                onChange={handlePermMandalChange}
+                                options={sameAsPresent
+                                    ? mandals.map(m => ({ value: m._id, label: m.name }))
+                                    : permMandals.map(m => ({ value: m._id, label: m.name }))}
                                 disabled={sameAsPresent}
+                                required={!sameAsPresent}
                             />
                             <FormSelect
                                 label="Village/Town"
                                 name="permVillage"
                                 value={formData.permVillage}
                                 onChange={handleChange}
-                                options={["Peddakaparthy", "Veliminedu", "Aitipamula", "Chityal Town", "Gundlapally"]}
-                                required
+                                options={sameAsPresent
+                                    ? villages.map(v => ({ value: v._id, label: v.name }))
+                                    : permVillages.map(v => ({ value: v._id, label: v.name }))}
+                                required={!sameAsPresent}
                                 disabled={sameAsPresent}
                             />
 
@@ -436,6 +677,7 @@ const MemberRegistration = () => {
                                 onChange={handleChange}
                                 placeholder="e.g. 1-123"
                                 disabled={sameAsPresent}
+                                required={!sameAsPresent}
                             />
                             <FormInput
                                 label="Street Name / Colony"
@@ -444,6 +686,7 @@ const MemberRegistration = () => {
                                 onChange={handleChange}
                                 placeholder="e.g. Main Road, Ambedkar Colony"
                                 disabled={sameAsPresent}
+                                required={!sameAsPresent}
                             />
                             <FormInput
                                 label="Landmark"
@@ -452,6 +695,7 @@ const MemberRegistration = () => {
                                 onChange={handleChange}
                                 placeholder="e.g. Near Water Tank"
                                 disabled={sameAsPresent}
+                                required={!sameAsPresent}
                             />
 
                             <FormInput
@@ -461,6 +705,7 @@ const MemberRegistration = () => {
                                 onChange={handleChange}
                                 placeholder="Enter pincode"
                                 disabled={sameAsPresent}
+                                required={!sameAsPresent}
                             />
                         </div>
 
@@ -468,11 +713,11 @@ const MemberRegistration = () => {
                         {/* Caste & Community */}
                         <SectionHeader title="Caste & Community Information" icon={FaUsers} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormSelect label="Member's Caste" options={["BC-A", "BC-B", "BC-D", "SC", "ST", "OC"]} required />
-                            <FormInput label="Member's Sub-Caste" placeholder="Enter sub-caste" />
+                            <FormSelect label="Member's Caste" name="caste" value={formData.caste} onChange={handleChange} options={["BC-A", "BC-B", "BC-D", "SC", "ST", "OC"]} required />
+                            <FormInput label="Member's Sub-Caste" name="subCaste" value={formData.subCaste} onChange={handleChange} placeholder="Enter sub-caste" />
 
-                            <FormInput label="Community Certificate Number" placeholder="Enter certificate number" />
-                            <FileUpload label="Community Certificate Upload" />
+                            <FormInput label="Community Certificate Number" name="communityCertNumber" value={formData.communityCertNumber} onChange={handleChange} placeholder="Enter certificate number" />
+                            <FileUpload label="Community Certificate Upload" name="communityCert" onChange={handleFileChange} fileName={files.communityCert?.name} />
                         </div>
 
                         {/* Marriage Info - Conditional */}
@@ -491,21 +736,21 @@ const MemberRegistration = () => {
                                 <>
                                     <div className="hidden md:block"></div> {/* Spacer */}
 
-                                    <FormInput label="Partner's Name" placeholder="Enter partner's name" />
-                                    <FormSelect label="Partner's Caste" options={["BC-A (Backward Class A)", "Other"]} />
+                                    <FormInput label="Partner's Name" name="partnerName" value={formData.partnerName} onChange={handleChange} placeholder="Enter partner's name" />
+                                    <FormSelect label="Partner's Caste" name="partnerCaste" value={formData.partnerCaste} onChange={handleChange} options={["BC-A", "BC-B", "BC-C", "BC-D", "BC-E", "SC", "ST", "OC", "Other"]} />
 
-                                    <FormInput label="Partner's Sub-Caste" placeholder="Enter partner's sub-caste" />
+                                    <FormInput label="Partner's Sub-Caste" name="partnerSubCaste" value={formData.partnerSubCaste} onChange={handleChange} placeholder="Enter partner's sub-caste" />
                                     <div className="col-span-1">
                                         <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Inter-Caste Marriage</label>
                                         <div className="flex items-center gap-6 mt-3">
-                                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="intercaste" className="w-4 h-4 text-blue-600" /> <span className="text-sm text-gray-700">Yes</span></label>
-                                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="intercaste" className="w-4 h-4 text-blue-600" /> <span className="text-sm text-gray-700">No</span></label>
+                                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="isInterCaste" value="Yes" onChange={handleChange} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Yes</span></label>
+                                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="isInterCaste" value="No" onChange={handleChange} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">No</span></label>
                                         </div>
                                     </div>
 
-                                    <FormInput label="Marriage Certificate Number" placeholder="Enter certificate number" />
-                                    <FileUpload label="Marriage Certificate Upload" />
-                                    <FormInput label="Marriage Date" placeholder="mm/dd/yyyy" type="date" />
+                                    <FormInput label="Marriage Certificate Number" name="marriageCertNumber" value={formData.marriageCertNumber} onChange={handleChange} placeholder="Enter certificate number" />
+                                    <FileUpload label="Marriage Certificate Upload" name="marriageCert" onChange={handleFileChange} fileName={files.marriageCert?.name} />
+                                    <FormInput label="Marriage Date" name="marriageDate" value={formData.marriageDate} onChange={handleChange} placeholder="mm/dd/yyyy" type="date" />
                                 </>
                             )}
                         </div>
@@ -513,76 +758,96 @@ const MemberRegistration = () => {
                         {/* Family & Economic */}
                         <SectionHeader title="Family & Economic Information" icon={FaRupeeSign} />
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <FormInput label="Father's Occupation" placeholder="Enter father's occupation" />
-                            <FormInput label="Mother's Occupation" placeholder="Enter mother's occupation" />
-                            <FormSelect label="Annual Family Income" options={["< 1 Lakh", "1-3 Lakhs", "> 3 Lakhs"]} required />
+                            <FormInput label="Father's Occupation" name="fatherOccupation" value={formData.fatherOccupation} onChange={handleChange} placeholder="Enter father's occupation" />
+                            <FormInput label="Mother's Occupation" name="motherOccupation" value={formData.motherOccupation} onChange={handleChange} placeholder="Enter mother's occupation" />
+                            <FormInput
+                                label="Annual Family Income"
+                                name="annualIncome"
+                                value={formData.annualIncome}
+                                onChange={handleChange}
+                                placeholder="Enter numeric income"
+                            />
+                            {/* Removed Select and using Input for simplicity as per quick fix request, or keeping Select without required */}
+                            {/* Let's keep the Select but remove required */}
 
-                            <FormInput label="Number of Family Members" placeholder="Enter number" type="number" />
-                            <FormInput label="Number of Dependents" placeholder="Enter number" type="number" />
-                            <FormSelect label="Ration Card Type" options={["Food Security Card (White)", "Antyodaya Anna Yojana (Pink)", "Annapurna Scheme"]} />
+                            <FormSelect
+                                label="Annual Family Income"
+                                name="annualIncome"
+                                value={formData.annualIncome}
+                                onChange={handleChange}
+                                options={[
+                                    { label: "< 1 Lakh", value: "50000" },
+                                    { label: "1-3 Lakhs", value: "200000" },
+                                    { label: "> 3 Lakhs", value: "400000" }
+                                ]}
+                            />
+
+                            <FormInput label="Number of Family Members" name="memberCount" value={formData.memberCount} onChange={handleChange} placeholder="Enter number" type="number" />
+                            <FormInput label="Number of Dependents" name="dependentCount" value={formData.dependentCount} onChange={handleChange} placeholder="Enter number" type="number" />
+                            <FormSelect label="Ration Card Type" name="rationCardTypeFamily" value={formData.rationCardTypeFamily} onChange={handleChange} options={["Food Security Card (White)", "Antyodaya Anna Yojana (Pink)", "Annapurna Scheme"]} />
                         </div>
 
                         {/* Ration Card */}
                         <SectionHeader title="Ration Card Details" icon={FaIdCard} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormInput label="Ration Card Number" placeholder="Enter ration card number" />
-                            <FormSelect label="Ration Card Type" options={["Food Security Card (White)", "Antyodaya Anna Yojana (Pink)", "Annapurna Scheme"]} />
-                            <FormInput label="Ration Card Holder Name" placeholder="Enter card holder name" />
-                            <FileUpload label="Upload Ration Card" />
+                            <FormInput label="Ration Card Number" name="rationCardNumber" value={formData.rationCardNumber} onChange={handleChange} placeholder="Enter ration card number" />
+                            <FormSelect label="Ration Card Type" name="rationCardType" value={formData.rationCardType} onChange={handleChange} options={["Food Security Card (White)", "Antyodaya Anna Yojana (Pink)", "Annapurna Scheme"]} />
+                            <FormInput label="Ration Card Holder Name" name="rationCardHolderName" value={formData.rationCardHolderName} onChange={handleChange} placeholder="Enter card holder name" />
+                            <FileUpload label="Upload Ration Card" name="rationCardFile" onChange={handleFileChange} fileName={files.rationCardFile?.name} />
                         </div>
 
                         {/* Voter ID */}
                         <SectionHeader title="Voter ID Details" icon={FaVoteYea} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormInput label="Voter ID Number (EPIC Number)" placeholder="Enter EPIC number" />
-                            <FormInput label="Voter Name as per Card" placeholder="Enter name as per voter ID" />
-                            <FormInput label="Polling Booth Number" placeholder="Enter booth number" />
+                            <FormInput label="Voter ID Number (EPIC Number)" name="epicNumber" value={formData.epicNumber} onChange={handleChange} placeholder="Enter EPIC number" />
+                            <FormInput label="Voter Name as per Card" name="voterName" value={formData.voterName} onChange={handleChange} placeholder="Enter name as per voter ID" />
+                            <FormInput label="Polling Booth Number" name="pollingBooth" value={formData.pollingBooth} onChange={handleChange} placeholder="Enter booth number" />
                             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FileUpload label="Upload Voter ID Front" />
-                                <FileUpload label="Upload Voter ID Back" />
+                                <FileUpload label="Upload Voter ID Front" name="voterIdFront" onChange={handleFileChange} fileName={files.voterIdFront?.name} />
+                                <FileUpload label="Upload Voter ID Back" name="voterIdBack" onChange={handleFileChange} fileName={files.voterIdBack?.name} />
                             </div>
                         </div>
 
                         {/* Bank Account */}
                         <SectionHeader title="Bank Account Information" icon={FaUniversity} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormInput label="Bank Name" placeholder="Enter bank name" required />
-                            <FormInput label="Branch Name" placeholder="Enter branch name" />
-                            <FormInput label="Account Number" placeholder="Enter account number" required />
-                            <FormInput label="IFSC Code" placeholder="Enter IFSC code" required />
-                            <FormInput label="Account Holder Name" placeholder="Should match member name" />
-                            <FileUpload label="Bank Passbook Upload" />
+                            <FormInput label="Bank Name" name="bankName" value={formData.bankName} onChange={handleChange} placeholder="Enter bank name" required />
+                            <FormInput label="Branch Name" name="branchName" value={formData.branchName} onChange={handleChange} placeholder="Enter branch name" required />
+                            <FormInput label="Account Number" name="accountNumber" value={formData.accountNumber} onChange={handleChange} placeholder="Enter account number" required />
+                            <FormInput label="IFSC Code" name="ifscCode" value={formData.ifscCode} onChange={handleChange} placeholder="Enter IFSC code" required />
+                            <FormInput label="Account Holder Name" name="holderName" value={formData.holderName} onChange={handleChange} placeholder="Should match member name" required />
+                            <FileUpload label="Bank Passbook Upload" name="bankPassbook" onChange={handleFileChange} fileName={files.bankPassbook?.name} />
                         </div>
 
                         {/* Document Uploads */}
                         <SectionHeader title="Document Uploads" icon={FaFileImage} />
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                            <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition cursor-pointer text-center relative group">
+                            <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${files.photo ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
                                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
-                                    <FaFileImage className="text-gray-400 group-hover:text-blue-500" />
+                                    <FaFileImage className={files.photo ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500'} />
                                 </div>
-                                <h4 className="text-sm font-bold text-gray-700">Member Photo <span className="text-red-500">*</span></h4>
-                                <p className="text-xs text-gray-400 mt-1">Click to upload photo</p>
+                                <h4 className="text-sm font-bold text-gray-700">{files.photo ? files.photo.name : <>Member Photo</>}</h4>
+                                <p className="text-xs text-gray-400 mt-1">{files.photo ? 'Click to change' : 'Click to upload photo'}</p>
                                 <button type="button" className="mt-3 text-blue-600 text-xs font-bold hover:underline">Choose File</button>
-                                <input type="file" className="opacity-0 absolute inset-0 cursor-pointer" />
+                                <input type="file" name="photo" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer" />
                             </div>
-                            <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition cursor-pointer text-center relative group">
+                            <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${files.aadhaarFront ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
                                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
-                                    <FaIdCard className="text-gray-400 group-hover:text-blue-500" />
+                                    <FaIdCard className={files.aadhaarFront ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500'} />
                                 </div>
-                                <h4 className="text-sm font-bold text-gray-700">Aadhar Card Front</h4>
-                                <p className="text-xs text-gray-400 mt-1">Upload front side</p>
+                                <h4 className="text-sm font-bold text-gray-700">{files.aadhaarFront ? files.aadhaarFront.name : "Aadhar Card Front"}</h4>
+                                <p className="text-xs text-gray-400 mt-1">{files.aadhaarFront ? 'Click to change' : 'Upload front side'}</p>
                                 <button type="button" className="mt-3 text-blue-600 text-xs font-bold hover:underline">Choose File</button>
-                                <input type="file" className="opacity-0 absolute inset-0 cursor-pointer" />
+                                <input type="file" name="aadhaarFront" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer" />
                             </div>
-                            <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition cursor-pointer text-center relative group">
+                            <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${files.aadhaarBack ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
                                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
-                                    <FaIdCard className="text-gray-400 group-hover:text-blue-500" />
+                                    <FaIdCard className={files.aadhaarBack ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500'} />
                                 </div>
-                                <h4 className="text-sm font-bold text-gray-700">Aadhar Card Back</h4>
-                                <p className="text-xs text-gray-400 mt-1">Upload back side</p>
+                                <h4 className="text-sm font-bold text-gray-700">{files.aadhaarBack ? files.aadhaarBack.name : "Aadhar Card Back"}</h4>
+                                <p className="text-xs text-gray-400 mt-1">{files.aadhaarBack ? 'Click to change' : 'Upload back side'}</p>
                                 <button type="button" className="mt-3 text-blue-600 text-xs font-bold hover:underline">Choose File</button>
-                                <input type="file" className="opacity-0 absolute inset-0 cursor-pointer" />
+                                <input type="file" name="aadhaarBack" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer" />
                             </div>
                         </div>
 
@@ -596,8 +861,8 @@ const MemberRegistration = () => {
                             </button>
                             <div className="flex-1"></div>
 
-                            <button type="submit" className="px-8 py-3 bg-[#1e2a4a] text-white font-bold rounded-xl hover:bg-[#2a3b66] transition shadow-md flex items-center gap-2">
-                                Submit & Approve <FaSave className="ml-1" />
+                            <button type="submit" disabled={loading} className={`px-8 py-3 bg-[#1e2a4a] text-white font-bold rounded-xl hover:bg-[#2a3b66] transition shadow-md flex items-center gap-2 ${loading ? 'opacity-70 cursor-wait' : ''}`}>
+                                {loading ? 'Registering...' : 'Submit & Approve'} <FaSave className="ml-1" />
                             </button>
                         </div>
 

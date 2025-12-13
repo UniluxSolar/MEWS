@@ -1,6 +1,6 @@
 1. System Setup (One-time / Admin Level)
 1.	Define Geography & Hierarchy
-o	Create structure: Village → Mandal → District → State.
+o	Create structure: Village → Mandal → District → State → superAdmin
 o	Assign admins at each level:
 	Village Admin
 	Mandal Admin

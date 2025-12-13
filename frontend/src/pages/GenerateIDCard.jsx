@@ -6,6 +6,9 @@ import {
     FaQuestionCircle, FaBullhorn, FaSignOutAlt, FaPrint, FaDownload,
     FaWhatsapp, FaEnvelope, FaCheckCircle, FaQrcode
 } from 'react-icons/fa';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import { QRCodeSVG } from 'qrcode.react';
 import member2 from '../assets/member2.png'; // Fallback
 
 // Sidebar Item Component
@@ -42,21 +45,49 @@ const GenerateIDCard = () => {
     useEffect(() => {
         if (location.state && location.state.newMember) {
             const newMember = location.state.newMember;
-            const generatedId = `MEW${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`;
+            const generatedId = newMember.mewsId || `MEW${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`;
 
             setSelectedMember({
                 name: newMember.name || 'Unknown',
                 surname: newMember.surname || '',
                 id: generatedId,
-                mobile: newMember.mobile || '+91 XXXXX XXXXX',
-                photo: member2, // In a real app, this would be the uploaded photo URL
+                mobile: newMember.mobileNumber || '+91 XXXXX XXXXX',
+                // Handle both full URL from backend or relative path if needed
+                photo: newMember.photoUrl ? (newMember.photoUrl.startsWith('http') ? newMember.photoUrl : `http://localhost:5000${newMember.photoUrl}`) : member2,
                 bloodGroup: newMember.bloodGroup || 'O+',
-                village: newMember.presentVillage || 'Peddakaparthy',
+                village: newMember.address?.village || 'Unknown',
                 validUntil: getValidUntil()
             });
             setSearchTerm(`${newMember.name || ''} ${newMember.surname || ''}`.trim());
         }
     }, [location.state]);
+
+    const handleDownloadPDF = async () => {
+        const element = document.getElementById('id-card-element');
+        if (!element) return;
+
+        try {
+            const canvas = await html2canvas(element, {
+                scale: 3, // Higher resolution
+                useCORS: true, // Allow loading cross-origin images (backend uploads)
+                logging: true,
+                backgroundColor: '#ffffff'
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: [85.6, 54] // Standard ID Card size (CR80)
+            });
+
+            pdf.addImage(imgData, 'PNG', 0, 0, 85.6, 54);
+            pdf.save(`${selectedMember.name}_ID_Card.pdf`);
+        } catch (error) {
+            console.error("Failed to generate PDF", error);
+            alert("Failed to download ID Card. Please try again.");
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[#f3f4f6] font-sans flex flex-col">
@@ -169,85 +200,92 @@ const GenerateIDCard = () => {
 
                     {/* Section 2: Preview - Enhanced UI */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-                        <h2 className="text-lg font-bold text-gray-800 mb-6">ID Card Preview</h2>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-lg font-bold text-gray-800">ID Card Preview</h2>
+                            <button onClick={handleDownloadPDF} className="text-blue-600 font-bold text-sm hover:underline flex items-center gap-1">
+                                <FaDownload /> Download PDF
+                            </button>
+                        </div>
 
                         <div className="flex justify-center bg-gray-50 py-10 rounded-xl border border-dashed border-gray-300">
-                            {/* ID Card */}
-                            <div className="w-[400px] h-[252px] bg-white rounded-xl shadow-xl border border-gray-300 overflow-hidden relative flex flex-col">
+                            {/* ID Card Container - Scalable */}
+                            <div id="id-card-element" className="w-[400px] h-[252px] bg-white rounded-xl shadow-xl border border-gray-300 overflow-hidden relative flex flex-col">
                                 {/* Watermark */}
-                                <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-                                    <FaShieldAlt size={200} />
+                                <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none z-0">
+                                    <FaShieldAlt size={180} />
                                 </div>
 
                                 {/* Card Header */}
                                 <div className="bg-gradient-to-r from-[#0f172a] to-[#1e2a4a] h-16 flex items-center justify-between px-5 relative z-10">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center border border-white/20 backdrop-blur-sm shadow-inner">
-                                            <FaShieldAlt className="text-blue-100 text-sm" />
+                                        <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center border border-white/20 backdrop-blur-sm shadow-inner">
+                                            <FaShieldAlt className="text-blue-100 text-lg" />
                                         </div>
                                         <div>
-                                            <div className="text-white font-bold text-sm leading-tight tracking-wide">MEWS 2.0</div>
-                                            <div className="text-blue-200 text-[9px] leading-tight uppercase tracking-wider font-semibold mt-0.5">Village Resident Identity</div>
+                                            <div className="text-white font-bold text-sm leading-tight tracking-wide">GRAM PANCHAYAT</div>
+                                            <div className="text-blue-200 text-[10px] uppercase font-semibold mt-0.5 tracking-wider">Peddakaparthy Village</div>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-white font-bold text-[10px] tracking-wide">PEDDAKAPARTHY</div>
-                                        <div className="text-blue-300/80 text-[8px] uppercase">Gram Panchayat</div>
+                                        <div className="text-white font-bold text-[10px] tracking-wide">STATE GOVERNMENT</div>
+                                        <div className="text-blue-300/80 text-[8px] uppercase">Official Identity Card</div>
                                     </div>
                                 </div>
 
                                 {/* Card Body */}
-                                <div className="flex-1 p-5 flex gap-5 relative z-10">
-                                    {/* Photo with Frame */}
-                                    <div className="w-24 h-28 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border-2 border-white shadow-md relative">
-                                        <img src={selectedMember.photo} alt="Member" className="w-full h-full object-cover" />
-                                        {/* Hologram Effect */}
-                                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent pointer-events-none"></div>
+                                <div className="flex-1 p-4 flex gap-4 relative z-10">
+                                    {/* Photo */}
+                                    <div className="w-24 h-28 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border-2 border-slate-200 shadow-md relative">
+                                        <img
+                                            src={selectedMember.photo}
+                                            alt="Member"
+                                            className="w-full h-full object-cover"
+                                            crossOrigin="anonymous"
+                                        />
                                     </div>
 
-                                    {/* Details */}
-                                    <div className="flex-1 pt-0.5">
-                                        <div className="mb-2">
-                                            <div className="text-[8px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Name</div>
-                                            <div className="text-base font-extrabold text-gray-900 leading-none">{selectedMember.name} {selectedMember.surname}</div>
+                                    {/* Info Grid */}
+                                    <div className="flex-1 grid grid-cols-2 gap-x-2 gap-y-1 content-start pt-1">
+                                        <div className="col-span-2 mb-1">
+                                            <div className="text-[9px] text-gray-500 uppercase font-bold">Name</div>
+                                            <div className="text-sm font-extrabold text-[#1e2a4a] leading-tight uppercase">{selectedMember.name} {selectedMember.surname}</div>
                                         </div>
 
-                                        <div className="mb-2.5">
-                                            <div className="text-[8px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Member ID</div>
-                                            <div className="text-xs font-bold text-gray-800 leading-none tracking-wide font-mono">{selectedMember.id}</div>
+                                        <div>
+                                            <div className="text-[8px] text-gray-500 uppercase font-bold">Member ID</div>
+                                            <div className="text-xs font-bold text-red-600 font-mono tracking-tight">{selectedMember.id}</div>
                                         </div>
 
-                                        <div className="flex gap-4">
-                                            <div>
-                                                <div className="text-[8px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Blood Group</div>
-                                                <div className="text-xs font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 inline-block leading-none">{selectedMember.bloodGroup}</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-[8px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Village</div>
-                                                <div className="text-xs font-bold text-gray-800 leading-none">{selectedMember.village}</div>
-                                            </div>
+                                        <div>
+                                            <div className="text-[8px] text-gray-500 uppercase font-bold">Valid Until</div>
+                                            <div className="text-xs font-bold text-gray-800">{selectedMember.validUntil}</div>
+                                        </div>
+
+                                        <div className="mt-1">
+                                            <div className="text-[8px] text-gray-500 uppercase font-bold">Mobile</div>
+                                            <div className="text-[10px] font-bold text-gray-800">{selectedMember.mobile}</div>
+                                        </div>
+
+                                        <div className="mt-1">
+                                            <div className="text-[8px] text-gray-500 uppercase font-bold">Blood Group</div>
+                                            <div className="text-[10px] font-bold text-gray-800">{selectedMember.bloodGroup}</div>
                                         </div>
                                     </div>
 
                                     {/* QR Code */}
-                                    <div className="flex flex-col items-center justify-end gap-1">
-                                        <div className="w-16 h-16 bg-white border border-gray-200 p-0.5 rounded shadow-sm">
-                                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=MEWS2024001234" alt="QR" className="w-full h-full" />
+                                    <div className="absolute bottom-3 right-4">
+                                        <div className="bg-white p-1 border border-gray-100 shadow-sm rounded">
+                                            <QRCodeSVG value={`ID:${selectedMember.id}|Name:${selectedMember.name}|Dob:${selectedMember.dob}`} size={56} />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Card Footer */}
-                                <div className="h-7 bg-gray-50 border-t border-gray-100 flex items-center justify-between px-5 py-0.5 relative z-10">
-                                    <div className="flex items-center gap-1.5">
-                                        <FaCheckCircle className="text-green-500 text-[8px]" />
-                                        <span className="text-[8px] text-gray-600 font-medium">Digital Verified</span>
-                                    </div>
-                                    <div className="text-[8px] text-gray-500 font-mono">
-                                        VALID: <span className="text-gray-900 font-bold">{selectedMember.validUntil}</span>
-                                    </div>
+                                <div className="h-6 bg-[#f8fafc] border-t border-gray-200 flex items-center justify-between px-5 relative z-10">
+                                    <div className="text-[8px] text-gray-500 italic">This card is property of Gram Panchayat</div>
+                                    <div className="text-[8px] font-bold text-[#1e2a4a]">Auth Signature</div>
                                 </div>
-                                <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500"></div>
+                                <div className="h-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800"></div>
                             </div>
                         </div>
                     </div>
@@ -256,7 +294,7 @@ const GenerateIDCard = () => {
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                         <h2 className="text-lg font-bold text-gray-800 mb-4">Actions</h2>
                         <div className="flex flex-wrap gap-4">
-                            <button className="flex-1 bg-[#1e2a4a] hover:bg-[#2a3b66] text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition shadow-md">
+                            <button onClick={handleDownloadPDF} className="flex-1 bg-[#1e2a4a] hover:bg-[#2a3b66] text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition shadow-md">
                                 <FaDownload /> Download PDF
                             </button>
                             <button className="flex-1 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition shadow-sm">

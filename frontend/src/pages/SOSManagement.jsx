@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import API from '../api';
 import { Link } from 'react-router-dom';
 import {
     FaThLarge, FaUsers, FaBuilding, FaExclamationTriangle, FaFileAlt,
@@ -81,47 +82,46 @@ const SOSCard = ({ id, name, memberId, age, gender, photo, type, time, location,
     </div>
 );
 
-import sosWoman from '../assets/sos_woman.jpg';
-import sosMan from '../assets/sos_man.jpg';
+// Dummy data imports removed
 
 const SOSManagement = () => {
 
-    const sosAlerts = [
-        {
-            id: 1,
-            name: "Lakshmi Devi",
-            memberId: "MEW-2847",
-            age: 67,
-            gender: "Female",
-            photo: sosWoman,
-            type: "Medical Emergency",
-            time: "12 minutes ago",
-            location: {
-                address: "Sector 3, House No. 45B",
-                lat: 17.3850,
-                lng: 78.4867
-            },
-            description: "Emergency detected via wearable device - Fall detection triggered",
-            isResolved: false
-        },
-        {
-            id: 2,
-            name: "Ravi Kumar",
-            memberId: "MEW-1523",
-            age: 32,
-            gender: "Male",
-            photo: sosMan,
-            type: "Security Threat",
-            time: "8 minutes ago",
-            location: {
-                address: "Market Area, Shop No. 23",
-                lat: 17.3850,
-                lng: 78.4867
-            },
-            description: "Manual SOS activated - Reporting suspicious activity near premises",
-            isResolved: false
-        }
-    ];
+    const [sosAlerts, setSosAlerts] = useState([]);
+
+    useEffect(() => {
+        const fetchSOS = async () => {
+            try {
+                const { data } = await API.get('/sos');
+                // Transform data if needed, but SOSRequest schema matches pretty close
+                // Note: Backend 'location' is object {latitude, longitude, address}
+                // Frontend expects {address, lat, lng}
+                const mapped = data.map(alert => ({
+                    id: alert._id,
+                    name: alert.name || 'Unknown',
+                    memberId: alert.member || 'Guest',
+                    age: 'N/A', // Not stored in SOS model directly unless linked
+                    gender: 'N/A',
+                    photo: sosMan, // placeholder
+                    type: alert.type,
+                    time: new Date(alert.createdAt).toLocaleTimeString(),
+                    location: {
+                        address: alert.location?.address || 'Unknown Location',
+                        lat: alert.location?.latitude,
+                        lng: alert.location?.longitude
+                    },
+                    description: alert.description,
+                    isResolved: alert.status === 'RESOLVED'
+                }));
+                setSosAlerts(mapped);
+            } catch (error) {
+                console.error("Failed to fetch SOS", error);
+            }
+        };
+
+        fetchSOS();
+        const interval = setInterval(fetchSOS, 5000); // Poll every 5 seconds
+        return () => clearInterval(interval);
+    }, []);
 
     return (
         <div className="min-h-screen bg-[#f3f4f6] font-sans flex flex-col">

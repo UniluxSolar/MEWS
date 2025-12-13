@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import API from '../api';
 import { useNavigate, Link } from 'react-router-dom';
-import { FaShieldAlt, FaLock, FaArrowRight, FaUserShield } from 'react-icons/fa';
+import { FaShieldAlt, FaLock, FaArrowRight, FaUserShield, FaChevronDown } from 'react-icons/fa';
 
 // Background Image (Ensure this absolute path is correct/accessible or move to assets in real app)
 // For this environment, we use the generated artifact path directly or a relative accessible path if moved.
@@ -17,16 +18,28 @@ import { FaShieldAlt, FaLock, FaArrowRight, FaUserShield } from 'react-icons/fa'
 
 const AdminLoginPage = () => {
     const navigate = useNavigate();
-    const [credentials, setCredentials] = useState({ adminId: '', password: '' });
+    const [credentials, setCredentials] = useState({ username: '', password: '', role: 'VILLAGE_ADMIN' });
+
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
         setCredentials({ ...credentials, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Mock admin login
-        navigate('/admin/dashboard', { replace: true });
+        setLoading(true);
+        setError('');
+        try {
+            const { data } = await API.post('/auth/login', credentials);
+            localStorage.setItem('adminInfo', JSON.stringify(data));
+            navigate('/admin/dashboard', { replace: true });
+        } catch (err) {
+            setError(err.response?.data?.message || 'Invalid Credentials');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -53,21 +66,47 @@ const AdminLoginPage = () => {
                 </div>
 
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                    {error && <div className="text-red-500 text-center text-sm font-bold bg-red-100 p-2 rounded">{error}</div>}
                     <div className="space-y-4">
                         <div>
-                            <label htmlFor="adminId" className="sr-only">Admin ID</label>
+                            <label htmlFor="role" className="sr-only">Admin Role</label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-300 group-focus-within:text-[#e85d04] transition">
+                                    <FaShieldAlt />
+                                </div>
+                                <select
+                                    id="role"
+                                    name="role"
+                                    required
+                                    className="appearance-none rounded-xl relative block w-full pl-10 px-4 py-3.5 bg-white/10 border border-gray-500 text-white focus:outline-none focus:ring-2 focus:ring-[#e85d04] focus:border-transparent sm:text-sm transition-all shadow-inner hover:bg-white/20 cursor-pointer"
+                                    value={credentials.role}
+                                    onChange={handleChange}
+                                >
+                                    <option value="VILLAGE_ADMIN" className="bg-[#1e2a4a] text-white">Village Admin</option>
+                                    <option value="MANDAL_ADMIN" className="bg-[#1e2a4a] text-white">Mandal Admin</option>
+                                    <option value="DISTRICT_ADMIN" className="bg-[#1e2a4a] text-white">District Admin</option>
+                                    <option value="STATE_ADMIN" className="bg-[#1e2a4a] text-white">State Admin</option>
+                                    <option value="SUPER_ADMIN" className="bg-[#1e2a4a] text-white">Super Admin</option>
+                                </select>
+                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
+                                    <FaChevronDown size={12} />
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label htmlFor="username" className="sr-only">Username</label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-300 group-focus-within:text-[#e85d04] transition">
                                     <FaUserShield />
                                 </div>
                                 <input
-                                    id="adminId"
-                                    name="adminId"
+                                    id="username"
+                                    name="username"
                                     type="text"
                                     required
                                     className="appearance-none rounded-xl relative block w-full pl-10 px-4 py-3.5 bg-white/10 border border-gray-500 placeholder-gray-300 text-white focus:outline-none focus:ring-2 focus:ring-[#e85d04] focus:border-transparent sm:text-sm transition-all shadow-inner"
-                                    placeholder="Admin ID"
-                                    value={credentials.adminId}
+                                    placeholder="Username"
+                                    value={credentials.username}
                                     onChange={handleChange}
                                 />
                             </div>

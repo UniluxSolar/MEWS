@@ -2,26 +2,23 @@ const mongoose = require('mongoose');
 
 const InstitutionSchema = new mongoose.Schema({
     type: {
-        type: String,
-        enum: ['Health', 'Education', 'Legal', 'Employment'],
+        type: String, // e.g., 'Hospital', 'School', etc.
         required: true
     },
     name: { type: String, required: true },
-    ownerName: { type: String },
-    mobileNumber: { type: String },
+    ownerName: { type: String, required: true },
+    mobileNumber: { type: String, required: true },
     whatsappNumber: { type: String },
 
     // Address
-    address: {
-        fullAddress: String,
-        googleMapsLink: String,
-        village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' }
-    },
+    fullAddress: { type: String, required: true },
+    googleMapsLink: { type: String },
 
-    // Services
+    // Services & details
+    mewsDiscountPercentage: { type: String }, // stored as string e.g. "10", "15-20"
     servicesOffered: [String],
-    discountDetails: { type: String, required: true }, // "MEWS Discount Offered"
-    photos: [String], // Array of URLs
+
+    institutionPhotos: [String], // Array of URLs or paths
 
     // Verification
     verificationStatus: {

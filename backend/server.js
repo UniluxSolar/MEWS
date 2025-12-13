@@ -12,6 +12,8 @@ connectDB();
 // Middleware
 app.use(cors());
 app.use(express.json()); // Body parser
+app.use(express.urlencoded({ extended: true })); // Form data parser
+app.use('/uploads', express.static('uploads')); // Serve uploaded files
 
 // Basic Route
 app.get('/', (req, res) => {
@@ -22,6 +24,10 @@ app.get('/', (req, res) => {
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/locations', require('./routes/locationRoutes'));
 app.use('/api/members', require('./routes/memberRoutes'));
+app.use('/api/institutions', require('./routes/institutionRoutes'));
+app.use('/api/sos', require('./routes/sosRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/locations', require('./routes/locationRoutes'));
 
 const PORT = process.env.PORT || 5000;
 

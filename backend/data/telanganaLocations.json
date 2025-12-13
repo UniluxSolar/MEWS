@@ -1,0 +1,678 @@
+{
+    "name": "Telangana",
+    "type": "STATE",
+    "districts": [
+        {
+            "name": "Adilabad",
+            "mandals": [
+                {
+                    "name": "Adilabad Urban",
+                    "villages": [
+                        "Adilabad (M)",
+                        "Battisawargaon",
+                        "Chichdhari Khanapur",
+                        "Dasnapur"
+                    ]
+                },
+                {
+                    "name": "Adilabad Rural",
+                    "villages": [
+                        "Ankapur",
+                        "Arli (B)",
+                        "Bander",
+                        "Bhimpur"
+                    ]
+                },
+                {
+                    "name": "Mavala",
+                    "villages": [
+                        "Mavala",
+                        "Battisavargaon"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Bhadradri Kothagudem",
+            "mandals": [
+                {
+                    "name": "Kothagudem",
+                    "villages": [
+                        "Kothagudem",
+                        "Chunchupally"
+                    ]
+                },
+                {
+                    "name": "Palwancha",
+                    "villages": [
+                        "Palwancha",
+                        "Kesavapuram"
+                    ]
+                },
+                {
+                    "name": "Bhadrachalam",
+                    "villages": [
+                        "Bhadrachalam",
+                        "Seetharam Nagar"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Hanamkonda",
+            "mandals": [
+                {
+                    "name": "Hanamkonda",
+                    "villages": [
+                        "Hanamkonda",
+                        "Lashkar Singaram"
+                    ]
+                },
+                {
+                    "name": "Kazipet",
+                    "villages": [
+                        "Kazipet",
+                        "Madikonda"
+                    ]
+                },
+                {
+                    "name": "Dharmasagar",
+                    "villages": [
+                        "Dharmasagar",
+                        "Peddapendyala"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Hyderabad",
+            "mandals": [
+                {
+                    "name": "Amberpet",
+                    "villages": [
+                        "Amberpet"
+                    ]
+                },
+                {
+                    "name": "Charminar",
+                    "villages": [
+                        "Charminar"
+                    ]
+                },
+                {
+                    "name": "Khairatabad",
+                    "villages": [
+                        "Khairatabad"
+                    ]
+                },
+                {
+                    "name": "Secunderabad",
+                    "villages": [
+                        "Secunderabad"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Jagtial",
+            "mandals": [
+                {
+                    "name": "Jagtial",
+                    "villages": [
+                        "Jagtial",
+                        "Dharur"
+                    ]
+                },
+                {
+                    "name": "Korutla",
+                    "villages": [
+                        "Korutla",
+                        "Yousufnagar"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Jangaon",
+            "mandals": [
+                {
+                    "name": "Jangaon",
+                    "villages": [
+                        "Jangaon",
+                        "Yeshwanthapur"
+                    ]
+                },
+                {
+                    "name": "Ghanpur (Station)",
+                    "villages": [
+                        "Ghanpur",
+                        "Chagallu"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Jayashankar Bhupalpally",
+            "mandals": [
+                {
+                    "name": "Bhupalpally",
+                    "villages": [
+                        "Bhupalpally",
+                        "Ghanpur"
+                    ]
+                },
+                {
+                    "name": "Ghanpur (Mulug)",
+                    "villages": [
+                        "Ghanpur",
+                        "Kondaparthy"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Jogulamba Gadwal",
+            "mandals": [
+                {
+                    "name": "Gadwal",
+                    "villages": [
+                        "Gadwal",
+                        "Priyadarshini Jurala Project"
+                    ]
+                },
+                {
+                    "name": "Alampur",
+                    "villages": [
+                        "Alampur",
+                        "Bukkapur"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Kamareddy",
+            "mandals": [
+                {
+                    "name": "Kamareddy",
+                    "villages": [
+                        "Kamareddy",
+                        "Adloor"
+                    ]
+                },
+                {
+                    "name": "Banswada",
+                    "villages": [
+                        "Banswada",
+                        "Desaipet"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Karimnagar",
+            "mandals": [
+                {
+                    "name": "Karimnagar",
+                    "villages": [
+                        "Karimnagar",
+                        "Arepally"
+                    ]
+                },
+                {
+                    "name": "Manakondur",
+                    "villages": [
+                        "Manakondur",
+                        "Chenjarla"
+                    ]
+                },
+                {
+                    "name": "Huzurabad",
+                    "villages": [
+                        "Huzurabad",
+                        "Singapur"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Khammam",
+            "mandals": [
+                {
+                    "name": "Khammam (Urban)",
+                    "villages": [
+                        "Khammam"
+                    ]
+                },
+                {
+                    "name": "Khammam (Rural)",
+                    "villages": [
+                        "Gollapadu",
+                        "M.Venkataipalem"
+                    ]
+                },
+                {
+                    "name": "Sathupally",
+                    "villages": [
+                        "Sathupally",
+                        "Yerragunta"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Kumuram Bheem Asifabad",
+            "mandals": [
+                {
+                    "name": "Asifabad",
+                    "villages": [
+                        "Asifabad",
+                        "Janakapur"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Mahabubabad",
+            "mandals": [
+                {
+                    "name": "Mahabubabad",
+                    "villages": [
+                        "Mahabubabad",
+                        "Jamandlapally"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Mahabubnagar",
+            "mandals": [
+                {
+                    "name": "Mahabubnagar (Urban)",
+                    "villages": [
+                        "Mahabubnagar"
+                    ]
+                },
+                {
+                    "name": "Jadcherla",
+                    "villages": [
+                        "Jadcherla",
+                        "Badepalle"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Mancherial",
+            "mandals": [
+                {
+                    "name": "Mancherial",
+                    "villages": [
+                        "Mancherial",
+                        "Naspur"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Medak",
+            "mandals": [
+                {
+                    "name": "Medak",
+                    "villages": [
+                        "Medak",
+                        "Rayinipally"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Medchal-Malkajgiri",
+            "mandals": [
+                {
+                    "name": "Malkajgiri",
+                    "villages": [
+                        "Malkajgiri"
+                    ]
+                },
+                {
+                    "name": "Kukatpally",
+                    "villages": [
+                        "Kukatpally"
+                    ]
+                },
+                {
+                    "name": "Medchal",
+                    "villages": [
+                        "Medchal"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Mulugu",
+            "mandals": [
+                {
+                    "name": "Mulugu",
+                    "villages": [
+                        "Mulugu",
+                        "Bandarupally"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Nagarkurnool",
+            "mandals": [
+                {
+                    "name": "Nagarkurnool",
+                    "villages": [
+                        "Nagarkurnool",
+                        "Uyyalawada"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Nalgonda",
+            "mandals": [
+                {
+                    "name": "Nalgonda",
+                    "villages": [
+                        "Nalgonda",
+                        "Arjalabavi",
+                        "Cherlapally",
+                        "Gandhamvarigudem",
+                        "Marroguda"
+                    ]
+                },
+                {
+                    "name": "Chityala",
+                    "villages": [
+                        "Chityala",
+                        "Peddakaparthy",
+                        "Veliminedu",
+                        "Gundlapally",
+                        "Aitipamula",
+                        "Vattimarthy"
+                    ]
+                },
+                {
+                    "name": "Narketpalle",
+                    "villages": [
+                        "Narketpalle",
+                        "Chervugattu",
+                        "Yellareddyguda",
+                        "Nemmani"
+                    ]
+                },
+                {
+                    "name": "Nakrekal",
+                    "villages": [
+                        "Nakrekal",
+                        "Chandupatla",
+                        "Kadaliguda"
+                    ]
+                },
+                {
+                    "name": "Kakatipally",
+                    "villages": [
+                        "Kakatipally"
+                    ]
+                },
+                {
+                    "name": "Munugode",
+                    "villages": [
+                        "Munugode",
+                        "Kompally"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Narayanpet",
+            "mandals": [
+                {
+                    "name": "Narayanpet",
+                    "villages": [
+                        "Narayanpet"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Nirmal",
+            "mandals": [
+                {
+                    "name": "Nirmal",
+                    "villages": [
+                        "Nirmal"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Nizamabad",
+            "mandals": [
+                {
+                    "name": "Nizamabad (South)",
+                    "villages": [
+                        "Nizamabad"
+                    ]
+                },
+                {
+                    "name": "Armoor",
+                    "villages": [
+                        "Armoor"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Peddapalli",
+            "mandals": [
+                {
+                    "name": "Peddapalli",
+                    "villages": [
+                        "Peddapalli"
+                    ]
+                },
+                {
+                    "name": "Ramagundam",
+                    "villages": [
+                        "Ramagundam"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Rajanna Sircilla",
+            "mandals": [
+                {
+                    "name": "Sircilla",
+                    "villages": [
+                        "Sircilla"
+                    ]
+                },
+                {
+                    "name": "Vemulawada",
+                    "villages": [
+                        "Vemulawada"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Ranga Reddy",
+            "mandals": [
+                {
+                    "name": "Maheshwaram",
+                    "villages": [
+                        "Maheshwaram",
+                        "Ammarpally"
+                    ]
+                },
+                {
+                    "name": "Rajendranagar",
+                    "villages": [
+                        "Rajendranagar"
+                    ]
+                },
+                {
+                    "name": "Serilingampally",
+                    "villages": [
+                        "Serilingampally"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Sangareddy",
+            "mandals": [
+                {
+                    "name": "Sangareddy",
+                    "villages": [
+                        "Sangareddy"
+                    ]
+                },
+                {
+                    "name": "Patancheru",
+                    "villages": [
+                        "Patancheru"
+                    ]
+                },
+                {
+                    "name": "Zaheerabad",
+                    "villages": [
+                        "Zaheerabad"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Siddipet",
+            "mandals": [
+                {
+                    "name": "Siddipet (Urban)",
+                    "villages": [
+                        "Siddipet"
+                    ]
+                },
+                {
+                    "name": "Siddipet (Rural)",
+                    "villages": [
+                        "Chintamadaka"
+                    ]
+                },
+                {
+                    "name": "Gajwel",
+                    "villages": [
+                        "Gajwel",
+                        "Pragnapur"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Suryapet",
+            "mandals": [
+                {
+                    "name": "Suryapet",
+                    "villages": [
+                        "Suryapet",
+                        "Kesaram"
+                    ]
+                },
+                {
+                    "name": "Kodad",
+                    "villages": [
+                        "Kodad"
+                    ]
+                },
+                {
+                    "name": "Huzurnagar",
+                    "villages": [
+                        "Huzurnagar",
+                        "Amaravaram",
+                        "Burugugudem",
+                        "Gopalapuram"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Vikarabad",
+            "mandals": [
+                {
+                    "name": "Vikarabad",
+                    "villages": [
+                        "Vikarabad"
+                    ]
+                },
+                {
+                    "name": "Tandur",
+                    "villages": [
+                        "Tandur"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Wanaparthy",
+            "mandals": [
+                {
+                    "name": "Wanaparthy",
+                    "villages": [
+                        "Wanaparthy"
+                    ]
+                },
+                {
+                    "name": "Kothakota",
+                    "villages": [
+                        "Kothakota"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Warangal",
+            "mandals": [
+                {
+                    "name": "Warangal",
+                    "villages": [
+                        "Warangal"
+                    ]
+                },
+                {
+                    "name": "Narsampet",
+                    "villages": [
+                        "Narsampet"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Yadadri Bhuvanagiri",
+            "mandals": [
+                {
+                    "name": "Bhongir",
+                    "villages": [
+                        "Bhongir",
+                        "Rayagiri"
+                    ]
+                },
+                {
+                    "name": "Choutuppal",
+                    "villages": [
+                        "Choutuppal"
+                    ]
+                },
+                {
+                    "name": "Yadagirigutta",
+                    "villages": [
+                        "Yadagirigutta"
+                    ]
+                }
+            ]
+        }
+    ]
+}

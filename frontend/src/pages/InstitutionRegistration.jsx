@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import API from '../api';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     FaThLarge, FaUsers, FaBuilding, FaExclamationTriangle, FaFileAlt,
@@ -36,7 +37,7 @@ const TypeCard = ({ icon: Icon, label, selected, onClick, color }) => (
     </div>
 );
 
-const FormInput = ({ label, placeholder, required }) => (
+const FormInput = ({ label, placeholder, required, value, onChange }) => (
     <div className="flex-1">
         <label className="block text-xs font-bold text-gray-700 mb-1.5">
             {label} {required && <span className="text-red-500">*</span>}
@@ -45,6 +46,8 @@ const FormInput = ({ label, placeholder, required }) => (
             type="text"
             placeholder={placeholder}
             className="w-full px-4 py-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all bg-white"
+            value={value}
+            onChange={onChange}
         />
     </div>
 );
@@ -55,6 +58,26 @@ const InstitutionRegistration = () => {
     const [dragActive, setDragActive] = useState(false);
     const [uploadedFiles, setUploadedFiles] = useState([]);
     const fileInputRef = React.useRef(null);
+    const [formData, setFormData] = useState({});
+
+    // Handle Submit
+    const handleSubmit = async () => {
+        try {
+            if (!selectedType || !formData.name) return alert('Please key in all required fields');
+
+            const payload = {
+                ...formData,
+                type: selectedType,
+                // servicesOffered: [] // map services checkboxes later
+            };
+
+            await API.post('/institutions', payload);
+            alert('Institution Registered Successfully');
+            navigate('/admin/institutions');
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    };
 
     const institutionTypes = [
         { id: 'hospital', label: 'Hospital', icon: FaHeartbeat, color: 'text-red-500' },
@@ -212,7 +235,10 @@ const InstitutionRegistration = () => {
                             <h2 className="text-lg font-bold text-gray-800 mb-6">Institution Details</h2>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                <FormInput label="Institution Name" placeholder="Enter institution name" required />
+                                <FormInput label="Institution Name" required
+                                    value={formData.name || ''}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                />
 
                                 <div className="flex-1">
                                     <label className="block text-xs font-bold text-gray-700 mb-1.5">
@@ -222,12 +248,17 @@ const InstitutionRegistration = () => {
                                         rows="1"
                                         placeholder="Enter complete address"
                                         className="w-full px-4 py-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all bg-white resize-none h-[46px]"
+                                        value={formData.fullAddress || ''}
+                                        onChange={(e) => setFormData({ ...formData, fullAddress: e.target.value })}
                                     ></textarea>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                <FormInput label="Owner/Administrator" placeholder="Enter owner or administrator name" required />
+                                <FormInput label="Owner/Administrator" required
+                                    value={formData.ownerName || ''}
+                                    onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
+                                />
 
                                 <div className="flex-1">
                                     <label className="block text-xs font-bold text-gray-700 mb-1.5">Google Maps Pin</label>
@@ -245,9 +276,18 @@ const InstitutionRegistration = () => {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                <FormInput label="Mobile Number" placeholder="Enter mobile number" required />
-                                <FormInput label="WhatsApp Number" placeholder="Enter WhatsApp number (optional)" />
-                                <FormInput label="MEWS Member Discount (%)" placeholder="Enter discount percentage" />
+                                <FormInput label="Mobile Number" required
+                                    value={formData.mobileNumber || ''}
+                                    onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
+                                />
+                                <FormInput label="WhatsApp Number"
+                                    value={formData.whatsappNumber || ''}
+                                    onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
+                                />
+                                <FormInput label="MEWS Member Discount (%)"
+                                    value={formData.mewsDiscountPercentage || ''}
+                                    onChange={(e) => setFormData({ ...formData, mewsDiscountPercentage: e.target.value })}
+                                />
                             </div>
 
                             {/* Services Checkboxes */}
@@ -320,7 +360,7 @@ const InstitutionRegistration = () => {
                                 <button onClick={() => navigate(-1)} className="flex-1 sm:flex-none px-6 py-2.5 border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 text-sm transition">
                                     Cancel
                                 </button>
-                                <button className="flex-1 sm:flex-none px-6 py-2.5 bg-[#1e2a4a] text-white font-bold rounded-lg hover:bg-[#2a3b66] text-sm transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
+                                <button onClick={handleSubmit} className="flex-1 sm:flex-none px-6 py-2.5 bg-[#1e2a4a] text-white font-bold rounded-lg hover:bg-[#2a3b66] text-sm transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
                                     <FaCheck size={12} /> Submit Institution
                                 </button>
                             </div>

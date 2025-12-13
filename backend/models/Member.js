@@ -8,21 +8,31 @@ const MemberSchema = new mongoose.Schema({
     dob: { type: Date },
     age: { type: Number },
     gender: { type: String, enum: ['Male', 'Female', 'Other'] },
-    mobileNumber: { type: String, required: true },
+    mobileNumber: { type: String }, // Made optional per request for testing
     bloodGroup: { type: String },
     email: { type: String },
     alternateMobile: { type: String },
-    aadhaarNumber: { type: String, unique: true }, // Should be encrypted/hashed in real world, keeping simple for now per specs
+    aadhaarNumber: { type: String, unique: true, sparse: true }, // Sparse allows multiple documents to have no value
 
     // B. Address Details
     address: {
         houseNumber: String,
         street: String,
-        village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' }, // Link to Village Location
-        mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
-        district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        village: { type: mongoose.Schema.Types.Mixed }, // Allow String or ObjectId
+        mandal: { type: mongoose.Schema.Types.Mixed }, // Allow String or ObjectId
+        district: { type: mongoose.Schema.Types.Mixed }, // Allow String or ObjectId
         pinCode: String,
         residencyType: String // e.g., Owned, Rented
+    },
+
+    permanentAddress: {
+        houseNumber: String,
+        street: String,
+        village: { type: mongoose.Schema.Types.Mixed },
+        mandal: { type: mongoose.Schema.Types.Mixed },
+        district: { type: mongoose.Schema.Types.Mixed },
+        pinCode: String,
+        landmark: String
     },
 
     // C. Caste & Community
@@ -57,28 +67,28 @@ const MemberSchema = new mongoose.Schema({
 
     // F. Ration Card
     rationCard: {
-        number: String,
-        type: String,
-        holderName: String,
-        fileUrl: String
+        number: { type: String, default: '' },
+        type: { type: String, default: '' },
+        holderName: { type: String, default: '' },
+        fileUrl: { type: String, default: '' }
     },
 
     // G. Voter ID
     voterId: {
-        epicNumber: String,
-        nameOnCard: String,
-        pollingBooth: String,
-        fileUrl: String
+        epicNumber: { type: String, default: '' },
+        nameOnCard: { type: String, default: '' },
+        pollingBooth: { type: String, default: '' },
+        fileUrl: { type: String, default: '' }
     },
 
     // H. Bank Account
     bankDetails: {
-        bankName: String,
-        branchName: String,
-        accountNumber: String,
-        ifscCode: String,
-        holderName: String,
-        passbookUrl: String
+        bankName: { type: String, default: '' },
+        branchName: { type: String, default: '' },
+        accountNumber: { type: String, default: '' },
+        ifscCode: { type: String, default: '' },
+        holderName: { type: String, default: '' },
+        passbookUrl: { type: String, default: '' }
     },
 
     // I. Other Docs

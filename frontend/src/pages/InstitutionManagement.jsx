@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import API from '../api';
 import { Link } from 'react-router-dom';
 import {
     FaThLarge, FaUsers, FaBuilding, FaExclamationTriangle, FaFileAlt,
@@ -16,7 +17,7 @@ const SidebarItem = ({ icon: Icon, label, active, to }) => (
     </Link>
 );
 
-const InstitutionCard = ({ icon: Icon, name, type, status, address, stats, phone, color }) => (
+const InstitutionCard = ({ icon: Icon, id, name, type, status, address, stats, phone, color }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
         <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-4">
@@ -50,87 +51,43 @@ const InstitutionCard = ({ icon: Icon, name, type, status, address, stats, phone
         </div>
 
         <div className="flex gap-3">
-            <button className="flex-1 bg-[#1e2a4a] text-white text-xs font-bold py-2 rounded-lg hover:bg-[#2a3b66] transition flex items-center justify-center gap-2">
+            <Link to={`/admin/institutions/${id}`} className="flex-1 bg-[#1e2a4a] text-white text-xs font-bold py-2 rounded-lg hover:bg-[#2a3b66] transition flex items-center justify-center gap-2">
                 <FaEye /> View Details
-            </button>
-            <button className="flex-1 border border-gray-200 text-gray-600 text-xs font-bold py-2 rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2">
+            </Link>
+            <Link to={`/admin/institutions/edit/${id}`} className="flex-1 border border-gray-200 text-gray-600 text-xs font-bold py-2 rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2">
                 <FaEdit /> Edit
-            </button>
+            </Link>
         </div>
     </div>
 );
 
 const InstitutionManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [institutions, setInstitutions] = useState([]);
 
-    const institutions = [
-        {
-            id: 1,
-            name: "Peddakaparthy Primary School",
-            type: "Educational Institution",
-            status: "Active",
-            address: "School Road, Peddakaparthy",
-            stats: "248 Students | 12 Staff",
-            phone: "+91 98765 43210",
-            icon: FaSchool,
-            color: "bg-blue-600"
-        },
-        {
-            id: 2,
-            name: "Village Health Center",
-            type: "Healthcare Institution",
-            status: "Active",
-            address: "Main Street, Peddakaparthy",
-            stats: "2 Doctors | 5 Nurses",
-            phone: "+91 98765 43211",
-            icon: FaHeartbeat,
-            color: "bg-red-500"
-        },
-        {
-            id: 3,
-            name: "Gram Panchayat Office",
-            type: "Government Institution",
-            status: "Active",
-            address: "Government Complex, Peddakaparthy",
-            stats: "8 Officials | 4 Clerks",
-            phone: "+91 98765 43212",
-            icon: FaLandmark,
-            color: "bg-indigo-600"
-        },
-        {
-            id: 4,
-            name: "Police Station",
-            type: "Security Institution",
-            status: "Active",
-            address: "Police Line, Peddakaparthy",
-            stats: "1 Inspector | 6 Constables",
-            phone: "+91 98765 43213",
-            icon: FaShieldAlt,
-            color: "bg-slate-700"
-        },
-        {
-            id: 5,
-            name: "Community Center",
-            type: "Community Institution",
-            status: "Maintenance",
-            address: "Center Square, Peddakaparthy",
-            stats: "2 Coordinators | 3 Staff",
-            phone: "+91 98765 43214",
-            icon: FaHome,
-            color: "bg-orange-500"
-        },
-        {
-            id: 6,
-            name: "Cooperative Bank",
-            type: "Financial Institution",
-            status: "Active",
-            address: "Market Street, Peddakaparthy",
-            stats: "1 Manager | 4 Clerks",
-            phone: "+91 98765 43215",
-            icon: FaMoneyBillWave,
-            color: "bg-emerald-600"
-        }
-    ];
+    useEffect(() => {
+        const fetchInstitutions = async () => {
+            try {
+                const { data } = await API.get('/institutions');
+                // Map backend data to frontend card format
+                const mapped = data.map(inst => ({
+                    id: inst._id,
+                    name: inst.name,
+                    type: inst.type,
+                    status: inst.verificationStatus === 'APPROVED' ? 'Active' : inst.verificationStatus === 'PENDING' ? 'Pending' : 'Inactive',
+                    address: inst.fullAddress,
+                    stats: inst.mobileNumber, // placeholder
+                    phone: inst.mobileNumber,
+                    icon: FaSchool, // default
+                    color: "bg-blue-600"
+                }));
+                setInstitutions(mapped);
+            } catch (error) {
+                console.error("Failed to fetch institutions", error);
+            }
+        };
+        fetchInstitutions();
+    }, []);
 
     return (
         <div className="min-h-screen bg-[#f3f4f6] font-sans flex flex-col">
