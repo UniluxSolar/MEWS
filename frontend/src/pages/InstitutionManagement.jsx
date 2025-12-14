@@ -8,14 +8,9 @@ import {
     FaPlus, FaDownload, FaSchool, FaHeartbeat, FaLandmark,
     FaHome, FaMoneyBillWave, FaMapMarkerAlt, FaPhoneAlt, FaEye, FaEdit
 } from 'react-icons/fa';
+import AdminSidebar from '../components/AdminSidebar';
 
-// Sidebar Components (Reused for consistency)
-const SidebarItem = ({ icon: Icon, label, active, to }) => (
-    <Link to={to || '#'} className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-colors mb-1 ${active ? 'bg-[#1e2a4a] text-white font-bold' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 font-medium'}`}>
-        <Icon size={18} className={active ? 'text-white' : 'text-gray-400'} />
-        <span className="text-sm">{label}</span>
-    </Link>
-);
+
 
 const InstitutionCard = ({ icon: Icon, id, name, type, status, address, stats, phone, color }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
@@ -132,26 +127,7 @@ const InstitutionManagement = () => {
 
             <div className="flex flex-1 overflow-hidden">
                 {/* Sidebar */}
-                <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col overflow-y-auto">
-                    <div className="p-4 space-y-1">
-                        <SidebarItem to="/admin/dashboard" icon={FaThLarge} label="Village Dashboard" />
-                        <SidebarItem to="/admin/members" icon={FaUsers} label="Member Management" />
-                        <SidebarItem to="/admin/institutions" icon={FaBuilding} label="Institution Management" active={true} />
-                        <SidebarItem to="/admin/sos" icon={FaExclamationTriangle} label="SOS Management" />
-                        <SidebarItem icon={FaFileAlt} label="Reports & Analytics" />
-                        <SidebarItem icon={FaHandHoldingUsd} label="Funding Requests" />
-                        <SidebarItem icon={FaChartLine} label="Activity Logs" />
-                        <SidebarItem icon={FaCog} label="Village Settings" />
-                        <SidebarItem icon={FaQuestionCircle} label="Help & Support" />
-                        <SidebarItem icon={FaBullhorn} label="Announcements" />
-                    </div>
-                    <div className="mt-auto p-4 border-t border-gray-100">
-                        <Link to="/admin/login" className="flex items-center gap-3 px-4 py-2 text-red-600 cursor-pointer hover:bg-red-50 rounded-lg transition-colors font-medium text-sm">
-                            <FaSignOutAlt />
-                            <span>Logout</span>
-                        </Link>
-                    </div>
-                </aside>
+                <AdminSidebar activePage="institutions" />
 
                 {/* Main Content */}
                 <main className="flex-1 overflow-y-auto p-4 md:p-8">

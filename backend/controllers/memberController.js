@@ -1,6 +1,7 @@
 const Member = require('../models/Member');
 const Location = require('../models/Location');
 const asyncHandler = require('express-async-handler');
+const mongoose = require('mongoose');
 
 // @desc    Register a member (Admin or Self)
 // @route   POST /api/members
@@ -147,10 +148,30 @@ const registerMember = asyncHandler(async (req, res) => {
         };
 
         const member = await Member.create(memberData);
-        res.status(201).json(member);
+
+        // --- POST-REGISTRATION ACTIONS ---
+        // 1. Generate Username (e.g. MEWS ID or Mobile)
+        const username = member.mewsId; // or mobileNumber
+
+        // 2. Generate Reset Link (Mock - in real app, generate a JWT token)
+        const resetLink = `${req.protocol}://${req.get('host')}/reset-password?user=${member.mewsId}`;
+
+        // 3. Send SMS
+        const { sendWelcomeSMS } = require('../utils/smsService');
+        await sendWelcomeSMS(member.mobileNumber, username, resetLink);
+
+        console.log(`[REG] Member Created: ${member.mewsId}, SMS Sent.`);
+
+        // Populate for frontend (ID Card)
+        const populatedMember = await Member.findById(member._id)
+            .populate('address.district')
+            .populate('address.mandal')
+            .populate('address.village');
+
+        res.status(201).json(populatedMember);
     } catch (error) {
-        console.error("REGISTER MEMBER ERROR:", error);
-        res.status(500).json({ message: error.message });
+        console.error(error);
+        res.status(400).json({ message: error.message });
     }
 });
 
@@ -160,20 +181,47 @@ const registerMember = asyncHandler(async (req, res) => {
 const getMembers = asyncHandler(async (req, res) => {
     let query = {};
 
-    // Filter by assigned location if user has one
-    // Filter by assigned location if user has one
-    // Filter by assigned location if user has one
+    // Filter by assigned location    // Filter by assigned location if user has an assigned location
     if (req.user && req.user.assignedLocation) {
-        // Use ObjectId directly (Mixed type field holds ObjectId)
-        const locationId = req.user.assignedLocation;
+        console.log(`[GET MEMBERS] User: ${req.user.username}, Role: ${req.user.role}, AssignedLoc: ${req.user.assignedLocation}`);
 
-        if (req.user.role === 'VILLAGE_ADMIN') {
-            query['address.village'] = locationId;
-        } else if (req.user.role === 'MANDAL_ADMIN') {
-            query['address.mandal'] = locationId;
-        } else if (req.user.role === 'DISTRICT_ADMIN') {
-            query['address.district'] = locationId;
+        const locationId = req.user.assignedLocation;
+        // Fetch location details to get the Name for fallback/string matching
+        const locationDoc = await Location.findById(locationId);
+
+        if (locationDoc) {
+            // RELAXED MATCH: Removed ^ and $ to match Dashboard's "Contains" logic
+            // This ensures if DB has "Peddakaparthy" or "Peddakaparthy Village", both show up.
+            const locNameRegex = new RegExp(locationDoc.name, 'i');
+            console.log(`[GET MEMBERS] Found Location Doc: ${locationDoc.name}, Regex: ${locNameRegex}`);
+
+            if (req.user.role === 'VILLAGE_ADMIN') {
+                // Match ID or Name (String)
+                query['$or'] = [
+                    { 'address.village': locationId },
+                    { 'address.village': locNameRegex }
+                ];
+            } else if (req.user.role === 'MANDAL_ADMIN') {
+                query['$or'] = [
+                    { 'address.mandal': locationId },
+                    { 'address.mandal': locNameRegex }
+                ];
+            } else if (req.user.role === 'DISTRICT_ADMIN') {
+                query['$or'] = [
+                    { 'address.district': locationId },
+                    { 'address.district': locNameRegex }
+                ];
+            }
+            console.log(`[GET MEMBERS] Query applied:`, JSON.stringify(query));
+        } else {
+            // Fallback if location doc not found (shouldn't happen for valid admins)
+            console.warn("[GET MEMBERS] Admin has assignedLocation ID but doc not found in DB");
+            if (req.user.role === 'VILLAGE_ADMIN') query['address.village'] = locationId;
+            else if (req.user.role === 'MANDAL_ADMIN') query['address.mandal'] = locationId;
+            else if (req.user.role === 'DISTRICT_ADMIN') query['address.district'] = locationId;
         }
+    } else {
+        console.log(`[GET MEMBERS] No specific location filter applied. Role: ${req.user?.role}`);
     }
 
     const members = await Member.find(query).sort({ createdAt: -1 });

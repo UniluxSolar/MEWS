@@ -26,10 +26,24 @@ const getLocations = asyncHandler(async (req, res) => {
         query.type = 'STATE';
     }
 
-    const locations = await Location.find(query).select('name _id type').sort('name');
+    const locations = await Location.find(query).select('name _id type pincode').sort('name');
     res.json(locations);
 });
 
+// @desc    Get single location by ID
+// @route   GET /api/locations/:id
+// @access  Public
+const getLocationById = asyncHandler(async (req, res) => {
+    const location = await Location.findById(req.params.id);
+    if (location) {
+        res.json(location);
+    } else {
+        res.status(404);
+        throw new Error('Location not found');
+    }
+});
+
 module.exports = {
-    getLocations
+    getLocations,
+    getLocationById
 };

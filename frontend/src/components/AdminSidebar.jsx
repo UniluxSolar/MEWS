@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     FaThLarge, FaUsers, FaBuilding, FaExclamationTriangle,
-    FaFileAlt, FaHandHoldingUsd, FaSignOutAlt
+    FaFileAlt, FaHandHoldingUsd, FaSignOutAlt, FaChartLine, FaCog, FaQuestionCircle, FaBullhorn
 } from 'react-icons/fa';
 
 const SidebarItem = ({ icon: Icon, label, active, to }) => (
@@ -33,18 +33,24 @@ const AdminSidebar = ({ activePage }) => {
     };
 
     return (
-        <aside className="w-64 bg-white border-r border-gray-200 hidden xl:block min-h-[calc(100vh-64px)] p-4 space-y-1">
-            <SidebarItem to="/admin/dashboard" icon={FaThLarge} label={roleLabel} active={activePage === 'dashboard'} />
-            <SidebarItem to="/admin/members" icon={FaUsers} label="Member Management" active={activePage === 'members'} />
-            <SidebarItem to="/admin/institutions" icon={FaBuilding} label="Institution Management" active={activePage === 'institutions'} />
-            <SidebarItem to="/admin/sos" icon={FaExclamationTriangle} label="SOS Management" active={activePage === 'sos'} />
-            <SidebarItem to="/admin/funding" icon={FaHandHoldingUsd} label="Funding Requests" active={activePage === 'funding'} />
-            <SidebarItem to="/admin/reports" icon={FaFileAlt} label="Reports & Analytics" active={activePage === 'reports'} />
+        <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col overflow-y-auto min-h-[calc(100vh-64px)]">
+            <div className="p-4 space-y-1">
+                <SidebarItem to="/admin/dashboard" icon={FaThLarge} label={roleLabel} active={activePage === 'dashboard'} />
+                <SidebarItem to="/admin/members" icon={FaUsers} label="Member Management" active={activePage === 'members'} />
+                <SidebarItem to="/admin/institutions" icon={FaBuilding} label="Institution Management" active={activePage === 'institutions'} />
+                <SidebarItem to="/admin/sos" icon={FaExclamationTriangle} label="SOS Management" active={activePage === 'sos'} />
+                <SidebarItem to="/admin/funding" icon={FaHandHoldingUsd} label="Funding Requests" active={activePage === 'funding'} />
+                <SidebarItem to="/admin/reports" icon={FaFileAlt} label="Reports & Analytics" active={activePage === 'reports'} />
+                <SidebarItem icon={FaChartLine} label="Activity Logs" />
+                <SidebarItem icon={FaCog} label="Village Settings" />
+                <SidebarItem icon={FaQuestionCircle} label="Help & Support" />
+                <SidebarItem icon={FaBullhorn} label="Announcements" />
+            </div>
 
-            <div className="pt-8 mt-8 border-t border-gray-100">
-                <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition w-full text-left">
+            <div className="mt-auto p-4 border-t border-gray-100">
+                <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-2 text-red-600 cursor-pointer hover:bg-red-50 rounded-lg transition-colors font-medium text-sm w-full text-left">
                     <FaSignOutAlt />
-                    <span className="text-sm font-medium">Logout</span>
+                    <span>Logout</span>
                 </button>
             </div>
         </aside>

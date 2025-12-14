@@ -28,7 +28,7 @@ const ConnectNavbar = () => {
                                 Member Login
                             </Link>
                             <Link to="/register" className="px-3 py-1.5 bg-[#f59e0b] text-white rounded font-bold hover:bg-amber-600 transition shadow-sm">
-                                Register
+                                Institution Login
                             </Link>
                             <Link to="/admin/login" className="px-3 py-1.5 bg-gray-700 text-white rounded font-bold hover:bg-gray-600 transition shadow-sm">
                                 Admin Login

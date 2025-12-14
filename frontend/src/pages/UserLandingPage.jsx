@@ -2,7 +2,6 @@ import React from 'react';
 import ConnectNavbar from '../components/ConnectNavbar';
 import ConnectHero from '../components/ConnectHero';
 import ImpactDashboard from '../components/ImpactDashboard';
-import StatsSummary from '../components/StatsSummary';
 import Campaigns from '../components/Campaigns';
 import ConnectFooter from '../components/ConnectFooter';
 import {
@@ -272,7 +271,6 @@ const UserLandingPage = () => {
             <main className="space-y-0">
                 <ConnectHero />
                 <ImpactDashboard />
-                <StatsSummary />
                 <Campaigns />
                 <CommunitySupportHub />
             </main>

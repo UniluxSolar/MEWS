@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import API from '../api';
+import subCastes from '../utils/subCastes.json';
+import partnerCastes from '../utils/partnerCastes.json';
+import casteSubCastes from '../utils/casteSubCastes.json';
 import {
     FaArrowLeft, FaShieldAlt, FaSave, FaIdCard, FaMapMarkerAlt,
     FaUsers, FaUniversity, FaVoteYea, FaCreditCard, FaRing, FaScroll
@@ -76,10 +79,10 @@ const EditMember = () => {
         presentVillage: '', presentMandal: '', presentDistrict: '', // Display only
 
         // C. Caste
-        caste: '', subCaste: '', communityCertNumber: '',
+        caste: 'MALA', subCaste: '', communityCertNumber: '',
 
         // D. Partner
-        partnerName: '', partnerCaste: '', partnerSubCaste: '', partnerMarriageCert: '',
+        partnerName: '', partnerCaste: '', partnerSubCaste: '', partnerMarriageCert: '', isInterCaste: '',
 
         // E. Family & Econ
         fatherOccupation: '', motherOccupation: '', annualIncome: '',
@@ -131,6 +134,7 @@ const EditMember = () => {
                     partnerName: data.partnerDetails?.name || '',
                     partnerCaste: data.partnerDetails?.caste || '',
                     partnerSubCaste: data.partnerDetails?.subCaste || '',
+                    isInterCaste: data.partnerDetails?.isInterCaste ? 'Yes' : 'No', // Convert boolean to string for radio
                     partnerMarriageCert: data.partnerDetails?.marriageCertNumber || '',
 
                     // Family
@@ -168,6 +172,20 @@ const EditMember = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+
+        // Validation Logic
+        if (name === 'mobile' || name === 'alternateMobile') {
+            // Only allow digits and max 10
+            if (!/^\d*$/.test(value)) return;
+            if (value.length > 10) return;
+        }
+
+        if (name === 'aadhaarNumber') {
+            // Only allow digits and max 12
+            if (!/^\d*$/.test(value)) return;
+            if (value.length > 12) return;
+        }
+
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
@@ -204,6 +222,7 @@ const EditMember = () => {
 
                 partnerDetails: {
                     name: formData.partnerName,
+                    isInterCaste: formData.isInterCaste === 'Yes', // Convert string back to Boolean
                     caste: formData.partnerCaste,
                     subCaste: formData.partnerSubCaste,
                     marriageCertNumber: formData.partnerMarriageCert
@@ -302,8 +321,8 @@ const EditMember = () => {
                         {/* 3. Family & Caste */}
                         <SectionHeader title="Family & Community" icon={FaUsers} />
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <FormInput label="Caste" name="caste" value={formData.caste} onChange={handleChange} />
-                            <FormInput label="Sub-Caste" name="subCaste" value={formData.subCaste} onChange={handleChange} />
+                            <FormSelect label="Caste" name="caste" value={formData.caste} onChange={handleChange} options={['MALA']} />
+                            <FormSelect label="Member's Sub-Caste" name="subCaste" value={formData.subCaste} onChange={handleChange} options={subCastes} />
                             <FormInput label="Community Cert No" name="communityCertNumber" value={formData.communityCertNumber} onChange={handleChange} />
 
                             <FormInput label="Father's Occupation" name="fatherOccupation" value={formData.fatherOccupation} onChange={handleChange} />
@@ -318,7 +337,59 @@ const EditMember = () => {
                                 <SectionHeader title="Spouse / Partner Details" icon={FaRing} />
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <FormInput label="Spouse Name" name="partnerName" value={formData.partnerName} onChange={handleChange} />
-                                    <FormInput label="Spouse Caste" name="partnerCaste" value={formData.partnerCaste} onChange={handleChange} />
+                                    <FormSelect
+                                        label="Spouse Caste"
+                                        name="partnerCaste"
+                                        value={formData.partnerCaste}
+                                        onChange={(e) => {
+                                            handleChange(e);
+                                            setFormData(prev => ({ ...prev, partnerSubCaste: '' }));
+                                        }}
+                                        options={partnerCastes}
+                                        disabled={formData.isInterCaste === 'No'}
+                                    />
+                                    <FormSelect
+                                        label="Spouse Sub-Caste"
+                                        name="partnerSubCaste"
+                                        value={formData.partnerSubCaste}
+                                        onChange={handleChange}
+                                        options={formData.partnerCaste ? (casteSubCastes[formData.partnerCaste] || []) : []}
+                                        disabled={!formData.partnerCaste}
+                                    />
+                                    <div className="col-span-1">
+                                        <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Inter-Caste Marriage</label>
+                                        <div className="flex items-center gap-6 mt-3">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="isInterCaste"
+                                                    value="Yes"
+                                                    checked={formData.isInterCaste === 'Yes'}
+                                                    onChange={handleChange}
+                                                    className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                                                />
+                                                <span className="text-sm text-gray-700">Yes</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="isInterCaste"
+                                                    value="No"
+                                                    checked={formData.isInterCaste === 'No'}
+                                                    onChange={(e) => {
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            isInterCaste: 'No',
+                                                            partnerCaste: 'Mala',
+                                                            partnerSubCaste: ''
+                                                        }));
+                                                    }}
+                                                    className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                                                />
+                                                <span className="text-sm text-gray-700">No</span>
+                                            </label>
+                                        </div>
+                                    </div>
                                     <FormInput label="Marriage Cert No" name="partnerMarriageCert" value={formData.partnerMarriageCert} onChange={handleChange} />
                                 </div>
                             </>

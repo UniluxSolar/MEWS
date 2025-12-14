@@ -18,9 +18,9 @@ const MemberSchema = new mongoose.Schema({
     address: {
         houseNumber: String,
         street: String,
-        village: { type: mongoose.Schema.Types.Mixed }, // Allow String or ObjectId
-        mandal: { type: mongoose.Schema.Types.Mixed }, // Allow String or ObjectId
-        district: { type: mongoose.Schema.Types.Mixed }, // Allow String or ObjectId
+        village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         pinCode: String,
         residencyType: String // e.g., Owned, Rented
     },
@@ -28,9 +28,9 @@ const MemberSchema = new mongoose.Schema({
     permanentAddress: {
         houseNumber: String,
         street: String,
-        village: { type: mongoose.Schema.Types.Mixed },
-        mandal: { type: mongoose.Schema.Types.Mixed },
-        district: { type: mongoose.Schema.Types.Mixed },
+        village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         pinCode: String,
         landmark: String
     },

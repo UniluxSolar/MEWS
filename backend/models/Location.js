@@ -1,10 +1,21 @@
 const mongoose = require('mongoose');
 
+const AncestorSchema = new mongoose.Schema({
+    locationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+    name: { type: String },
+    type: { type: String }
+}, { _id: false });
+
 const LocationSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
         trim: true
+    },
+    pincode: {
+        type: String,
+        trim: true,
+        default: ''
     },
     type: {
         type: String,
@@ -17,11 +28,7 @@ const LocationSchema = new mongoose.Schema({
         default: null
     },
     // Optional: Ancestors array for faster queries (Materialized Path pattern)
-    ancestors: [{
-        _id: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
-        name: String,
-        type: String
-    }]
+    ancestors: [AncestorSchema]
 }, {
     timestamps: true
 });

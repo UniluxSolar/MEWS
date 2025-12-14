@@ -15,6 +15,15 @@ module.exports = {
                 500: '#f97316',
                 600: '#ea580c',
                 900: '#7c2d12',
+            },
+            animation: {
+                marquee: 'marquee 25s linear infinite',
+            },
+            keyframes: {
+                marquee: {
+                    '0%': { transform: 'translateX(100%)' },
+                    '100%': { transform: 'translateX(-100%)' },
+                }
             }
         },
         fontFamily: {

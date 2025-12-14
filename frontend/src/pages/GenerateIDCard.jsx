@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import API from '../api';
 import {
     FaSearch, FaShieldAlt, FaBell, FaChevronDown, FaThLarge, FaUsers, FaBuilding,
     FaExclamationTriangle, FaFileAlt, FaHandHoldingUsd, FaChartLine, FaCog,
@@ -41,25 +42,88 @@ const GenerateIDCard = () => {
         validUntil: 'Dec 2025'
     });
 
+
+
+    // ...
+
     // Effect to load data from navigation state (Registration -> Generate ID)
     useEffect(() => {
-        if (location.state && location.state.newMember) {
-            const newMember = location.state.newMember;
-            const generatedId = newMember.mewsId || `MEW${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`;
+        const loadMemberData = async () => {
+            if (location.state && location.state.newMember) {
+                console.log("GenerateIDCard State:", location.state);
+                const newMember = location.state.newMember;
+                const rawData = location.state.rawData || {}; // Fallback data if populated data fails
+                const resolvedNames = location.state.resolvedNames || {};
+                console.log("Raw Data for fallback:", rawData);
 
-            setSelectedMember({
-                name: newMember.name || 'Unknown',
-                surname: newMember.surname || '',
-                id: generatedId,
-                mobile: newMember.mobileNumber || '+91 XXXXX XXXXX',
-                // Handle both full URL from backend or relative path if needed
-                photo: newMember.photoUrl ? (newMember.photoUrl.startsWith('http') ? newMember.photoUrl : `http://localhost:5000${newMember.photoUrl}`) : member2,
-                bloodGroup: newMember.bloodGroup || 'O+',
-                village: newMember.address?.village || 'Unknown',
-                validUntil: getValidUntil()
-            });
-            setSearchTerm(`${newMember.name || ''} ${newMember.surname || ''}`.trim());
-        }
+                const generatedId = newMember.mewsId || `MEW${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`;
+
+                // Helper to resolve name (string ID -> fetch, Object -> use name)
+                const resolveLocationName = async (loc, fallbackId, preResolvedName) => {
+                    // 1. Best: Pre-resolved name passed from previous page
+                    if (preResolvedName) return preResolvedName;
+
+                    // 2. Good: Populated object from backend
+                    if (typeof loc === 'object' && loc && loc.name) return loc.name;
+
+                    // 3. Fallback: Fetch by ID
+                    const idToFetch = (typeof loc === 'string' && loc.length === 24) ? loc : (fallbackId && fallbackId.length === 24 ? fallbackId : null);
+
+                    if (idToFetch) {
+                        try {
+                            const { data } = await API.get(`/locations/${idToFetch}`);
+                            return data.name;
+                        } catch (e) {
+                            console.error("Loc lookup failed", e);
+                            return '';
+                        }
+                    }
+                    return loc || '';
+                };
+
+                const vName = await resolveLocationName(newMember.address?.village, rawData.presentVillage, resolvedNames.village);
+                const mName = await resolveLocationName(newMember.address?.mandal, rawData.presentMandal, resolvedNames.mandal);
+                const dName = await resolveLocationName(newMember.address?.district, rawData.presentDistrict, resolvedNames.district);
+
+                const pincode = newMember.address?.pinCode || resolvedNames.pincode || rawData.presentPincode || '';
+                const houseNo = newMember.address?.houseNumber || resolvedNames.houseNo || rawData.presentHouseNo || '';
+                const street = newMember.address?.street || resolvedNames.street || rawData.presentStreet || '';
+                const landmark = resolvedNames.landmark || rawData.presentLandmark || ''; // Fetch landmark from rawData since it's not in address schema
+
+                // Construct full address properly
+                const addrParts = [];
+                if (houseNo) addrParts.push(`H.No: ${houseNo}`);
+                if (street) addrParts.push(street);
+                if (landmark) addrParts.push(landmark);
+                if (vName) addrParts.push(vName + ' (Vil)');
+                if (mName) addrParts.push(mName + ' (Mdl)');
+                if (dName) addrParts.push(dName + ' (Dist)');
+                addrParts.push('Telangana');
+                if (pincode) addrParts.push(pincode);
+
+                const fullAddress = addrParts.join(', ');
+
+                setSelectedMember({
+                    name: newMember.name || 'Unknown',
+                    surname: newMember.surname || '',
+                    id: generatedId,
+                    mobile: newMember.mobileNumber || '+91 XXXXX XXXXX',
+                    // Handle both full URL from backend or relative path if needed
+                    photo: newMember.photoUrl ? (newMember.photoUrl.startsWith('http') ? newMember.photoUrl : `http://localhost:5000${newMember.photoUrl}`) : member2,
+                    bloodGroup: newMember.bloodGroup || '-',
+                    village: vName || 'Unknown',
+                    mandal: mName || '',
+                    district: dName || '',
+                    fullAddress: fullAddress, // New Field
+                    dob: newMember.dob ? new Date(newMember.dob).toISOString().split('T')[0] : '',
+                    fatherName: newMember.fatherName || '',
+                    validUntil: getValidUntil()
+                });
+                setSearchTerm(`${newMember.name || ''} ${newMember.surname || ''}`.trim());
+            }
+        };
+
+        loadMemberData();
     }, [location.state]);
 
     const handleDownloadPDF = async () => {
@@ -216,14 +280,22 @@ const GenerateIDCard = () => {
                                 </div>
 
                                 {/* Card Header */}
-                                <div className="bg-gradient-to-r from-[#0f172a] to-[#1e2a4a] h-16 flex items-center justify-between px-5 relative z-10">
+                                <div className="bg-gradient-to-r from-[#0f172a] to-[#1e2a4a] h-16 flex items-center justify-between px-5 relative z-10 transition-colors">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center border border-white/20 backdrop-blur-sm shadow-inner">
                                             <FaShieldAlt className="text-blue-100 text-lg" />
                                         </div>
                                         <div>
-                                            <div className="text-white font-bold text-sm leading-tight tracking-wide">GRAM PANCHAYAT</div>
-                                            <div className="text-blue-200 text-[10px] uppercase font-semibold mt-0.5 tracking-wider">Peddakaparthy Village</div>
+                                            {/* Dynamic Gram Panchayat Name */}
+                                            <div className="text-white font-bold text-[10px] leading-tight tracking-wide uppercase">
+                                                {selectedMember.village} GRAM PANCHAYAT
+                                            </div>
+                                            {/* Mandal & District */}
+                                            <div className="text-blue-100 text-[8px] font-semibold mt-0.5 tracking-wide uppercase">
+                                                Mdl: {selectedMember.mandal} | Dist: {selectedMember.district}
+                                            </div>
+                                            {/* MEWS Name */}
+                                            <div className="text-blue-300 text-[7px] font-bold mt-0.5 tracking-wider">Mala Educational Welfare Society (MEWS)</div>
                                         </div>
                                     </div>
                                     <div className="text-right">
@@ -269,6 +341,12 @@ const GenerateIDCard = () => {
                                         <div className="mt-1">
                                             <div className="text-[8px] text-gray-500 uppercase font-bold">Blood Group</div>
                                             <div className="text-[10px] font-bold text-gray-800">{selectedMember.bloodGroup}</div>
+                                        </div>
+
+                                        {/* Full Address */}
+                                        <div className="col-span-2 mt-2 pt-1 border-t border-gray-100">
+                                            <div className="text-[8px] text-gray-500 uppercase font-bold">Address</div>
+                                            <div className="text-[9px] font-semibold text-gray-700 leading-snug">{selectedMember.fullAddress}</div>
                                         </div>
                                     </div>
 

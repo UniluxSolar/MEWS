@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaGraduationCap, FaHeartbeat, FaBalanceScale, FaBriefcase, FaChartLine } from 'react-icons/fa';
+import { FaGraduationCap, FaHeartbeat, FaBalanceScale, FaBriefcase, FaChartLine, FaLayerGroup } from 'react-icons/fa';
 
 const StatCard = ({ icon: Icon, title, color, stats, linkText, borderColor }) => (
     <div className={`bg-white rounded-xl shadow-sm border-t-4 ${borderColor} p-6 h-full flex flex-col`}>
@@ -57,6 +57,13 @@ const ImpactDashboard = () => {
         { value: "3,456", label: "Entrepreneurship", sub: "87% business survival rate" }
     ];
 
+    const welfareStats = [
+        { value: "67,890", label: "Community Services", sub: "Applications processed" },
+        { value: "234", label: "Matrimonial Services", sub: "Community development" },
+        { value: "45,678", label: "Daily Beneficiaries", sub: "Social program meals" },
+        { value: "89", label: "Model Villages", sub: "Across 4 districts" }
+    ];
+
     return (
         <section className="bg-gray-50 py-8 relative z-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -69,7 +76,7 @@ const ImpactDashboard = () => {
                     <div className="w-16 h-1 bg-[#1e2a4a] mx-auto mt-4 rounded-full"></div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                     <StatCard
                         icon={FaGraduationCap}
                         title="Education"
@@ -101,6 +108,14 @@ const ImpactDashboard = () => {
                         borderColor="border-t-yellow-500"
                         stats={jobStats}
                         linkText="View All Employment Programs"
+                    />
+                    <StatCard
+                        icon={FaLayerGroup}
+                        title="Welfare"
+                        color="bg-purple-600"
+                        borderColor="border-t-purple-600"
+                        stats={welfareStats}
+                        linkText="View All Welfare Programs"
                     />
                 </div>
             </div>
