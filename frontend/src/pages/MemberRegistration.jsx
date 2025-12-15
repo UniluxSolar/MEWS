@@ -502,6 +502,7 @@ const MemberRegistration = () => {
 
         // Files
         if (!files.photo) newErrors.photo = "Member Photo is required";
+        if (!files.aadhaarFront) newErrors.aadhaarFront = "Aadhaar Card Front is required";
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -710,19 +711,43 @@ const MemberRegistration = () => {
                                 </div>
                             </div>
 
-                            {/* Files */}
+                            {/* Documents Preview Grid */}
                             <div>
                                 <h3 className="text-lg font-bold text-blue-700 border-b pb-2 mb-4">Uploaded Documents</h3>
-                                <ul className="list-disc pl-5 text-sm text-gray-600 grid grid-cols-1 md:grid-cols-2 gap-2">
-                                    <li><span className="font-bold">Photo:</span> {files.photo ? files.photo.name : 'Not Uploaded'}</li>
-                                    <li><span className="font-bold">Community Cert:</span> {files.communityCert ? files.communityCert.name : 'Not Uploaded'}</li>
-                                    <li><span className="font-bold">Aadhar Front:</span> {files.aadhaarFront ? files.aadhaarFront.name : 'Not Uploaded'}</li>
-                                    <li><span className="font-bold">Aadhar Back:</span> {files.aadhaarBack ? files.aadhaarBack.name : 'Not Uploaded'}</li>
-                                    <li><span className="font-bold">Ration Card:</span> {files.rationCardFile ? files.rationCardFile.name : 'Not Uploaded'}</li>
-                                    <li><span className="font-bold">Voter Front:</span> {files.voterIdFront ? files.voterIdFront.name : 'Not Uploaded'}</li>
-                                    <li><span className="font-bold">Voter Back:</span> {files.voterIdBack ? files.voterIdBack.name : 'Not Uploaded'}</li>
-                                    <li><span className="font-bold">Bank Passbook:</span> {files.bankPassbook ? files.bankPassbook.name : 'Not Uploaded'}</li>
-                                </ul>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {[
+                                        { key: 'photo', label: 'Member Photo' },
+                                        { key: 'communityCert', label: 'Community Cert' },
+                                        { key: 'aadhaarFront', label: 'Aadhaar Front' },
+                                        { key: 'aadhaarBack', label: 'Aadhaar Back' },
+                                        { key: 'rationCardFile', label: 'Ration Card' },
+                                        { key: 'voterIdFront', label: 'Voter Front' },
+                                        { key: 'voterIdBack', label: 'Voter Back' },
+                                        { key: 'bankPassbook', label: 'Bank Passbook' },
+                                        { key: 'marriageCert', label: 'Marriage Cert' }
+                                    ].map((doc) => (
+                                        files[doc.key] && (
+                                            <div key={doc.key} className="border rounded-lg p-2 bg-gray-50 text-center">
+                                                <p className="text-xs font-bold text-gray-700 mb-2">{doc.label}</p>
+                                                <div className="w-full h-32 bg-gray-200 rounded flex items-center justify-center overflow-hidden">
+                                                    {files[doc.key].type.startsWith('image/') ? (
+                                                        <img
+                                                            src={URL.createObjectURL(files[doc.key])}
+                                                            alt={doc.label}
+                                                            className="w-full h-full object-contain"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex flex-col items-center text-gray-500">
+                                                            <FaFileAlt size={24} />
+                                                            <span className="text-[10px] mt-1">{files[doc.key].name}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )
+                                    ))}
+                                </div>
+                                {Object.keys(files).length === 0 && <p className="text-sm text-gray-500 italic">No documents uploaded.</p>}
                             </div>
 
                         </div>
@@ -1256,8 +1281,6 @@ const MemberRegistration = () => {
 
 
                             <FormInput label="Number of Family Members" name="memberCount" value={formData.memberCount} onChange={handleChange} placeholder="Enter number" type="number" required error={errors.memberCount} />
-                            <FormInput label="Number of Dependents" name="dependentCount" value={formData.dependentCount} onChange={handleChange} placeholder="Enter number" type="number" />
-                            <FormSelect label="Ration Card Type" name="rationCardTypeFamily" value={formData.rationCardTypeFamily} onChange={handleChange} options={["Food Security Card (White)", "Antyodaya Anna Yojana (Pink)", "Annapurna Scheme"]} />
                         </div>
 
                         {/* Ration Card */}
@@ -1295,6 +1318,7 @@ const MemberRegistration = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormInput label="Ration Card Number" name="rationCardNumber" value={formData.rationCardNumber} onChange={handleChange} placeholder="Enter ration card number" />
                                 <FormInput label="Ration Card Holder Name" name="rationCardHolderName" value={formData.rationCardHolderName} onChange={handleChange} placeholder="Enter card holder name" />
+                                <FormSelect label="Ration Card Type" name="rationCardTypeFamily" value={formData.rationCardTypeFamily} onChange={handleChange} options={["Food Security Card (White)", "Antyodaya Anna Yojana (Pink)", "Annapurna Scheme"]} />
                                 <div className="md:col-span-2">
                                     <FileUpload label="Upload Ration Card" name="rationCardFile" onChange={handleFileChange} fileName={files.rationCardFile?.name} />
                                     <p className="text-[10px] text-gray-500 mt-1">Max file size: 5 MB</p>
@@ -1341,12 +1365,16 @@ const MemberRegistration = () => {
                                 <button type="button" className={`mt-3 text-xs font-bold hover:underline ${errors.photo ? 'text-red-600' : 'text-blue-600'}`}>Choose File</button>
                                 <input type="file" name="photo" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer" />
                             </div>
-                            <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${files.aadhaarFront ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
+                            <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${errors.aadhaarFront ? 'border-red-500 bg-red-50' : (files.aadhaarFront ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100')}`}>
                                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
-                                    <FaIdCard className={files.aadhaarFront ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500'} />
+                                    <FaIdCard className={errors.aadhaarFront ? 'text-red-500' : (files.aadhaarFront ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500')} />
                                 </div>
-                                <h4 className="text-sm font-bold text-gray-700">{files.aadhaarFront ? files.aadhaarFront.name : "Aadhar Card Front"}</h4>
-                                <p className="text-xs text-gray-400 mt-1">{files.aadhaarFront ? 'Click to change' : 'Upload front side'}</p>
+                                <h4 className="text-sm font-bold text-gray-700">
+                                    {files.aadhaarFront ? files.aadhaarFront.name : <>Aadhar Card Front <span className="text-red-500">*</span></>}
+                                </h4>
+                                <p className={`text-xs mt-1 ${errors.aadhaarFront ? 'text-red-500' : 'text-gray-400'}`}>
+                                    {errors.aadhaarFront ? errors.aadhaarFront : (files.aadhaarFront ? 'Click to change' : 'Upload front side')}
+                                </p>
                                 <button type="button" className="mt-3 text-blue-600 text-xs font-bold hover:underline">Choose File</button>
                                 <input type="file" name="aadhaarFront" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer" />
                             </div>
@@ -1453,10 +1481,11 @@ const MemberRegistration = () => {
             {/* Hidden Printable Application Form */}
             {
                 createdMemberData && (
-                    <div id="application-form-print" className="fixed top-0 left-0 bg-white w-[210mm] min-h-[297mm] p-10 hidden text-black">
-                        <div className="border-b-2 border-gray-800 pb-4 mb-6 flex justify-between items-center">
+                    <div id="application-form-print" className="fixed top-0 left-0 bg-white w-[210mm] min-h-[297mm] p-8 hidden text-black">
+                        {/* Header */}
+                        <div className="border-b-2 border-gray-800 pb-2 mb-4 flex justify-between items-center">
                             <div>
-                                <h1 className="text-2xl font-bold uppercase tracking-wide">Mala Educational Welfare Society</h1>
+                                <h1 className="text-xl font-bold uppercase tracking-wide">Mala Educational Welfare Society</h1>
                                 <p className="text-sm text-gray-600 font-bold">Membership Registration Application</p>
                             </div>
                             <div className="text-right">
@@ -1465,44 +1494,107 @@ const MemberRegistration = () => {
                             </div>
                         </div>
 
-                        <div className="flex gap-6 mb-8">
-                            <div className="w-32 h-40 border border-gray-300 flex items-center justify-center bg-gray-50">
+                        {/* Basic Info & Photo Row */}
+                        <div className="flex gap-4 mb-4">
+                            <div className="w-28 h-32 border border-gray-300 flex items-center justify-center bg-gray-50 shrink-0">
                                 {createdMemberData.photoUrl ? (
-                                    <img src={`http://localhost:5000${createdMemberData.photoUrl}`} alt="Member" className="w-full h-full object-cover" />
+                                    <img src={createdMemberData.photoUrl} alt="Member" className="w-full h-full object-cover" />
                                 ) : (
-                                    <span className="text-xs text-gray-400">Photo</span>
+                                    <span className="text-[10px] text-gray-400">Photo</span>
                                 )}
                             </div>
-                            <div className="flex-1 space-y-2">
-                                <div className="grid grid-cols-2 gap-4 text-sm border-b border-gray-200 pb-2">
-                                    <p><span className="font-bold w-32 inline-block">Surname:</span> {createdMemberData.surname}</p>
-                                    <p><span className="font-bold w-32 inline-block">Name:</span> {createdMemberData.name}</p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 text-sm border-b border-gray-200 pb-2">
-                                    <p><span className="font-bold w-32 inline-block">Father Name:</span> {createdMemberData.fatherName}</p>
-                                    <p><span className="font-bold w-32 inline-block">DOB / Age:</span> {new Date(createdMemberData.dob).toLocaleDateString()} ({createdMemberData.age} Yrs)</p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 text-sm border-b border-gray-200 pb-2">
-                                    <p><span className="font-bold w-32 inline-block">Gender:</span> {createdMemberData.gender}</p>
-                                    <p><span className="font-bold w-32 inline-block">Blood Group:</span> {createdMemberData.bloodGroup}</p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <p><span className="font-bold w-32 inline-block">Mobile:</span> {createdMemberData.mobileNumber}</p>
-                                    <p><span className="font-bold w-32 inline-block">Aadhar:</span> {createdMemberData.aadhaarNumber}</p>
+                            <div className="flex-1 space-y-1">
+                                <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-1 border border-gray-200">Basic Information</h3>
+                                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+                                    <p><span className="font-bold w-24 inline-block">Surname:</span> {createdMemberData.surname}</p>
+                                    <p><span className="font-bold w-24 inline-block">Name:</span> {createdMemberData.name}</p>
+                                    <p><span className="font-bold w-24 inline-block">Father Name:</span> {createdMemberData.fatherName}</p>
+                                    <p><span className="font-bold w-24 inline-block">DOB (Age):</span> {new Date(createdMemberData.dob).toLocaleDateString()} ({createdMemberData.age})</p>
+                                    <p><span className="font-bold w-24 inline-block">Gender:</span> {createdMemberData.gender}</p>
+                                    <p><span className="font-bold w-24 inline-block">Blood Group:</span> {createdMemberData.bloodGroup}</p>
+                                    <p><span className="font-bold w-24 inline-block">Mobile:</span> {createdMemberData.mobileNumber}</p>
+                                    <p><span className="font-bold w-24 inline-block">Alt Mobile:</span> {createdMemberData.alternateMobile || 'N/A'}</p>
+                                    <p><span className="font-bold w-24 inline-block">Email:</span> {createdMemberData.email || 'N/A'}</p>
+                                    <p><span className="font-bold w-24 inline-block">Aadhar:</span> {createdMemberData.aadhaarNumber}</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="mb-6">
-                            <h3 className="text-sm font-bold uppercase bg-gray-100 p-2 mb-2 border border-gray-200">Address Details</h3>
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm px-2">
-                                <p><span className="font-bold">Present Address:</span> {createdMemberData.address?.houseNumber}, {createdMemberData.address?.street}</p>
-                                <p><span className="font-bold">Village:</span> {createdMemberData.address?.village?.name || createdMemberData.address?.village}</p>
-                                <p><span className="font-bold">Mandal:</span> {createdMemberData.address?.mandal?.name || createdMemberData.address?.mandal}</p>
-                                <p><span className="font-bold">District:</span> {createdMemberData.address?.district?.name || createdMemberData.address?.district}</p>
-                                <p><span className="font-bold">Pincode:</span> {createdMemberData.address?.pinCode}</p>
+                        {/* Addresses */}
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-1 border border-gray-200">Present Address</h3>
+                                <div className="text-xs space-y-1 px-1">
+                                    <p>{createdMemberData.address.houseNumber}, {createdMemberData.address.street}</p>
+                                    <p>{createdMemberData.address.landmark ? `Near ${createdMemberData.address.landmark}, ` : ''}</p>
+                                    <p>{createdMemberData.address.village?.name || createdMemberData.address.village}, {createdMemberData.address.mandal?.name || createdMemberData.address.mandal}</p>
+                                    <p>{createdMemberData.address.district?.name || createdMemberData.address.district} - {createdMemberData.address.pinCode}</p>
+                                    <p><span className="font-bold">Residence:</span> {createdMemberData.address.residencyType || 'N/A'}</p>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-1 border border-gray-200">Permanent Address</h3>
+                                <div className="text-xs space-y-1 px-1">
+                                    <p>{createdMemberData.permanentAddress.houseNumber}, {createdMemberData.permanentAddress.street}</p>
+                                    <p>{createdMemberData.permanentAddress.landmark ? `Near ${createdMemberData.permanentAddress.landmark}, ` : ''}</p>
+                                    <p>{createdMemberData.permanentAddress.village?.name || createdMemberData.permanentAddress.village}, {createdMemberData.permanentAddress.mandal?.name || createdMemberData.permanentAddress.mandal}</p>
+                                    <p>{createdMemberData.permanentAddress.district?.name || createdMemberData.permanentAddress.district} - {createdMemberData.permanentAddress.pinCode}</p>
+                                </div>
                             </div>
                         </div>
+
+                        {/* Social & Family */}
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-1 border border-gray-200">Caste & Marriage</h3>
+                                <div className="text-xs space-y-1 px-1">
+                                    <p><span className="font-bold">Caste:</span> {createdMemberData.casteDetails.caste} - {createdMemberData.casteDetails.subCaste}</p>
+                                    <p><span className="font-bold">Cert No:</span> {createdMemberData.casteDetails.communityCertNumber || 'N/A'}</p>
+                                    <p><span className="font-bold">Marital Status:</span> {createdMemberData.maritalStatus}</p>
+                                    {createdMemberData.maritalStatus === 'Married' && (
+                                        <>
+                                            <p><span className="font-bold">Partner:</span> {createdMemberData.partnerDetails.name} ({createdMemberData.partnerDetails.caste})</p>
+                                            <p><span className="font-bold">Inter-Caste:</span> {createdMemberData.partnerDetails.isInterCaste ? 'Yes' : 'No'}</p>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-1 border border-gray-200">Family & Economic</h3>
+                                <div className="text-xs space-y-1 px-1">
+                                    <p><span className="font-bold">Father Occ:</span> {createdMemberData.familyDetails.fatherOccupation || 'N/A'}</p>
+                                    <p><span className="font-bold">Mother Occ:</span> {createdMemberData.familyDetails.motherOccupation || 'N/A'}</p>
+                                    <p><span className="font-bold">Annual Income:</span> ₹{createdMemberData.familyDetails.annualIncome}</p>
+                                    <p><span className="font-bold">Members:</span> {createdMemberData.familyDetails.memberCount}</p>
+                                    <p><span className="font-bold">Ration Card Type:</span> {createdMemberData.familyDetails.rationCardType || 'N/A'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* IDs & Bank */}
+                        <div className="mb-4">
+                            <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-1 border border-gray-200">KYC & Bank Details</h3>
+                            <div className="grid grid-cols-3 gap-2 text-xs px-1">
+                                <div>
+                                    <p className="font-bold underline mb-1">Ration Card</p>
+                                    <p>No: {createdMemberData.rationCard.number || 'N/A'}</p>
+                                    <p>Holder: {createdMemberData.rationCard.holderName || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="font-bold underline mb-1">Voter ID</p>
+                                    <p>EPIC: {createdMemberData.voterId.epicNumber || 'N/A'}</p>
+                                    <p>Name: {createdMemberData.voterId.nameOnCard || 'N/A'}</p>
+                                    <p>Booth: {createdMemberData.voterId.pollingBooth || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="font-bold underline mb-1">Bank Account</p>
+                                    <p>{createdMemberData.bankDetails.bankName} - {createdMemberData.bankDetails.branchName}</p>
+                                    <p>A/c: {createdMemberData.bankDetails.accountNumber}</p>
+                                    <p>IFSC: {createdMemberData.bankDetails.ifscCode}</p>
+                                </div>
+                            </div>
+                        </div>
+
 
                         <div className="mb-8">
                             <h3 className="text-sm font-bold uppercase bg-gray-100 p-2 mb-2 border border-gray-200">Declaration</h3>
@@ -1511,7 +1603,41 @@ const MemberRegistration = () => {
                             </p>
                         </div>
 
-                        <div className="flex justify-between mt-16 px-4">
+                        {/* Printable Documents Section */}
+                        <div className="mb-4 break-inside-avoid">
+                            <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-2 border border-gray-200">Attached Documents</h3>
+                            <div className="grid grid-cols-4 gap-2">
+                                {[
+                                    { key: 'communityCert', label: 'Community Cert' },
+                                    { key: 'aadhaarFront', label: 'Aadhaar Front' },
+                                    { key: 'aadhaarBack', label: 'Aadhaar Back' },
+                                    { key: 'rationCardFile', label: 'Ration Card' },
+                                    { key: 'voterIdFront', label: 'Voter Front' },
+                                    { key: 'voterIdBack', label: 'Voter Back' },
+                                    { key: 'bankPassbook', label: 'Bank Passbook' },
+                                    { key: 'marriageCert', label: 'Marriage Cert' }
+                                ].map((doc) => (
+                                    files[doc.key] && (
+                                        <div key={doc.key} className="border border-gray-200 p-1 text-center">
+                                            <p className="text-[10px] font-bold text-gray-700 mb-1">{doc.label}</p>
+                                            <div className="w-full h-24 bg-gray-50 flex items-center justify-center overflow-hidden">
+                                                {files[doc.key].type.startsWith('image/') ? (
+                                                    <img
+                                                        src={URL.createObjectURL(files[doc.key])}
+                                                        alt={doc.label}
+                                                        className="max-w-full max-h-full object-contain"
+                                                    />
+                                                ) : (
+                                                    <span className="text-[8px] text-gray-500">PDF/File</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between mt-12 px-4">
                             <div className="text-center">
                                 <p className="font-bold text-sm mb-1">______________________</p>
                                 <p className="text-xs">Signature of Applicant</p>
@@ -1522,7 +1648,7 @@ const MemberRegistration = () => {
                             </div>
                         </div>
 
-                        <div className="mt-auto pt-4 border-t border-gray-300 text-center">
+                        <div className="mt-auto pt-2 border-t border-gray-300 text-center">
                             <p className="text-[10px] text-gray-400">Generated by MEWS System on {new Date().toLocaleString()}</p>
                         </div>
                     </div>

@@ -99,7 +99,7 @@ const LoginPage = () => {
                             <span className="absolute left-0 inset-y-0 flex items-center pl-3">
                                 <FaArrowRight className="h-4 w-4 text-orange-200 group-hover:text-white transition" />
                             </span>
-                            Sign in to Dashboard
+                            Login
                         </button>
                     </div>
                 </form>

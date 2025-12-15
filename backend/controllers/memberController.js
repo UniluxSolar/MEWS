@@ -166,7 +166,10 @@ const registerMember = asyncHandler(async (req, res) => {
         const populatedMember = await Member.findById(member._id)
             .populate('address.district')
             .populate('address.mandal')
-            .populate('address.village');
+            .populate('address.village')
+            .populate('permanentAddress.district')
+            .populate('permanentAddress.mandal')
+            .populate('permanentAddress.village');
 
         res.status(201).json(populatedMember);
     } catch (error) {

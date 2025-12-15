@@ -159,7 +159,7 @@ const AdminLoginPage = () => {
                             <span className="absolute left-0 inset-y-0 flex items-center pl-3">
                                 <FaArrowRight className="h-4 w-4 text-orange-100 group-hover:text-white transition" />
                             </span>
-                            Access Dashboard
+                            Login
                         </button>
                     </div>
                 </form>
