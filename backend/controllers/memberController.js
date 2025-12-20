@@ -71,6 +71,7 @@ const registerMember = asyncHandler(async (req, res) => {
             fatherName: clean(data.fatherName),
             dob: data.dob ? new Date(data.dob) : undefined,
             age: cleanNum(data.age),
+            occupation: clean(data.occupation), // New Field
             gender: clean(data.gender),
             mobileNumber: clean(data.mobileNumber),
             bloodGroup: clean(data.bloodGroup),
@@ -80,6 +81,7 @@ const registerMember = asyncHandler(async (req, res) => {
 
             address: {
                 district: districtId, // Still allow string if not mapped, but ideally ID
+                constituency: clean(data.presentConstituency), // New Field
                 mandal: mandalId,
                 village: villageId, // Now an ObjectId if found!
                 houseNumber: clean(data.presentHouseNo),
@@ -90,6 +92,7 @@ const registerMember = asyncHandler(async (req, res) => {
             },
             permanentAddress: {
                 district: clean(data.permDistrict),
+                constituency: clean(data.permConstituency), // New Field
                 mandal: clean(data.permMandal),
                 village: clean(data.permVillage),
                 houseNumber: clean(data.permHouseNo),
@@ -116,7 +119,7 @@ const registerMember = asyncHandler(async (req, res) => {
             familyDetails: {
                 fatherOccupation: clean(data.fatherOccupation),
                 motherOccupation: clean(data.motherOccupation),
-                annualIncome: incomeValue,
+                annualIncome: clean(data.annualIncome), // Stored as String
                 memberCount: cleanNum(data.memberCount),
                 dependentCount: cleanNum(data.dependentCount),
                 rationCardType: clean(data.rationCardTypeFamily)
@@ -146,6 +149,58 @@ const registerMember = asyncHandler(async (req, res) => {
             mewsId,
             verificationStatus: 'PENDING'
         };
+
+        // Process Family Members
+        if (data.familyMembers) {
+            try {
+                const parsedMembers = JSON.parse(data.familyMembers);
+                if (Array.isArray(parsedMembers)) {
+                    memberData.familyMembers = parsedMembers.map(fm => {
+                        const getIndex = (val) => {
+                            if (typeof val === 'string' && val.startsWith('INDEX:')) {
+                                return parseInt(val.split(':')[1], 10);
+                            }
+                            return -1;
+                        };
+
+                        const getFamilyFile = (field, indexRef) => {
+                            if (indexRef >= 0 && req.files && req.files[field] && req.files[field][indexRef]) {
+                                return req.files[field][indexRef].path.replace(/\\/g, "/");
+                            }
+                            return undefined;
+                        };
+
+                        return {
+                            relation: clean(fm.relation),
+                            surname: clean(fm.surname),
+                            name: clean(fm.name),
+                            fatherName: clean(fm.fatherName),
+                            dob: fm.dob ? new Date(fm.dob) : undefined,
+                            age: cleanNum(fm.age),
+                            gender: clean(fm.gender),
+                            occupation: clean(fm.occupation),
+                            mobileNumber: clean(fm.mobileNumber),
+                            aadhaarNumber: clean(fm.aadhaarNumber),
+                            epicNumber: clean(fm.epicNumber),
+                            voterName: clean(fm.voterName),
+                            pollingBooth: clean(fm.pollingBooth),
+                            // Files
+                            photo: getFamilyFile('familyMemberPhotos', getIndex(fm.photo)),
+                            aadhaarFront: getFamilyFile('familyMemberAadhaarFronts', getIndex(fm.aadhaarFront)),
+                            aadhaarBack: getFamilyFile('familyMemberAadhaarBacks', getIndex(fm.aadhaarBack)),
+                            voterIdFront: getFamilyFile('familyMemberVoterIdFronts', getIndex(fm.voterIdFront)),
+                            voterIdBack: getFamilyFile('familyMemberVoterIdBacks', getIndex(fm.voterIdBack)),
+
+                            // Addresses (Copy from main member)
+                            presentAddress: memberData.address,
+                            permanentAddress: memberData.permanentAddress
+                        };
+                    });
+                }
+            } catch (e) {
+                console.error("Error parsing family members:", e);
+            }
+        }
 
         const member = await Member.create(memberData);
 
@@ -269,6 +324,7 @@ const updateMember = asyncHandler(async (req, res) => {
         member.fatherName = req.body.fatherName || member.fatherName;
         member.dob = req.body.dob || member.dob;
         member.age = req.body.age || member.age;
+        member.occupation = req.body.occupation || member.occupation;
         member.gender = req.body.gender || member.gender;
         member.mobileNumber = req.body.mobile || member.mobileNumber;
         member.bloodGroup = req.body.bloodGroup || member.bloodGroup;
@@ -297,6 +353,7 @@ const updateMember = asyncHandler(async (req, res) => {
         if (req.body.presentStreet) member.address.street = req.body.presentStreet;
         if (req.body.presentLandmark) member.address.landmark = req.body.presentLandmark;
         if (req.body.presentPincode) member.address.pincode = req.body.presentPincode;
+        if (req.body.presentConstituency) member.address.constituency = req.body.presentConstituency;
 
         const updatedMember = await member.save();
         res.json(updatedMember);

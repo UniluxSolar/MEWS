@@ -3,17 +3,60 @@ import { FaGooglePlay, FaApple, FaGraduationCap, FaHeartbeat, FaBalanceScale, Fa
 
 // Using a different placeholder background for variety or reuse existing if suitable.
 // Ideally usage of specific 'hero-connect' image if available.
+
+import { useState, useEffect } from 'react';
 import ConnectHeroBg from '../assets/community-hero.jpg';
+import Member1 from '../assets/member1.png';
+import Member2 from '../assets/member2.png';
+import Member3 from '../assets/member3.png';
+import Member4 from '../assets/member4.png';
+import LandingScroll1 from '../assets/landing_scroll_1.png';
+import LandingScroll2 from '../assets/landing_scroll_2.png';
+import MewsLogo from '../assets/mews_main_logo_new.png';
 
 const ConnectHero = () => {
+    // Array of images for the slideshow
+    const bgImages = [ConnectHeroBg, LandingScroll1, Member1, LandingScroll2, Member2, Member3, Member4];
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentImageIndex((prevIndex) => (prevIndex + 1) % bgImages.length);
+        }, 3000); // Change image every 3 seconds
+
+        return () => clearInterval(interval);
+    }, [bgImages.length]);
+
     return (
-        <div className="relative bg-[#1e2a4a] overflow-hidden">
-            <div className="absolute inset-0 z-0 opacity-40">
-                <img src={ConnectHeroBg} alt="Background" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-[#1e2a4a]/80 mix-blend-multiply"></div>
+        <div className="relative bg-[#1e2a4a] overflow-hidden min-h-[600px] flex items-center">
+            {/* Fading Background Slideshow */}
+            <div className="absolute inset-0 z-0">
+                {bgImages.map((img, index) => (
+                    <div
+                        key={index}
+                        className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                            }`}
+                    >
+                        <img src={img} alt="Bg" className="w-full h-full object-cover" />
+                    </div>
+                ))}
+
+                <div className="absolute inset-0 bg-[#1e2a4a]/70 mix-blend-multiply"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-[#1e2a4a] via-[#1e2a4a]/70 to-transparent"></div>
             </div>
 
-            <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 lg:py-32">
+            {/* Custom CSS for Animations */}
+            <style>{`
+                @keyframes spin-slow {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .animate-spin-slow {
+                    animation: spin-slow 20s linear infinite;
+                }
+            `}</style>
+
+            <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex justify-between items-center">
                 <div className="max-w-3xl">
                     <div className="flex gap-4 mb-6 text-xs font-semibold uppercase tracking-wider text-green-400">
                         <span className="flex items-center gap-1"><FaCheckCircle /> Community Verified</span>
@@ -21,7 +64,7 @@ const ConnectHero = () => {
                         <span className="flex items-center gap-1"><FaUserShield /> Free to Use</span>
                     </div>
 
-                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight">
+                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight drop-shadow-md">
                         MEWS CONNECT
                     </h1>
                     <p className="text-xl sm:text-2xl text-gray-300 font-light mb-2">
@@ -42,14 +85,14 @@ const ConnectHero = () => {
 
                     {/* Downloads */}
                     <div className="flex flex-wrap gap-4">
-                        <button className="bg-white text-[#1e2a4a] px-5 py-2.5 rounded-md font-bold flex items-center gap-3 hover:bg-gray-100 transition">
+                        <button className="bg-white text-[#1e2a4a] px-5 py-2.5 rounded-md font-bold flex items-center gap-3 hover:bg-gray-100 transition shadow-lg">
                             <FaGooglePlay size={20} />
                             <div className="text-left leading-tight">
                                 <div className="text-[10px] uppercase">Get it on</div>
                                 <div className="text-sm">Google Play</div>
                             </div>
                         </button>
-                        <button className="bg-white text-[#1e2a4a] px-5 py-2.5 rounded-md font-bold flex items-center gap-3 hover:bg-gray-100 transition">
+                        <button className="bg-white text-[#1e2a4a] px-5 py-2.5 rounded-md font-bold flex items-center gap-3 hover:bg-gray-100 transition shadow-lg">
                             <FaApple size={24} />
                             <div className="text-left leading-tight">
                                 <div className="text-[10px] uppercase">Download on the</div>
@@ -60,6 +103,27 @@ const ConnectHero = () => {
                             Explore Features
                         </button>
                     </div>
+                </div>
+
+                {/* Rotating Logo Section - Visible primarily on desktop */}
+                <div className="hidden lg:flex justify-center items-center relative w-[400px] h-[400px]">
+                    <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-3xl filter opacity-40 animate-pulse"></div>
+
+                    {/* Layer 1: Static Background (Outer Ring) - Inverted to make cream background dark and text light */}
+                    <img
+                        src={MewsLogo}
+                        alt="MEWS Ring"
+                        className="absolute inset-0 w-[350px] h-[350px] object-contain m-auto transition-all duration-500"
+                        style={{ filter: 'invert(1) hue-rotate(180deg) brightness(0.8) contrast(1.2)' }}
+                    />
+
+                    {/* Layer 2: Spinning Foreground (Center Emblem Only) - Kept original and vibrant */}
+                    <img
+                        src={MewsLogo}
+                        alt="MEWS Center"
+                        className="absolute inset-0 w-[350px] h-[350px] object-contain m-auto z-10 drop-shadow-2xl animate-spin-slow"
+                        style={{ clipPath: 'circle(44% at 50% 50%)' }}
+                    />
                 </div>
             </div>
         </div>

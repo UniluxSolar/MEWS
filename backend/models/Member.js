@@ -8,6 +8,7 @@ const MemberSchema = new mongoose.Schema({
     dob: { type: Date },
     age: { type: Number },
     gender: { type: String, enum: ['Male', 'Female', 'Other'] },
+    occupation: { type: String }, // New Field
     mobileNumber: { type: String }, // Made optional per request for testing
     bloodGroup: { type: String },
     email: { type: String },
@@ -21,6 +22,7 @@ const MemberSchema = new mongoose.Schema({
         village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        constituency: String, // New Field
         pinCode: String,
         residencyType: String // e.g., Owned, Rented
     },
@@ -31,6 +33,7 @@ const MemberSchema = new mongoose.Schema({
         village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        constituency: String, // New Field
         pinCode: String,
         landmark: String
     },
@@ -59,7 +62,7 @@ const MemberSchema = new mongoose.Schema({
     familyDetails: {
         fatherOccupation: String,
         motherOccupation: String,
-        annualIncome: Number,
+        annualIncome: String,
         memberCount: Number,
         dependentCount: Number,
         rationCardType: String
@@ -105,6 +108,52 @@ const MemberSchema = new mongoose.Schema({
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     adminNotes: String,
 
+    familyMembers: [{
+        relation: { type: String, enum: ['Spouse', 'Son', 'Daughter', 'Father', 'Mother'] }, // Added relation
+        surname: String,
+        name: String,
+        fatherName: String,
+        dob: Date,
+        age: Number,
+        gender: String,
+        occupation: String,
+        mobileNumber: String,
+        aadhaarNumber: String,
+
+        // Voter ID
+        epicNumber: String,
+        voterName: String,
+        pollingBooth: String,
+
+        // Documents (Paths)
+        photo: String,
+        aadhaarFront: String,
+        aadhaarBack: String,
+        voterIdFront: String,
+        voterIdBack: String,
+
+        // Addresses (Snapshotted from main member)
+        presentAddress: {
+            houseNumber: String,
+            street: String,
+            village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+            mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+            district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+            constituency: String,
+            pinCode: String,
+            residencyType: String
+        },
+        permanentAddress: {
+            houseNumber: String,
+            street: String,
+            village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+            mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+            district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+            constituency: String,
+            pinCode: String,
+            landmark: String
+        }
+    }],
 }, {
     timestamps: true
 });

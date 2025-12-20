@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaShieldAlt, FaSearch, FaExclamationTriangle, FaBell, FaChevronDown } from 'react-icons/fa';
-import villageAdminLogo from '../assets/mews_village_admin.png';
-import mandalAdminLogo from '../assets/mews_mandal_admin.png';
-import districtAdminLogo from '../assets/mews_district_admin.png';
+
+import mewsLogo from '../assets/mews_main_logo_new.png';
 
 const AdminHeader = ({ title }) => { // title optional, can auto-derive
     // Force HMR Update
@@ -20,18 +19,18 @@ const AdminHeader = ({ title }) => { // title optional, can auto-derive
             let r = parsed.role || '';
             if (r === 'VILLAGE_ADMIN') {
                 setRoleText('Village Admin Portal');
-                setProfileLogo(villageAdminLogo);
+                setProfileLogo(mewsLogo);
             }
             else if (r === 'MANDAL_ADMIN') {
                 setRoleText('Mandal Admin Portal');
-                setProfileLogo(mandalAdminLogo);
+                setProfileLogo(mewsLogo);
             }
             else if (r === 'DISTRICT_ADMIN') {
                 setRoleText('District Admin Portal');
-                setProfileLogo(districtAdminLogo);
+                setProfileLogo(mewsLogo);
             }
             else {
-                setProfileLogo(districtAdminLogo); // Fallback to district/general logo
+                setProfileLogo(mewsLogo); // Fallback to district/general logo
             }
 
             setLocationName(parsed.locationName || '');

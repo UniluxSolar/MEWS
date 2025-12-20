@@ -14,7 +14,13 @@ router.route('/')
         { name: 'rationCardFile', maxCount: 1 },
         { name: 'voterIdFront', maxCount: 1 },
         { name: 'voterIdBack', maxCount: 1 },
-        { name: 'bankPassbook', maxCount: 1 }
+        { name: 'bankPassbook', maxCount: 1 },
+        // Family Member Files (Arrays)
+        { name: 'familyMemberPhotos', maxCount: 20 },
+        { name: 'familyMemberAadhaarFronts', maxCount: 20 },
+        { name: 'familyMemberAadhaarBacks', maxCount: 20 },
+        { name: 'familyMemberVoterIdFronts', maxCount: 20 },
+        { name: 'familyMemberVoterIdBacks', maxCount: 20 }
     ]), registerMember);
 router.get('/', protect, getMembers);
 router.get('/:id', protect, getMemberById);

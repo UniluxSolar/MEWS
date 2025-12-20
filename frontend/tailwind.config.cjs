@@ -17,7 +17,7 @@ module.exports = {
                 900: '#7c2d12',
             },
             animation: {
-                marquee: 'marquee 25s linear infinite',
+                marquee: 'marquee 50s linear infinite',
             },
             keyframes: {
                 marquee: {

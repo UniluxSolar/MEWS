@@ -5,12 +5,13 @@ import {
     FaSearch, FaShieldAlt, FaBell, FaChevronDown, FaThLarge, FaUsers, FaBuilding,
     FaExclamationTriangle, FaFileAlt, FaHandHoldingUsd, FaChartLine, FaCog,
     FaQuestionCircle, FaBullhorn, FaSignOutAlt, FaPrint, FaDownload,
-    FaWhatsapp, FaEnvelope, FaCheckCircle, FaQrcode
+    FaWhatsapp, FaEnvelope, FaCheckCircle
 } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { QRCodeSVG } from 'qrcode.react';
+
 import member2 from '../assets/member2.png'; // Fallback
+import mewsLogo from '../assets/mews_main_logo_new.png';
 
 // Sidebar Item Component
 const SidebarItem = ({ icon: Icon, label, active, to }) => (
@@ -279,91 +280,91 @@ const GenerateIDCard = () => {
                                     <FaShieldAlt size={180} />
                                 </div>
 
-                                {/* Card Header */}
-                                <div className="bg-gradient-to-r from-[#0f172a] to-[#1e2a4a] h-16 flex items-center justify-between px-5 relative z-10 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center border border-white/20 backdrop-blur-sm shadow-inner">
-                                            <FaShieldAlt className="text-blue-100 text-lg" />
+                                {/* Header Section */}
+                                <div className="flex flex-col relative z-20">
+                                    {/* Top Dark Band */}
+                                    <div className="h-[45px] bg-[#0f172a] flex items-center justify-center pl-[60px]">
+                                        <div className="text-white font-bold text-[13px] tracking-wide uppercase text-center leading-tight drop-shadow-sm">
+                                            Mala Educational Welfare Society
                                         </div>
-                                        <div>
-                                            {/* Dynamic Gram Panchayat Name */}
-                                            <div className="text-white font-bold text-[10px] leading-tight tracking-wide uppercase">
-                                                {selectedMember.village} GRAM PANCHAYAT
+                                    </div>
+                                    {/* Bottom Accent Band */}
+                                    <div className="h-[30px] bg-[#1e2a4a] flex items-center justify-center pl-[60px]">
+                                        <h2 className="text-white font-bold text-[11px] tracking-[0.2em] uppercase drop-shadow-sm">
+                                            EMPOWERING COMMUNITIES
+                                        </h2>
+                                    </div>
+
+                                    {/* Floating Logo - Overlapping Both Bands */}
+                                    <div className="absolute top-1 left-2 w-[55px] h-[65px] bg-white rounded-b-lg shadow-md p-0.5 border-t-0 border-x border-b border-gray-200 z-30">
+                                        <div className="w-full h-full rounded-b overflow-hidden bg-white flex items-center justify-center">
+                                            <img src={mewsLogo} alt="Logo" className="w-full h-full object-contain" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* ID Number Floating Top Right */}
+                                <div className="absolute top-[80px] right-4 z-20">
+                                    <div className="text-[11px] font-bold text-gray-800 tracking-wide">
+                                        ID NO. <span className="text-black text-[12px]">{selectedMember.id}</span>
+                                    </div>
+                                </div>
+
+                                {/* Main Content Body */}
+                                <div className="flex-1 flex px-4 pt-8 pb-2 relative z-10">
+                                    {/* Left Column: Photo & Details */}
+                                    <div className="flex items-start gap-4 w-full mt-1">
+                                        {/* Photo */}
+                                        <div className="flex flex-col gap-2">
+                                            <div className="w-[90px] h-[110px] bg-gray-100 border border-gray-300 shadow-sm p-0.5">
+                                                <img
+                                                    src={selectedMember.photo}
+                                                    alt="Member"
+                                                    className="w-full h-full object-cover"
+                                                    crossOrigin="anonymous"
+                                                />
                                             </div>
-                                            {/* Mandal & District */}
-                                            <div className="text-blue-100 text-[8px] font-semibold mt-0.5 tracking-wide uppercase">
-                                                Mdl: {selectedMember.mandal} | Dist: {selectedMember.district}
+                                        </div>
+
+                                        {/* Right Details */}
+                                        <div className="flex-1 flex flex-col pt-1">
+                                            <div className="text-[#1e2a4a] text-[13px] font-extrabold uppercase leading-snug tracking-wide mb-1">
+                                                {selectedMember.name} {selectedMember.surname}
                                             </div>
-                                            {/* MEWS Name */}
-                                            <div className="text-blue-300 text-[7px] font-bold mt-0.5 tracking-wider">Mala Educational Welfare Society (MEWS)</div>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-white font-bold text-[10px] tracking-wide">STATE GOVERNMENT</div>
-                                        <div className="text-blue-300/80 text-[8px] uppercase">Official Identity Card</div>
-                                    </div>
-                                </div>
 
-                                {/* Card Body */}
-                                <div className="flex-1 p-4 flex gap-4 relative z-10">
-                                    {/* Photo */}
-                                    <div className="w-24 h-28 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border-2 border-slate-200 shadow-md relative">
-                                        <img
-                                            src={selectedMember.photo}
-                                            alt="Member"
-                                            className="w-full h-full object-cover"
-                                            crossOrigin="anonymous"
-                                        />
-                                    </div>
+                                            <div className="text-gray-800 text-[11px] font-bold uppercase mb-0.5">
+                                                MEMBER
+                                            </div>
 
-                                    {/* Info Grid */}
-                                    <div className="flex-1 grid grid-cols-2 gap-x-2 gap-y-1 content-start pt-1">
-                                        <div className="col-span-2 mb-1">
-                                            <div className="text-[9px] text-gray-500 uppercase font-bold">Name</div>
-                                            <div className="text-sm font-extrabold text-[#1e2a4a] leading-tight uppercase">{selectedMember.name} {selectedMember.surname}</div>
-                                        </div>
+                                            <div className="text-gray-700 text-[10px] font-semibold uppercase leading-tight mb-3">
+                                                {selectedMember.village} VILLAGE <br />
+                                                {selectedMember.mandal} (M), {selectedMember.district} (D)
+                                            </div>
 
-                                        <div>
-                                            <div className="text-[8px] text-gray-500 uppercase font-bold">Member ID</div>
-                                            <div className="text-xs font-bold text-red-600 font-mono tracking-tight">{selectedMember.id}</div>
-                                        </div>
+                                            {/* Footer Area inside body for alignment */}
+                                            <div className="mt-auto w-full flex justify-between items-end">
+                                                {/* Left: QR or Valid Until */}
+                                                <div>
+                                                    <div className="text-[8px] text-gray-500 font-bold uppercase mb-0.5">Valid Until</div>
+                                                    <div className="text-[10px] text-[#1e2a4a] font-bold">{selectedMember.validUntil}</div>
+                                                </div>
 
-                                        <div>
-                                            <div className="text-[8px] text-gray-500 uppercase font-bold">Valid Until</div>
-                                            <div className="text-xs font-bold text-gray-800">{selectedMember.validUntil}</div>
-                                        </div>
-
-                                        <div className="mt-1">
-                                            <div className="text-[8px] text-gray-500 uppercase font-bold">Mobile</div>
-                                            <div className="text-[10px] font-bold text-gray-800">{selectedMember.mobile}</div>
-                                        </div>
-
-                                        <div className="mt-1">
-                                            <div className="text-[8px] text-gray-500 uppercase font-bold">Blood Group</div>
-                                            <div className="text-[10px] font-bold text-gray-800">{selectedMember.bloodGroup}</div>
-                                        </div>
-
-                                        {/* Full Address */}
-                                        <div className="col-span-2 mt-2 pt-1 border-t border-gray-100">
-                                            <div className="text-[8px] text-gray-500 uppercase font-bold">Address</div>
-                                            <div className="text-[9px] font-semibold text-gray-700 leading-snug">{selectedMember.fullAddress}</div>
-                                        </div>
-                                    </div>
-
-                                    {/* QR Code */}
-                                    <div className="absolute bottom-3 right-4">
-                                        <div className="bg-white p-1 border border-gray-100 shadow-sm rounded">
-                                            <QRCodeSVG value={`ID:${selectedMember.id}|Name:${selectedMember.name}|Dob:${selectedMember.dob}`} size={56} />
+                                                {/* Right: Signature */}
+                                                <div className="flex flex-col items-center">
+                                                    {/* Signature Img Placeholder */}
+                                                    <div className="text-[14px] font-signature text-[#1e2a4a] mb-0 leading-none">Auth Sign</div>
+                                                    <div className="text-[8px] font-bold text-gray-800 border-t border-gray-400 capitalize px-1 pt-0.5">
+                                                        General Secretary
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Card Footer */}
-                                <div className="h-6 bg-[#f8fafc] border-t border-gray-200 flex items-center justify-between px-5 relative z-10">
-                                    <div className="text-[8px] text-gray-500 italic">This card is property of Gram Panchayat</div>
-                                    <div className="text-[8px] font-bold text-[#1e2a4a]">Auth Signature</div>
+                                <div className="absolute bottom-2 left-[30%] opacity-20">
+                                    {/* Hologram/Seal placeholder effect if wanted, else standard styling */}
                                 </div>
-                                <div className="h-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800"></div>
+
                             </div>
                         </div>
                     </div>
@@ -386,9 +387,9 @@ const GenerateIDCard = () => {
                             </button>
                         </div>
                     </div>
-                </main>
-            </div>
-        </div>
+                </main >
+            </div >
+        </div >
     );
 };
 

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaUserCircle, FaBell } from 'react-icons/fa';
+import { FaBell } from 'react-icons/fa';
 import { HiMenu } from 'react-icons/hi';
+import MewsLogo from '../assets/mews_main_logo_new.png';
 
 const ConnectNavbar = () => {
     return (
@@ -10,8 +11,8 @@ const ConnectNavbar = () => {
                 {/* Logo Area */}
                 <div className="flex items-center gap-8">
                     <Link to="/" className="flex items-center gap-2">
-                        <div className="bg-white text-[#1e2a4a] p-1.5 rounded-md">
-                            <FaUserCircle size={20} />
+                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-0.5 overflow-hidden">
+                            <img src={MewsLogo} alt="MEWS" className="w-full h-full object-contain" />
                         </div>
                         <div className="flex flex-col">
                             <span className="text-xl font-bold leading-none tracking-tight">MEWS CONNECT</span>
@@ -46,9 +47,7 @@ const ConnectNavbar = () => {
                         <span>|</span>
                         <span>English</span>
                     </div>
-                    <button className="px-4 py-1.5 bg-[#e85d04] hover:bg-[#d05304] text-white text-xs font-bold rounded flex items-center gap-2 transition uppercase tracking-wider">
-                        <FaBell /> Emergency
-                    </button>
+
                     <button className="md:hidden text-white p-2">
                         <HiMenu size={24} />
                     </button>

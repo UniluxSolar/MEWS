@@ -85,39 +85,47 @@ const CommunitySupportHub = () => {
                 </div>
             </section>
 
-            {/* 3. Community Impact Metrics */}
-            <section className="text-center max-w-6xl mx-auto">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12">
-                    {[
-                        { value: '₹15.6 Lakh', label: 'Total raised this month', icon: <FaChartLine />, color: 'text-blue-600', bg: 'bg-blue-50' },
-                        { value: '2,847', label: 'Active donors', icon: <FaUsers />, color: 'text-green-600', bg: 'bg-green-50' },
-                        { value: '89%', label: 'Success Rate', icon: <FaCheckCircle />, color: 'text-purple-600', bg: 'bg-purple-50' },
-                        { value: '24 Hours', label: 'Response Time', icon: <FaBolt />, color: 'text-orange-600', bg: 'bg-orange-50' }
-                    ].map((item, idx) => (
-                        <div key={idx} className="flex flex-col items-center p-6 rounded-2xl bg-white shadow-lg shadow-gray-100 hover:shadow-xl transition-shadow border border-gray-50">
-                            <div className={`w-14 h-14 rounded-full ${item.bg} ${item.color} flex items-center justify-center text-2xl mb-4`}>
-                                {item.icon}
+            {/* 3. Community Impact Metrics (Static Dashboard) */}
+            <section className="w-full bg-white border-b border-gray-100 py-10">
+                <div className="max-w-7xl mx-auto px-4 mb-8 text-center">
+                    <h2 className="text-xl font-bold text-gray-400 uppercase tracking-widest">Our Impact Dashboard</h2>
+                </div>
+
+                <div className="max-w-7xl mx-auto px-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 justify-items-center">
+                        {[
+                            { value: '₹15.6 Lakh', label: 'Total Raised', icon: <FaChartLine />, color: 'text-blue-600', bg: 'bg-blue-50' },
+                            { value: '2,847', label: 'Active Donors', icon: <FaUsers />, color: 'text-green-600', bg: 'bg-green-50' },
+                            { value: '127', label: 'Medical Cases', icon: <FaMedkit />, color: 'text-red-600', bg: 'bg-red-50' },
+                            { value: '89', label: 'Students Funded', icon: <FaGraduationCap />, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                            { value: '15+', label: 'Villages Covered', icon: <FaHome />, color: 'text-orange-600', bg: 'bg-orange-50' },
+                            { value: '100%', label: 'Transparency', icon: <FaCheckCircle />, color: 'text-teal-600', bg: 'bg-teal-50' },
+                        ].map((item, idx) => (
+                            <div key={idx} className="flex flex-col items-center p-4 rounded-2xl bg-white border border-gray-50 hover:border-gray-100 hover:shadow-lg transition-all w-full">
+                                <div className={`w-12 h-12 rounded-full ${item.bg} ${item.color} flex items-center justify-center text-xl mb-3`}>
+                                    {item.icon}
+                                </div>
+                                <div className={`text-xl md:text-2xl font-extrabold ${item.color} tracking-tight`}>{item.value}</div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 text-center">{item.label}</div>
                             </div>
-                            <div className={`text-2xl md:text-4xl font-extrabold ${item.color} mb-2 tracking-tight`}>{item.value}</div>
-                            <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">{item.label}</div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
             </section>
 
             {/* 4. Donation Ticker */}
-            <section className="max-w-5xl mx-auto">
-                <div className="bg-white border border-gray-100 rounded-full py-2 pl-4 pr-2 shadow-lg shadow-blue-900/5 flex items-center gap-4">
-                    <span className="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs font-extrabold tracking-wide uppercase shrink-0">Live Updates</span>
-                    <div className="flex-1 overflow-hidden relative h-6">
-                        <div className="animate-marquee absolute whitespace-nowrap flex gap-12 text-sm font-medium text-gray-600 items-center h-full">
-                            <span className="flex items-center gap-2"><FaHeart className="text-red-500 text-xs" /> Anonymous gave ₹500 to Ravi's surgery</span>
-                            <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-gray-300 rounded-full"></div></span>
-                            <span className="flex items-center gap-2"><FaHeart className="text-blue-500 text-xs" /> Priya M. donated ₹200 for flood relief</span>
-                            <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-gray-300 rounded-full"></div></span>
-                            <span className="flex items-center gap-2"><FaHeart className="text-green-500 text-xs" /> Ram Singh donated ₹1000 to Education Fund</span>
-                            <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-gray-300 rounded-full"></div></span>
-                            <span className="flex items-center gap-2"><FaHeart className="text-purple-500 text-xs" /> New Campaign "Clean Water for School" verified</span>
+            <section className="w-full">
+                <div className="bg-white border-y border-gray-100 py-6 px-8 shadow-sm flex items-center gap-8">
+                    <span className="bg-red-50 text-red-600 px-5 py-2 rounded-full text-base font-extrabold tracking-wide uppercase shrink-0 shadow-sm border border-red-100">Live Updates</span>
+                    <div className="flex-1 overflow-hidden relative h-10">
+                        <div className="animate-marquee absolute whitespace-nowrap flex gap-16 text-xl font-medium text-gray-700 items-center h-full">
+                            <span className="flex items-center gap-3"><FaHeart className="text-red-500 text-lg" /> Anonymous gave ₹500 to Ravi's surgery</span>
+                            <span className="flex items-center gap-3"><div className="w-2 h-2 bg-gray-300 rounded-full"></div></span>
+                            <span className="flex items-center gap-3"><FaHeart className="text-blue-500 text-lg" /> Priya M. donated ₹200 for flood relief</span>
+                            <span className="flex items-center gap-3"><div className="w-2 h-2 bg-gray-300 rounded-full"></div></span>
+                            <span className="flex items-center gap-3"><FaHeart className="text-green-500 text-lg" /> Ram Singh donated ₹1000 to Education Fund</span>
+                            <span className="flex items-center gap-3"><div className="w-2 h-2 bg-gray-300 rounded-full"></div></span>
+                            <span className="flex items-center gap-3"><FaHeart className="text-purple-500 text-lg" /> New Campaign "Clean Water for School" verified</span>
                         </div>
                     </div>
                 </div>
@@ -161,9 +169,7 @@ const CommunitySupportHub = () => {
                             <button className="w-full py-4 bg-[#1e2a4a] text-white rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-[#2a3b66] transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                                 <FaCloudUploadAlt size={18} /> Submit Request
                             </button>
-                            <button className="w-full py-4 bg-white border-2 border-red-100 text-red-600 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-red-50 transition">
-                                <FaBolt size={18} /> Emergency SOS
-                            </button>
+
                         </div>
                     </div>
                 </div>
@@ -185,6 +191,48 @@ const CommunitySupportHub = () => {
                                 <FaWhatsapp className="inline mr-1" /> Share
                             </button>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Business Advertisement Scroller */}
+            <section className="w-full bg-[#f8fafc] py-12 border-y border-gray-200 overflow-hidden">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 text-center">
+                    <span className="inline-block px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold uppercase tracking-wide mb-2">Support Local</span>
+                    <h2 className="text-2xl font-bold text-[#1e2a4a]">Community Market Place</h2>
+                </div>
+
+                <div className="relative w-full overflow-hidden group">
+                    {/* Gradient Masks */}
+                    <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#f8fafc] to-transparent z-10"></div>
+                    <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#f8fafc] to-transparent z-10"></div>
+
+                    <div className="flex gap-6 animate-marquee hover:[animation-play-state:paused] w-max px-4">
+                        {/* Render twice for infinite scroll effect */}
+                        {[...Array(2)].map((_, i) => (
+                            <React.Fragment key={i}>
+                                {[
+                                    { name: "Ravi General Stores", type: "Retail", offer: "10% Off for Students", color: "bg-blue-600" },
+                                    { name: "Mala Tech Solutions", type: "Services", offer: "Websites & Branding", color: "bg-purple-600" },
+                                    { name: "Jyothi Textiles", type: "Fashion", offer: "Saree & Dress Material", color: "bg-pink-600" },
+                                    { name: "Ambedkar Constructions", type: "Real Estate", offer: "Affordable Housing", color: "bg-amber-600" },
+                                    { name: "Community Dairy Farm", type: "Agriculture", offer: "Fresh Milk Daily", color: "bg-green-600" },
+                                    { name: "New Era Coaching", type: "Education", offer: "Entrance Exam Prep", color: "bg-indigo-600" },
+                                    { name: "Suresh Auto Works", type: "Automotive", offer: "Complete Car Care", color: "bg-red-600" }
+                                ].map((biz, idx) => (
+                                    <div key={`${i}-${idx}`} className="flex-shrink-0 w-72 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group/card cursor-pointer">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className={`w-10 h-10 rounded-lg ${biz.color} text-white flex items-center justify-center font-bold text-lg`}>
+                                                {biz.name.charAt(0)}
+                                            </div>
+                                            <span className="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] font-bold uppercase tracking-wider rounded border border-gray-100">{biz.type}</span>
+                                        </div>
+                                        <h4 className="font-bold text-[#1e2a4a] text-lg mb-1 group-hover/card:text-blue-600 transition">{biz.name}</h4>
+                                        <p className="text-sm text-gray-500">{biz.offer}</p>
+                                    </div>
+                                ))}
+                            </React.Fragment>
+                        ))}
                     </div>
                 </div>
             </section>
@@ -244,19 +292,36 @@ const CommunitySupportHub = () => {
 
                     <h3 className="text-xl font-bold mb-8 relative z-10">Thank You Wall</h3>
                     <div className="space-y-6 relative z-10">
-                        {[
-                            { msg: "Thanks to everyone who helped with my surgery. I'm recovering well!", author: "Ravi Kumar", type: "Health" },
-                            { msg: "My daughter can now continue her engineering studies. Grateful!", author: "Priya's Father", type: "Education" },
-                            { msg: "50 families received relief supplies thanks to your donations.", author: "Relief Committee", type: "Disaster" }
-                        ].map((item, idx) => (
-                            <div key={idx} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/5 hover:bg-white/15 transition">
-                                <p className="text-sm text-gray-200 italic mb-3">"{item.msg}"</p>
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="font-bold text-secondary text-opacity-90">- {item.author}</span>
-                                    <span className="px-2 py-0.5 rounded bg-white/10 text-gray-300">{item.type}</span>
+                        {(() => {
+                            // Mock Data from Backend/Database
+                            const recentMessages = [
+                                { msg: "Thanks to everyone who helped with my surgery. I'm recovering well!", author: "Ravi Kumar", type: "Health" },
+                                { msg: "My daughter can now continue her engineering studies. Grateful!", author: "Priya's Father", type: "Education" },
+                                { msg: "50 families received relief supplies thanks to your donations.", author: "Relief Committee", type: "Disaster" }
+                            ];
+
+                            // System Default Message (Fallback)
+                            const systemDefault = {
+                                msg: "We deeply appreciate every contribution. Your support empowers the community!",
+                                author: "MEWS Team",
+                                type: "General"
+                            };
+
+                            // Logic: Use recent messages if available, otherwise use system default
+                            const displayMessages = recentMessages && recentMessages.length > 0
+                                ? recentMessages
+                                : [systemDefault];
+
+                            return displayMessages.map((item, idx) => (
+                                <div key={idx} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/5 hover:bg-white/15 transition">
+                                    <p className="text-sm text-gray-200 italic mb-3">"{item.msg}"</p>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="font-bold text-secondary text-opacity-90">- {item.author}</span>
+                                        <span className="px-2 py-0.5 rounded bg-white/10 text-gray-300">{item.type}</span>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ));
+                        })()}
                     </div>
                 </div>
             </section>
