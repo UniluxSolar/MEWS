@@ -14,7 +14,7 @@ const AdminHeader = ({ title }) => { // title optional, can auto-derive
         const info = localStorage.getItem('adminInfo');
         if (info) {
             const parsed = JSON.parse(info);
-            setAdminName(parsed.username || 'Admin');
+            setAdminName(parsed.name || parsed.username || 'Admin');
 
             let r = parsed.role || '';
             if (r === 'VILLAGE_ADMIN') {
@@ -46,8 +46,11 @@ const AdminHeader = ({ title }) => { // title optional, can auto-derive
                     </div>
                     <div>
                         <div className="font-bold text-lg leading-none tracking-tight">MEWS</div>
-                        <div className="text-[10px] text-gray-400 leading-none mt-1 uppercase tracking-wider">
-                            {locationName} {roleText}
+                        <div className="text-xs font-bold text-blue-200 leading-none mt-1">
+                            {adminName}
+                        </div>
+                        <div className="text-[10px] text-gray-400 leading-none mt-0.5 uppercase tracking-wider">
+                            {roleText}
                         </div>
                     </div>
                 </div>

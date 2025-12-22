@@ -47,7 +47,7 @@ const MemberSchema = new mongoose.Schema({
     },
 
     // D. Marriage & Partner
-    maritalStatus: { type: String, enum: ['Single', 'Married', 'Widowed', 'Divorced'] },
+    maritalStatus: { type: String, enum: ['Unmarried', 'Married', 'Widowed', 'Divorced'] },
     partnerDetails: {
         name: String,
         caste: String,

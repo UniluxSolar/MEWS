@@ -236,53 +236,61 @@ const registerMember = asyncHandler(async (req, res) => {
 // @desc    Get all members
 // @route   GET /api/members
 // @access  Private (Admin)
+// @desc    Get all members
+// @route   GET /api/members
+// @access  Private (Admin)
 const getMembers = asyncHandler(async (req, res) => {
     let query = {};
 
-    // Filter by assigned location    // Filter by assigned location if user has an assigned location
+    // Filter by assigned location if user has an assigned location
     if (req.user && req.user.assignedLocation) {
         console.log(`[GET MEMBERS] User: ${req.user.username}, Role: ${req.user.role}, AssignedLoc: ${req.user.assignedLocation}`);
 
         const locationId = req.user.assignedLocation;
-        // Fetch location details to get the Name for fallback/string matching
-        const locationDoc = await Location.findById(locationId);
 
-        if (locationDoc) {
-            // RELAXED MATCH: Removed ^ and $ to match Dashboard's "Contains" logic
-            // This ensures if DB has "Peddakaparthy" or "Peddakaparthy Village", both show up.
-            const locNameRegex = new RegExp(locationDoc.name, 'i');
-            console.log(`[GET MEMBERS] Found Location Doc: ${locationDoc.name}, Regex: ${locNameRegex}`);
-
-            if (req.user.role === 'VILLAGE_ADMIN') {
-                // Match ID or Name (String)
-                query['$or'] = [
-                    { 'address.village': locationId },
-                    { 'address.village': locNameRegex }
-                ];
-            } else if (req.user.role === 'MANDAL_ADMIN') {
-                query['$or'] = [
-                    { 'address.mandal': locationId },
-                    { 'address.mandal': locNameRegex }
-                ];
-            } else if (req.user.role === 'DISTRICT_ADMIN') {
-                query['$or'] = [
-                    { 'address.district': locationId },
-                    { 'address.district': locNameRegex }
-                ];
-            }
-            console.log(`[GET MEMBERS] Query applied:`, JSON.stringify(query));
-        } else {
-            // Fallback if location doc not found (shouldn't happen for valid admins)
-            console.warn("[GET MEMBERS] Admin has assignedLocation ID but doc not found in DB");
-            if (req.user.role === 'VILLAGE_ADMIN') query['address.village'] = locationId;
-            else if (req.user.role === 'MANDAL_ADMIN') query['address.mandal'] = locationId;
-            else if (req.user.role === 'DISTRICT_ADMIN') query['address.district'] = locationId;
+        if (req.user.role === 'VILLAGE_ADMIN') {
+            // STRICT: Must match the assigned Village ID
+            query['address.village'] = locationId;
         }
+        else if (req.user.role === 'MANDAL_ADMIN') {
+            // STRICT: Must match the assigned Mandal ID
+            query['address.mandal'] = locationId;
+        }
+        else if (req.user.role === 'DISTRICT_ADMIN') {
+            // STRICT: Must match the assigned District ID
+            query['address.district'] = locationId;
+        }
+        else if (req.user.role === 'STATE_ADMIN') {
+            // STRICT: Must match any District under the assigned State
+            // Find all districts where parent is the State ID
+            const districts = await Location.find({ parent: locationId, type: 'DISTRICT' }).select('_id');
+            const districtIds = districts.map(d => d._id);
+            query['address.district'] = { $in: districtIds };
+        }
+        else if (req.user.role === 'SUPER_ADMIN') {
+            // Show All - No Filter
+        }
+
+        console.log(`[GET MEMBERS] Query applied:`, JSON.stringify(query));
     } else {
-        console.log(`[GET MEMBERS] No specific location filter applied. Role: ${req.user?.role}`);
+        // If no assigned location but restricted role, return empty or error?
+        // Assuming Super Admin might not have assignedLocation.
+        if (req.user.role !== 'SUPER_ADMIN') {
+            console.warn(`[GET MEMBERS] User ${req.user.username} (${req.user.role}) has no assigned location. Showing nothing.`);
+            // query = { _id: null }; // Force empty result? Or just let them see all if misconfigured? 
+            // Better to fail safe.
+            // But for now, let's assume valid configuration.
+            if (req.user.role === 'VILLAGE_ADMIN' || req.user.role === 'MANDAL_ADMIN' || req.user.role === 'DISTRICT_ADMIN') {
+                query = { _id: null }; // Block access
+            }
+        }
     }
 
-    const members = await Member.find(query).sort({ createdAt: -1 });
+    const members = await Member.find(query)
+        .populate('address.village')
+        .populate('address.mandal')
+        .populate('address.district') // Populate to show names
+        .sort({ createdAt: -1 });
     res.json(members);
 });
 

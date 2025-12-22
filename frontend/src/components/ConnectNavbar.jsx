@@ -15,7 +15,7 @@ const ConnectNavbar = () => {
                             <img src={MewsLogo} alt="MEWS" className="w-full h-full object-contain" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-xl font-bold leading-none tracking-tight">MEWS CONNECT</span>
+                            <span className="text-xl font-bold leading-none tracking-tight">MEWS</span>
                             <span className="text-[10px] text-gray-400 uppercase tracking-widest">A Community Initiative</span>
                         </div>
                     </Link>

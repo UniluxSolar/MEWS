@@ -14,7 +14,6 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 
     let institutionQuery = {};
     let sosQuery = {};
-    // const totalFunds definition moved to bottom or reused
 
     // If user has an assigned location
     if (req.user.assignedLocation) {
@@ -22,53 +21,40 @@ const getDashboardStats = asyncHandler(async (req, res) => {
         if (location) {
             locationName = location.name;
 
-            // Common regex filter for unstructured address fields
+            // Common regex filter for unstructured address fields (Institution/SOS)
             const locationRegex = { $regex: location.name, $options: 'i' };
 
             if (req.user.role === 'VILLAGE_ADMIN') {
-                // Use ID OR Name for member filtering
-                memberQuery = {
-                    $or: [
-                        { 'address.village': location._id },
-                        { 'address.village': locationRegex }
-                    ]
-                };
+                // STRICT: Use ID match for members to prevent CastError
+                memberQuery = { 'address.village': location._id };
 
-                // Use Regex for Institution/SOS (best effort based on name)
+                // Use Regex for Institution (fullAddress is String)
                 institutionQuery = { fullAddress: locationRegex };
-                sosQuery = { location: locationRegex };
+                // Fix: SOS location is nested object with address string
+                sosQuery = { 'location.address': locationRegex };
 
             } else if (req.user.role === 'MANDAL_ADMIN') {
-                memberQuery = {
-                    $or: [
-                        { 'address.mandal': location._id },
-                        { 'address.mandal': locationRegex }
-                    ]
-                };
-                institutionQuery = { fullAddress: locationRegex }; // A generic mandal search might strictly not work if address only says village, but best effort
-                sosQuery = { location: locationRegex };
+                memberQuery = { 'address.mandal': location._id };
+
+                institutionQuery = { fullAddress: locationRegex };
+                sosQuery = { 'location.address': locationRegex };
 
                 // Fetch child villages for Mandal Dashboard
                 const villages = await Location.find({ parent: location._id, type: 'VILLAGE' });
 
                 // Aggregate stats per village
                 villagesData = await Promise.all(villages.map(async (village) => {
-                    // Robust query for members (ID vs String)
                     const mCount = await Member.countDocuments({
-                        $or: [
-                            { 'address.village': { $in: [village._id, village._id.toString()] } },
-                            { 'address.village': { $regex: village.name, $options: 'i' } }
-                        ]
+                        'address.village': village._id
                     });
 
                     const pCount = await Member.countDocuments({
-                        'address.village': { $in: [village._id, village._id.toString()] },
+                        'address.village': village._id,
                         verificationStatus: 'PENDING'
                     });
 
-                    // Approximate Institution count by Village Name
                     const instCount = await Institution.countDocuments({ fullAddress: { $regex: village.name, $options: 'i' } });
-                    const sosCount = await SOSRequest.countDocuments({ location: { $regex: village.name, $options: 'i' }, status: 'OPEN' });
+                    const sosCount = await SOSRequest.countDocuments({ 'location.address': { $regex: village.name, $options: 'i' }, status: 'OPEN' });
 
                     return {
                         id: village._id,
@@ -81,36 +67,26 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                     };
                 }));
             } else if (req.user.role === 'DISTRICT_ADMIN') {
-                // Robust District Filtering: ID or Name
-                memberQuery = {
-                    $or: [
-                        { 'address.district': location._id },
-                        { 'address.district': locationRegex }
-                    ]
-                };
+                memberQuery = { 'address.district': location._id };
 
                 // Get Mandals for breakdown
                 const mandals = await Location.find({ parent: location._id, type: 'MANDAL' });
 
-                // Build a regex that matches the District Name OR Any Mandal Name coverage
+                // Build a regex that matches the District Name OR Any Mandal Name range
                 const locationNames = [location.name, ...mandals.map(m => m.name)].map(name =>
                     name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
                 ).join('|');
                 const locationRegexExtended = new RegExp(locationNames, 'i');
 
                 institutionQuery = { fullAddress: locationRegexExtended };
-                sosQuery = { location: locationRegexExtended };
+                sosQuery = { 'location.address': locationRegexExtended };
 
                 const mandalsData = await Promise.all(mandals.map(async (mandal) => {
-                    // Robust query for members per Mandal (ID vs String)
                     const mCount = await Member.countDocuments({
-                        $or: [
-                            { 'address.mandal': { $in: [mandal._id, mandal._id.toString()] } },
-                            { 'address.mandal': { $regex: mandal.name, $options: 'i' } }
-                        ]
+                        'address.mandal': mandal._id
                     });
                     const instCount = await Institution.countDocuments({ fullAddress: { $regex: mandal.name, $options: 'i' } });
-                    const sosCount = await SOSRequest.countDocuments({ location: { $regex: mandal.name, $options: 'i' }, status: 'ACTIVE' });
+                    const sosCount = await SOSRequest.countDocuments({ 'location.address': { $regex: mandal.name, $options: 'i' }, status: 'ACTIVE' });
                     return {
                         id: mandal._id,
                         name: mandal.name,
@@ -120,7 +96,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                         status: sosCount > 0 ? 'Action Required' : 'Active'
                     };
                 }));
-                // Attach to response object (will be used below)
+                // Attach to response object
                 req.mandalsData = mandalsData;
             }
         }

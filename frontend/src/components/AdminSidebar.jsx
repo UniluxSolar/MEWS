@@ -15,11 +15,13 @@ const SidebarItem = ({ icon: Icon, label, active, to }) => (
 const AdminSidebar = ({ activePage }) => {
     const navigate = useNavigate();
     const [roleLabel, setRoleLabel] = useState('Dashboard');
+    const [adminName, setAdminName] = useState('');
 
     useEffect(() => {
         const info = localStorage.getItem('adminInfo');
         if (info) {
-            const { role } = JSON.parse(info);
+            const { role, name } = JSON.parse(info);
+            setAdminName(name || 'Admin');
             if (role === 'VILLAGE_ADMIN') setRoleLabel('Village Dashboard');
             else if (role === 'MANDAL_ADMIN') setRoleLabel('Mandal Dashboard');
             else if (role === 'DISTRICT_ADMIN') setRoleLabel('District Dashboard');
@@ -35,6 +37,12 @@ const AdminSidebar = ({ activePage }) => {
     return (
         <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col overflow-y-auto min-h-[calc(100vh-64px)]">
             <div className="p-4 space-y-1">
+                {/* Admin Name Display */}
+                <div className="mb-4 px-4">
+                    <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Welcome</h2>
+                    <p className="text-lg font-bold text-[#1e2a4a] truncate">{adminName}</p>
+                </div>
+
                 <SidebarItem to="/admin/dashboard" icon={FaThLarge} label={roleLabel} active={activePage === 'dashboard'} />
                 <SidebarItem to="/admin/members" icon={FaUsers} label="Member Management" active={activePage === 'members'} />
                 <SidebarItem to="/admin/institutions" icon={FaBuilding} label="Institution Management" active={activePage === 'institutions'} />

@@ -441,35 +441,55 @@ const MemberRegistration = () => {
         });
     };
 
-    // Effect to filtering Present Mandals when Constituency changes
-    useEffect(() => {
-        if (formData.presentDistrict && allMandals.length > 0) {
-            const filtered = filterMandalsByConstituency(allMandals, formData.presentConstituency);
+    // Filter Mandals by Constituency Helper
+    // const filterMandalsByConstituency... (Defined above)
+
+    // Explicit Handlers for Constituency Change (Replacing useEffect for better control)
+    const handlePresentConstituencyChange = (e) => {
+        const constituencyName = e.target.value;
+        console.log(`[UI] Present Constituency Selected: ${constituencyName}`);
+
+        setFormData(prev => ({
+            ...prev,
+            presentConstituency: constituencyName,
+            // Reset dependent fields
+            presentMandal: '',
+            presentMandalName: '',
+            presentVillage: '',
+            presentVillageName: ''
+        }));
+
+        // Filter Mandals based on selection
+        if (allMandals.length > 0) {
+            const filtered = filterMandalsByConstituency(allMandals, constituencyName);
             setMandals(filtered);
-
-            // If current selected mandal is not in filtered list, reset it
-            if (formData.presentMandal && !filtered.find(m => m._id === formData.presentMandal)) {
-                // Don't verify strictly if filtered is empty (might be data issue), 
-                // but if filtered has items and selection isn't there, reset.
-                if (filtered.length > 0) {
-                    // Ideally reset, but might annoy user if mapping is imperfect. 
-                    // Let's keep it for now unless user changes it.
-                }
-            }
-        } else {
-            setMandals(allMandals);
+            console.log(`[Logic] Filtered Present Mandals: ${filtered.length} (from ${allMandals.length})`);
         }
-    }, [formData.presentConstituency, allMandals, formData.presentDistrict]);
+        setVillages([]);
+    };
 
-    // Effect for filtering Perm Mandals
-    useEffect(() => {
-        if (formData.permDistrict && allPermMandals.length > 0) {
-            const filtered = filterMandalsByConstituency(allPermMandals, formData.permConstituency);
+    const handlePermConstituencyChange = (e) => {
+        const constituencyName = e.target.value;
+        console.log(`[UI] Perm Constituency Selected: ${constituencyName}`);
+
+        setFormData(prev => ({
+            ...prev,
+            permConstituency: constituencyName,
+            // Reset dependent fields
+            permMandal: '',
+            permMandalName: '',
+            permVillage: '',
+            permVillageName: ''
+        }));
+
+        // Filter Mandals based on selection
+        if (allPermMandals.length > 0) {
+            const filtered = filterMandalsByConstituency(allPermMandals, constituencyName);
             setPermMandals(filtered);
-        } else {
-            setPermMandals(allPermMandals);
+            console.log(`[Logic] Filtered Perm Mandals: ${filtered.length} (from ${allPermMandals.length})`);
         }
-    }, [formData.permConstituency, allPermMandals, formData.permDistrict]);
+        setPermVillages([]);
+    };
 
 
     // Fetch Districts on Mount (Specifically for Telangana)
@@ -1319,226 +1339,229 @@ const MemberRegistration = () => {
 
                         {/* Present Address Info */}
                         <CollapsibleSection
-                            title="Present Address"
+                            title="Address Information"
                             icon={FaMapMarkerAlt}
                             sectionNumber={2}
                             isOpen={openSections[2]}
                             onToggle={() => toggleSection(2)}
                         >
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <FormInput
-                                    label="State"
-                                    name="presentState"
-                                    value="Telangana"
-                                    disabled={true}
-                                    placeholder="Telangana"
-                                />
-                                <FormSelect
-                                    label="District"
-                                    name="presentDistrict"
-                                    value={formData.presentDistrict}
-                                    onChange={handleDistrictChange}
-                                    options={districts.map(d => ({ value: d._id, label: d.name }))}
-                                    required
-                                    error={errors.presentDistrict}
-                                />
-                                <FormSelect
-                                    label="Constituency"
-                                    name="presentConstituency"
-                                    value={formData.presentConstituency}
-                                    onChange={handleChange}
-                                    options={presentConstituencies}
-                                    required
-                                    error={errors.presentConstituency}
-                                />
-                                <FormSelect
-                                    label="Mandal"
-                                    name="presentMandal"
-                                    value={formData.presentMandal}
-                                    onChange={handleMandalChange}
-                                    options={mandals.map(m => ({ value: m._id, label: m.name }))}
-                                    required
-                                    error={errors.presentMandal}
-                                />
-                                <FormSelect
-                                    label="Village/Town"
-                                    name="presentVillage"
-                                    value={formData.presentVillage}
-                                    onChange={handleVillageChange}
-                                    options={villages.map(v => ({ value: v._id, label: v.name }))}
-                                    required
-                                    error={errors.presentVillage}
-                                />
+                            <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm mb-6">
+                                <div className="mb-4 pb-2 border-b border-gray-200">
+                                    <h4 className="text-lg font-bold text-gray-800">Present Address</h4>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <FormInput
+                                        label="State"
+                                        name="presentState"
+                                        value="Telangana"
+                                        disabled={true}
+                                        placeholder="Telangana"
+                                    />
+                                    <FormSelect
+                                        label="District"
+                                        name="presentDistrict"
+                                        value={formData.presentDistrict}
+                                        onChange={handleDistrictChange}
+                                        options={districts.map(d => ({ value: d._id, label: d.name }))}
+                                        required
+                                        error={errors.presentDistrict}
+                                    />
+                                    <FormSelect
+                                        label="Constituency"
+                                        name="presentConstituency"
+                                        value={formData.presentConstituency}
+                                        onChange={handlePresentConstituencyChange}
+                                        options={presentConstituencies}
+                                        required
+                                        disabled={!formData.presentDistrict}
+                                        error={errors.presentConstituency}
+                                    />
+                                    <FormSelect
+                                        label="Mandal"
+                                        name="presentMandal"
+                                        value={formData.presentMandal}
+                                        onChange={handleMandalChange}
+                                        options={mandals.map(m => ({ value: m._id, label: m.name }))}
+                                        required
+                                        disabled={!formData.presentConstituency}
+                                        error={errors.presentMandal}
+                                    />
+                                    <FormSelect
+                                        label="Village/Town"
+                                        name="presentVillage"
+                                        value={formData.presentVillage}
+                                        onChange={handleVillageChange}
+                                        options={villages.map(v => ({ value: v._id, label: v.name }))}
+                                        required
+                                        disabled={!formData.presentMandal}
+                                        error={errors.presentVillage}
+                                    />
 
-                                <FormInput
-                                    label="House No."
-                                    name="presentHouseNo"
-                                    value={formData.presentHouseNo}
-                                    onChange={handleChange}
-                                    placeholder="e.g. 1-123"
-                                    required
-                                    error={errors.presentHouseNo}
-                                />
-                                <FormInput
-                                    label="Street Name / Colony"
-                                    name="presentStreet"
-                                    value={formData.presentStreet}
-                                    onChange={handleChange}
-                                    placeholder="e.g. Main Road, Ambedkar Colony"
-                                // Required removed as per request
-                                />
-                                <FormInput
-                                    label="Landmark"
-                                    name="presentLandmark"
-                                    value={formData.presentLandmark}
-                                    onChange={handleChange}
-                                    placeholder="e.g. Near Water Tank"
-                                // Required removed as per request
-                                />
+                                    <FormInput
+                                        label="House No."
+                                        name="presentHouseNo"
+                                        value={formData.presentHouseNo}
+                                        onChange={handleChange}
+                                        placeholder="e.g. 1-123"
+                                        required
+                                        error={errors.presentHouseNo}
+                                    />
+                                    <FormInput
+                                        label="Street Name / Colony"
+                                        name="presentStreet"
+                                        value={formData.presentStreet}
+                                        onChange={handleChange}
+                                        placeholder="e.g. Main Road, Ambedkar Colony"
+                                    // Required removed as per request
+                                    />
+                                    <FormInput
+                                        label="Landmark"
+                                        name="presentLandmark"
+                                        value={formData.presentLandmark}
+                                        onChange={handleChange}
+                                        placeholder="e.g. Near Water Tank"
+                                    // Required removed as per request
+                                    />
 
-                                <FormInput
-                                    label="Pincode"
-                                    name="presentPincode"
-                                    value={formData.presentPincode}
-                                    onChange={handleChange}
-                                    placeholder="Enter pincode"
-                                    required
-                                    error={errors.presentPincode}
-                                />
+                                    <FormInput
+                                        label="Pincode"
+                                        name="presentPincode"
+                                        value={formData.presentPincode}
+                                        onChange={handleChange}
+                                        placeholder="Enter pincode"
+                                        required
+                                        error={errors.presentPincode}
+                                    />
 
-                                <div className="col-span-1 md:col-span-2">
-                                    <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Residence Type</label>
-                                    <div className="flex items-center gap-6 mt-2">
-                                        <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="residenceType" value="Owned" onChange={handleChange} checked={formData.residenceType === 'Owned'} className="w-4 h-4 text-blue-600" /> <span className="text-sm text-gray-700">Owned</span></label>
-                                        <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="residenceType" value="Rented" onChange={handleChange} checked={formData.residenceType === 'Rented'} className="w-4 h-4 text-blue-600" /> <span className="text-sm text-gray-700">Rented</span></label>
+                                    <div className="col-span-1 md:col-span-2">
+                                        <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Residence Type</label>
+                                        <div className="flex items-center gap-6 mt-2">
+                                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="residenceType" value="Owned" onChange={handleChange} checked={formData.residenceType === 'Owned'} className="w-4 h-4 text-blue-600" /> <span className="text-sm text-gray-700">Owned</span></label>
+                                            <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="residenceType" value="Rented" onChange={handleChange} checked={formData.residenceType === 'Rented'} className="w-4 h-4 text-blue-600" /> <span className="text-sm text-gray-700">Rented</span></label>
+                                        </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Permanent Address Header inside same section */}
+                            <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
+                                <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
+                                    <h4 className="text-lg font-bold text-gray-800">Permanent Address</h4>
+                                    <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50 transition shadow-sm">
+                                        <input
+                                            type="checkbox"
+                                            checked={sameAsPresent}
+                                            onChange={handleSameAsPresentChange}
+                                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-400"
+                                        />
+                                        <span className="text-xs font-bold text-blue-800">SAME AS PRESENT</span>
+                                    </label>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <FormInput
+                                        label="State"
+                                        name="permState"
+                                        value="Telangana"
+                                        disabled={true}
+                                        placeholder="Telangana"
+                                    />
+                                    <FormSelect
+                                        label="District"
+                                        name="permDistrict"
+                                        value={formData.permDistrict}
+                                        onChange={handlePermDistrictChange}
+                                        options={districts.map(d => ({ value: d._id, label: d.name }))}
+                                        disabled={sameAsPresent}
+                                        required={!sameAsPresent}
+                                        error={!sameAsPresent ? errors.permDistrict : null}
+                                    />
+                                    <FormSelect
+                                        label="Constituency"
+                                        name="permConstituency"
+                                        value={formData.permConstituency}
+                                        onChange={handlePermConstituencyChange}
+                                        options={permConstituencies}
+                                        disabled={sameAsPresent || !formData.permDistrict}
+                                        required={!sameAsPresent}
+                                        error={!sameAsPresent ? errors.permConstituency : null}
+                                    />
+                                    <FormSelect
+                                        label="Mandal"
+                                        name="permMandal"
+                                        value={formData.permMandal}
+                                        onChange={handlePermMandalChange}
+                                        options={sameAsPresent
+                                            ? mandals.map(m => ({ value: m._id, label: m.name }))
+                                            : permMandals.map(m => ({ value: m._id, label: m.name }))}
+                                        disabled={sameAsPresent || !formData.permConstituency}
+                                        required={!sameAsPresent}
+                                        error={!sameAsPresent ? errors.permMandal : null}
+                                    />
+                                    <FormSelect
+                                        label="Village/Town"
+                                        name="permVillage"
+                                        value={formData.permVillage}
+                                        onChange={handlePermVillageChange}
+                                        options={sameAsPresent
+                                            ? villages.map(v => ({ value: v._id, label: v.name }))
+                                            : permVillages.map(v => ({ value: v._id, label: v.name }))}
+                                        required={!sameAsPresent}
+                                        disabled={sameAsPresent || !formData.permMandal}
+                                        error={!sameAsPresent ? errors.permVillage : null}
+                                    />
+
+                                    <FormInput
+                                        label="House No."
+                                        name="permHouseNo"
+                                        value={formData.permHouseNo}
+                                        onChange={handleChange}
+                                        placeholder="e.g. 1-123"
+                                        disabled={sameAsPresent}
+                                        required={!sameAsPresent}
+                                        error={!sameAsPresent ? errors.permHouseNo : null}
+                                    />
+                                    <FormInput
+                                        label="Street Name / Colony"
+                                        name="permStreet"
+                                        value={formData.permStreet}
+                                        onChange={handleChange}
+                                        placeholder="e.g. Main Road, Ambedkar Colony"
+                                        disabled={sameAsPresent}
+                                    />
+                                    <FormInput
+                                        label="Landmark"
+                                        name="permLandmark"
+                                        value={formData.permLandmark}
+                                        onChange={handleChange}
+                                        placeholder="e.g. Near Water Tank"
+                                        disabled={sameAsPresent}
+                                    />
+
+                                    <FormInput
+                                        label="Pincode"
+                                        name="permPincode"
+                                        value={formData.permPincode}
+                                        onChange={handleChange}
+                                        placeholder="Enter pincode"
+                                        disabled={sameAsPresent}
+                                        required={!sameAsPresent}
+                                        error={!sameAsPresent ? errors.permPincode : null}
+                                    />
                                 </div>
                             </div>
                         </CollapsibleSection>
 
-                        {/* Permanent Address Info */}
-                        <CollapsibleSection
-                            title="Permanent Address"
-                            icon={FaHome}
-                            sectionNumber={3}
-                            isOpen={openSections[3]}
-                            onToggle={() => toggleSection(3)}
-                        >
-                            <div className="flex items-center gap-4 mb-6">
-                                {/* Moved to left as requested */}
-                                <label className="flex items-center gap-2 cursor-pointer bg-blue-100 px-4 py-2 rounded-lg border border-blue-300 hover:bg-blue-200 transition shadow-sm">
-                                    <input
-                                        type="checkbox"
-                                        checked={sameAsPresent}
-                                        onChange={handleSameAsPresentChange}
-                                        className="w-5 h-5 text-blue-700 rounded focus:ring-blue-600 border-gray-400"
-                                    />
-                                    <span className="text-sm font-extrabold text-blue-900">SAME AS PRESENT ADDRESS</span>
-                                </label>
-                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <FormInput
-                                    label="State"
-                                    name="permState"
-                                    value="Telangana"
-                                    disabled={true}
-                                    placeholder="Telangana"
-                                />
-                                <FormSelect
-                                    label="District"
-                                    name="permDistrict"
-                                    value={formData.permDistrict}
-                                    onChange={handlePermDistrictChange}
-                                    options={districts.map(d => ({ value: d._id, label: d.name }))}
-                                    disabled={sameAsPresent}
-                                    required={!sameAsPresent}
-                                    error={!sameAsPresent ? errors.permDistrict : null}
-                                />
-                                <FormSelect
-                                    label="Constituency"
-                                    name="permConstituency"
-                                    value={formData.permConstituency}
-                                    onChange={handleChange}
-                                    options={permConstituencies}
-                                    disabled={sameAsPresent}
-                                    required={!sameAsPresent}
-                                    error={!sameAsPresent ? errors.permConstituency : null}
-                                />
-                                <FormSelect
-                                    label="Mandal"
-                                    name="permMandal"
-                                    value={formData.permMandal}
-                                    onChange={handlePermMandalChange}
-                                    options={sameAsPresent
-                                        ? mandals.map(m => ({ value: m._id, label: m.name }))
-                                        : permMandals.map(m => ({ value: m._id, label: m.name }))}
-                                    disabled={sameAsPresent}
-                                    required={!sameAsPresent}
-                                    error={!sameAsPresent ? errors.permMandal : null}
-                                />
-                                <FormSelect
-                                    label="Village/Town"
-                                    name="permVillage"
-                                    value={formData.permVillage}
-                                    onChange={handlePermVillageChange}
-                                    options={sameAsPresent
-                                        ? villages.map(v => ({ value: v._id, label: v.name }))
-                                        : permVillages.map(v => ({ value: v._id, label: v.name }))}
-                                    required={!sameAsPresent}
-                                    disabled={sameAsPresent}
-                                    error={!sameAsPresent ? errors.permVillage : null}
-                                />
-
-                                <FormInput
-                                    label="House No."
-                                    name="permHouseNo"
-                                    value={formData.permHouseNo}
-                                    onChange={handleChange}
-                                    placeholder="e.g. 1-123"
-                                    disabled={sameAsPresent}
-                                    required={!sameAsPresent}
-                                    error={!sameAsPresent ? errors.permHouseNo : null}
-                                />
-                                <FormInput
-                                    label="Street Name / Colony"
-                                    name="permStreet"
-                                    value={formData.permStreet}
-                                    onChange={handleChange}
-                                    placeholder="e.g. Main Road, Ambedkar Colony"
-                                    disabled={sameAsPresent}
-                                // Required removed as per request
-                                />
-                                <FormInput
-                                    label="Landmark"
-                                    name="permLandmark"
-                                    value={formData.permLandmark}
-                                    onChange={handleChange}
-                                    placeholder="e.g. Near Water Tank"
-                                    disabled={sameAsPresent}
-                                // Required removed as per request
-                                />
-
-                                <FormInput
-                                    label="Pincode"
-                                    name="permPincode"
-                                    value={formData.permPincode}
-                                    onChange={handleChange}
-                                    placeholder="Enter pincode"
-                                    disabled={sameAsPresent}
-                                    required={!sameAsPresent}
-                                    error={!sameAsPresent ? errors.permPincode : null}
-                                />
-                            </div>
-                        </CollapsibleSection>
 
 
                         {/* Caste & Community */}
                         <CollapsibleSection
                             title="Caste & Community Information"
                             icon={FaUsers}
-                            sectionNumber={4}
-                            isOpen={openSections[4]}
+                            sectionNumber={3}
+                            isOpen={openSections[4]} // Kept key 4 to minimise state refactor, or better rename state keys? 
+                            // Actually it's cleaner to keep the original state keys but just change the display number.
                             onToggle={() => toggleSection(4)}
                         >
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1554,7 +1577,7 @@ const MemberRegistration = () => {
                         <CollapsibleSection
                             title="Marriage & Partner Information"
                             icon={FaRing}
-                            sectionNumber={5}
+                            sectionNumber={4}
                             isOpen={openSections[5]}
                             onToggle={() => toggleSection(5)}
                         >
@@ -2178,74 +2201,76 @@ const MemberRegistration = () => {
             }
 
             {/* Family Member Modal */}
-            {showFamilyModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <div className="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
-                            <h2 className="text-xl font-bold text-gray-800">Add Family Member Details</h2>
-                            <button onClick={() => setShowFamilyModal(false)} className="text-gray-500 hover:text-red-500 text-2xl font-bold">&times;</button>
-                        </div>
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Basic Info */}
-                            <div className="md:col-span-2"><h3 className="font-bold text-blue-600 border-b pb-1 mb-2">Basic Information</h3></div>
-                            <FormSelect
-                                label="Relation"
-                                name="relation"
-                                value={familyMemberForm.relation}
-                                onChange={handleFamilyChange}
-                                options={formData.maritalStatus === 'Unmarried'
-                                    ? ["Father", "Mother", "Brother", "Sister"]
-                                    : ["Spouse", "Son", "Daughter"]
-                                }
-                                required
-                            />
-                            <FormInput label="Surname" name="surname" value={familyMemberForm.surname} onChange={handleFamilyChange} placeholder="Surname" required />
-                            <FormInput label="Name" name="name" value={familyMemberForm.name} onChange={handleFamilyChange} placeholder="Name" required />
-                            <FormInput label="Date of Birth" name="dob" value={familyMemberForm.dob} onChange={handleFamilyChange} type="date" />
-                            <FormInput label="Age" name="age" value={familyMemberForm.age} onChange={handleFamilyChange} placeholder="Age" type="number" />
-                            <FormSelect label="Gender" name="gender" value={familyMemberForm.gender} onChange={handleFamilyChange} options={["Male", "Female", "Other"]} />
-                            <FormSelect label="Occupation" name="occupation" value={familyMemberForm.occupation} onChange={handleFamilyChange} options={memberOccupations} />
-
-                            {familyMemberForm.occupation === 'Student' && (
+            {
+                showFamilyModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                            <div className="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
+                                <h2 className="text-xl font-bold text-gray-800">Add Family Member Details</h2>
+                                <button onClick={() => setShowFamilyModal(false)} className="text-gray-500 hover:text-red-500 text-2xl font-bold">&times;</button>
+                            </div>
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Basic Info */}
+                                <div className="md:col-span-2"><h3 className="font-bold text-blue-600 border-b pb-1 mb-2">Basic Information</h3></div>
                                 <FormSelect
-                                    label="Education Level"
-                                    name="educationLevel"
-                                    value={familyMemberForm.educationLevel}
+                                    label="Relation"
+                                    name="relation"
+                                    value={familyMemberForm.relation}
                                     onChange={handleFamilyChange}
-                                    options={["School", "Intermediate", "Degree", "PG"]}
+                                    options={formData.maritalStatus === 'Unmarried'
+                                        ? ["Father", "Mother", "Brother", "Sister"]
+                                        : ["Spouse", "Son", "Daughter"]
+                                    }
                                     required
                                 />
-                            )}
+                                <FormInput label="Surname" name="surname" value={familyMemberForm.surname} onChange={handleFamilyChange} placeholder="Surname" required />
+                                <FormInput label="Name" name="name" value={familyMemberForm.name} onChange={handleFamilyChange} placeholder="Name" required />
+                                <FormInput label="Date of Birth" name="dob" value={familyMemberForm.dob} onChange={handleFamilyChange} type="date" />
+                                <FormInput label="Age" name="age" value={familyMemberForm.age} onChange={handleFamilyChange} placeholder="Age" type="number" />
+                                <FormSelect label="Gender" name="gender" value={familyMemberForm.gender} onChange={handleFamilyChange} options={["Male", "Female", "Other"]} />
+                                <FormSelect label="Occupation" name="occupation" value={familyMemberForm.occupation} onChange={handleFamilyChange} options={memberOccupations} />
 
-                            <FormInput label="Mobile Number" name="mobileNumber" value={familyMemberForm.mobileNumber} onChange={handleFamilyChange} placeholder="Mobile" />
-                            <FormInput label="Aadhaar Number" name="aadhaarNumber" value={familyMemberForm.aadhaarNumber} onChange={handleFamilyChange} placeholder="Aadhaar" />
+                                {familyMemberForm.occupation === 'Student' && (
+                                    <FormSelect
+                                        label="Education Level"
+                                        name="educationLevel"
+                                        value={familyMemberForm.educationLevel}
+                                        onChange={handleFamilyChange}
+                                        options={["School", "Intermediate", "Degree", "PG"]}
+                                        required
+                                    />
+                                )}
 
-                            {/* Voter ID */}
-                            <div className="md:col-span-2 mt-4"><h3 className="font-bold text-blue-600 border-b pb-1 mb-2">Voter ID Details</h3></div>
-                            <FormInput label="EPIC Number" name="epicNumber" value={familyMemberForm.epicNumber} onChange={handleFamilyChange} placeholder="EPIC No" />
-                            <FormInput label="Voter Name" name="voterName" value={familyMemberForm.voterName} onChange={handleFamilyChange} placeholder="Name on Card" />
-                            <FormInput label="Polling Booth" name="pollingBooth" value={familyMemberForm.pollingBooth} onChange={handleFamilyChange} placeholder="Booth No" />
+                                <FormInput label="Mobile Number" name="mobileNumber" value={familyMemberForm.mobileNumber} onChange={handleFamilyChange} placeholder="Mobile" />
+                                <FormInput label="Aadhaar Number" name="aadhaarNumber" value={familyMemberForm.aadhaarNumber} onChange={handleFamilyChange} placeholder="Aadhaar" />
 
-                            {/* Documents */}
-                            <div className="md:col-span-2 mt-4"><h3 className="font-bold text-blue-600 border-b pb-1 mb-2">Document Uploads</h3></div>
-                            <FileUpload label="Member Photo" name="photo" onChange={handleFamilyFileChange} fileName={familyMemberFiles.photo?.name} />
-                            <FileUpload label="Aadhaar Front" name="aadhaarFront" onChange={handleFamilyFileChange} fileName={familyMemberFiles.aadhaarFront?.name} />
-                            <FileUpload label="Aadhaar Back" name="aadhaarBack" onChange={handleFamilyFileChange} fileName={familyMemberFiles.aadhaarBack?.name} />
-                            <FileUpload label="Voter ID Front" name="voterIdFront" onChange={handleFamilyFileChange} fileName={familyMemberFiles.voterIdFront?.name} />
-                            <FileUpload label="Voter ID Back" name="voterIdBack" onChange={handleFamilyFileChange} fileName={familyMemberFiles.voterIdBack?.name} />
+                                {/* Voter ID */}
+                                <div className="md:col-span-2 mt-4"><h3 className="font-bold text-blue-600 border-b pb-1 mb-2">Voter ID Details</h3></div>
+                                <FormInput label="EPIC Number" name="epicNumber" value={familyMemberForm.epicNumber} onChange={handleFamilyChange} placeholder="EPIC No" />
+                                <FormInput label="Voter Name" name="voterName" value={familyMemberForm.voterName} onChange={handleFamilyChange} placeholder="Name on Card" />
+                                <FormInput label="Polling Booth" name="pollingBooth" value={familyMemberForm.pollingBooth} onChange={handleFamilyChange} placeholder="Booth No" />
 
-                            <div className="md:col-span-2 bg-blue-50 p-3 rounded text-sm text-blue-800">
-                                <p><strong>Note:</strong> Addresses for this family member will be automatically set to the same as the main applicant's Present and Permanent addresses.</p>
+                                {/* Documents */}
+                                <div className="md:col-span-2 mt-4"><h3 className="font-bold text-blue-600 border-b pb-1 mb-2">Document Uploads</h3></div>
+                                <FileUpload label="Member Photo" name="photo" onChange={handleFamilyFileChange} fileName={familyMemberFiles.photo?.name} />
+                                <FileUpload label="Aadhaar Front" name="aadhaarFront" onChange={handleFamilyFileChange} fileName={familyMemberFiles.aadhaarFront?.name} />
+                                <FileUpload label="Aadhaar Back" name="aadhaarBack" onChange={handleFamilyFileChange} fileName={familyMemberFiles.aadhaarBack?.name} />
+                                <FileUpload label="Voter ID Front" name="voterIdFront" onChange={handleFamilyFileChange} fileName={familyMemberFiles.voterIdFront?.name} />
+                                <FileUpload label="Voter ID Back" name="voterIdBack" onChange={handleFamilyFileChange} fileName={familyMemberFiles.voterIdBack?.name} />
+
+                                <div className="md:col-span-2 bg-blue-50 p-3 rounded text-sm text-blue-800">
+                                    <p><strong>Note:</strong> Addresses for this family member will be automatically set to the same as the main applicant's Present and Permanent addresses.</p>
+                                </div>
+                            </div>
+                            <div className="p-6 border-t border-gray-200 flex justify-end gap-4">
+                                <button onClick={() => setShowFamilyModal(false)} className="px-6 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                                <button onClick={saveFamilyMember} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Add Member</button>
                             </div>
                         </div>
-                        <div className="p-6 border-t border-gray-200 flex justify-end gap-4">
-                            <button onClick={() => setShowFamilyModal(false)} className="px-6 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
-                            <button onClick={saveFamilyMember} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Add Member</button>
-                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

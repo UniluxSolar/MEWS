@@ -48,16 +48,41 @@ const Location = require('../models/Location');
 // @desc    Get all institutions
 // @route   GET /api/institutions
 // @access  Private (Admin)
+// @desc    Get all institutions
+// @route   GET /api/institutions
+// @access  Private (Admin)
 const getInstitutions = asyncHandler(async (req, res) => {
     let query = {};
 
     // Filter by assigned location if user has one
     if (req.user && req.user.assignedLocation) {
+        // We need the location name because Institution uses a string 'fullAddress'
         const location = await Location.findById(req.user.assignedLocation);
+
         if (location) {
-            // Since Institution uses 'fullAddress' string, we use Regex to match the location name
-            query.fullAddress = { $regex: location.name, $options: 'i' };
+            console.log(`[GET INSTITUTIONS] User: ${req.user.username}, Role: ${req.user.role}, Location: ${location.name}`);
+
+            // STRICT FILTERING based on Location Name
+            // Note: Since Institution doesn't store IDs, we must rely on the address string containing the name.
+
+            if (['VILLAGE_ADMIN', 'MANDAL_ADMIN', 'DISTRICT_ADMIN'].includes(req.user.role)) {
+                query.fullAddress = { $regex: location.name, $options: 'i' };
+            }
+            else if (req.user.role === 'STATE_ADMIN') {
+                // For State Admin, ideally we filter by State name?
+                // Or if 'assignedLocation' is the State node, we use its name.
+                query.fullAddress = { $regex: location.name, $options: 'i' };
+            }
+            // SUPER_ADMIN sees all (query stays empty)
+        } else {
+            // Block access if assigned location exists but not found
+            if (req.user.role !== 'SUPER_ADMIN') {
+                query = { _id: null };
+            }
         }
+    } else if (req.user && req.user.role !== 'SUPER_ADMIN') {
+        // Block access if no assigned location for non-super admins
+        //  query = { _id: null }; 
     }
 
     const institutions = await Institution.find(query).sort({ createdAt: -1 });

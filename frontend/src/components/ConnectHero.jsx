@@ -65,7 +65,7 @@ const ConnectHero = () => {
                     </div>
 
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight drop-shadow-md">
-                        MEWS CONNECT
+                        MEWS
                     </h1>
                     <p className="text-xl sm:text-2xl text-gray-300 font-light mb-2">
                         Empowering the Mala Community
@@ -99,9 +99,7 @@ const ConnectHero = () => {
                                 <div className="text-sm">App Store</div>
                             </div>
                         </button>
-                        <button className="bg-transparent border border-gray-400 text-white px-6 py-2.5 rounded-md font-semibold hover:bg-white/10 transition">
-                            Explore Features
-                        </button>
+
                     </div>
                 </div>
 
@@ -126,7 +124,7 @@ const ConnectHero = () => {
                     />
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

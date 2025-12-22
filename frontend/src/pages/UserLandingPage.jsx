@@ -8,10 +8,56 @@ import {
     FaCloudUploadAlt, FaUsers, FaHandHoldingHeart, FaChartLine,
     FaCheckCircle, FaUniversity, FaEye, FaBalanceScale,
     FaBolt, FaGraduationCap, FaHome, FaStore,
-    FaHeart, FaSearch, FaWhatsapp, FaMedkit, FaUserTie, FaArrowRight
+    FaHeart, FaSearch, FaWhatsapp, FaMedkit, FaUserTie, FaArrowRight, FaBriefcase
 } from 'react-icons/fa';
 
+import SrinivasImg from '../assets/srinivas.png';
+import VenkatImg from '../assets/venkat.png';
+import PadmaImg from '../assets/padma.png';
+import AnushaImg from '../assets/anusha.png';
+import Member1 from '../assets/member1.png';
+import Member2 from '../assets/member2.png';
+import Member3 from '../assets/member3.png';
+import Member4 from '../assets/member4.png';
+import SosMan from '../assets/sos_man.jpg';
+import SosWoman from '../assets/sos_woman.jpg';
+
 const CommunitySupportHub = () => {
+    const institutionStats = [
+        { label: "Education", value: "1,200+", icon: FaGraduationCap, color: "text-blue-600", bg: "bg-blue-100" },
+        { label: "Health", value: "850+", icon: FaMedkit, color: "text-red-600", bg: "bg-red-100" },
+        { label: "Legal Aid", value: "3,500+", icon: FaBalanceScale, color: "text-purple-600", bg: "bg-purple-100" },
+        { label: "Employment", value: "500+", icon: FaBriefcase, color: "text-amber-600", bg: "bg-amber-100" },
+        { label: "Welfare", value: "2,100+", icon: FaHandHoldingHeart, color: "text-green-600", bg: "bg-green-100" },
+        { label: "Total Beneficiaries", value: "8,150+", icon: FaUsers, color: "text-indigo-600", bg: "bg-indigo-100" },
+    ];
+
+    const [championTab, setChampionTab] = React.useState('monthly');
+
+    const championsData = {
+        monthly: [
+            { rank: 1, name: "Srinivas Rao", amount: "₹50,000", location: "Hyderabad", img: SrinivasImg },
+            { rank: 2, name: "Latha K.", amount: "₹35,000", location: "Warangal", img: PadmaImg },
+            { rank: 3, name: "Prasad G.", amount: "₹25,000", location: "Khammam", img: Member1 },
+            { rank: 4, name: "Anusha R.", amount: "₹20,000", location: "Karimnagar", img: AnushaImg },
+            { rank: 5, name: "Rajesh T.", amount: "₹15,000", location: "Nalgonda", img: Member2 },
+        ],
+        yearly: [
+            { rank: 1, name: "Dr. K. Kumar", amount: "₹5,00,000", location: "Hyderabad", img: SosMan },
+            { rank: 2, name: "Venkatesh K.", amount: "₹3,50,000", location: "Corporate", img: VenkatImg },
+            { rank: 3, name: "Sunrise Hospitals", amount: "₹2,00,000", location: "Warangal", img: Member3 },
+            { rank: 4, name: "Vijay M.", amount: "₹1,50,000", location: "Nizamabad", img: Member4 },
+            { rank: 5, name: "Saritha P.", amount: "₹1,20,000", location: "Khammam", img: SosWoman },
+        ],
+        overall: [
+            { rank: 1, name: "Venkatesh K.", amount: "₹12,00,000", location: "USA", img: VenkatImg },
+            { rank: 2, name: "Global Mala Assn", amount: "₹10,50,000", location: "International", img: Member1 },
+            { rank: 3, name: "Ravi Teja", amount: "₹8,00,000", location: "Bangalore", img: SrinivasImg },
+            { rank: 4, name: "Dr. Bhanu", amount: "₹6,50,000", location: "Hyderabad", img: PadmaImg },
+            { rank: 5, name: "Suresh G.", amount: "₹5,00,000", location: "Mumbai", img: Member2 },
+        ]
+    };
+
     return (
         <div className="relative py-12 px-4 md:px-8 lg:px-16 space-y-16 font-sans text-gray-800 overflow-hidden">
 
@@ -88,25 +134,19 @@ const CommunitySupportHub = () => {
             {/* 3. Community Impact Metrics (Static Dashboard) */}
             <section className="w-full bg-white border-b border-gray-100 py-10">
                 <div className="max-w-7xl mx-auto px-4 mb-8 text-center">
-                    <h2 className="text-xl font-bold text-gray-400 uppercase tracking-widest">Our Impact Dashboard</h2>
+                    <h2 className="text-3xl font-bold text-[#1e2a4a] uppercase tracking-widest">Our Impact Dashboard</h2>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-4">
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 justify-items-center">
-                        {[
-                            { value: '₹15.6 Lakh', label: 'Total Raised', icon: <FaChartLine />, color: 'text-blue-600', bg: 'bg-blue-50' },
-                            { value: '2,847', label: 'Active Donors', icon: <FaUsers />, color: 'text-green-600', bg: 'bg-green-50' },
-                            { value: '127', label: 'Medical Cases', icon: <FaMedkit />, color: 'text-red-600', bg: 'bg-red-50' },
-                            { value: '89', label: 'Students Funded', icon: <FaGraduationCap />, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-                            { value: '15+', label: 'Villages Covered', icon: <FaHome />, color: 'text-orange-600', bg: 'bg-orange-50' },
-                            { value: '100%', label: 'Transparency', icon: <FaCheckCircle />, color: 'text-teal-600', bg: 'bg-teal-50' },
-                        ].map((item, idx) => (
-                            <div key={idx} className="flex flex-col items-center p-4 rounded-2xl bg-white border border-gray-50 hover:border-gray-100 hover:shadow-lg transition-all w-full">
-                                <div className={`w-12 h-12 rounded-full ${item.bg} ${item.color} flex items-center justify-center text-xl mb-3`}>
-                                    {item.icon}
+                <div className="max-w-7xl mx-auto px-4 relative z-10">
+                    <div className="bg-white rounded-3xl shadow-xl p-8 relative z-20 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 border border-gray-100">
+                        {institutionStats.map((stat, idx) => (
+                            <div key={idx} className="text-center group p-4 rounded-2xl hover:bg-gray-50 transition duration-300">
+                                <div className={`w-14 h-14 mx-auto ${stat.bg} ${stat.color} rounded-full flex items-center justify-center mb-3 text-2xl group-hover:scale-110 transition duration-300 shadow-sm`}>
+                                    <stat.icon />
                                 </div>
-                                <div className={`text-xl md:text-2xl font-extrabold ${item.color} tracking-tight`}>{item.value}</div>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 text-center">{item.label}</div>
+                                <h3 className="text-3xl font-extrabold text-gray-800 mb-1">{stat.value}</h3>
+                                <p className="text-sm font-bold text-gray-500 uppercase tracking-wide">{stat.label}</p>
+                                <p className="text-[10px] text-gray-400 font-semibold mt-1">Beneficiaries</p>
                             </div>
                         ))}
                     </div>
@@ -118,7 +158,7 @@ const CommunitySupportHub = () => {
                 <div className="bg-white border-y border-gray-100 py-6 px-8 shadow-sm flex items-center gap-8">
                     <span className="bg-red-50 text-red-600 px-5 py-2 rounded-full text-base font-extrabold tracking-wide uppercase shrink-0 shadow-sm border border-red-100">Live Updates</span>
                     <div className="flex-1 overflow-hidden relative h-10">
-                        <div className="animate-marquee absolute whitespace-nowrap flex gap-16 text-xl font-medium text-gray-700 items-center h-full">
+                        <div className="animate-marquee-fast absolute whitespace-nowrap flex gap-16 text-xl font-medium text-gray-700 items-center h-full">
                             <span className="flex items-center gap-3"><FaHeart className="text-red-500 text-lg" /> Anonymous gave ₹500 to Ravi's surgery</span>
                             <span className="flex items-center gap-3"><div className="w-2 h-2 bg-gray-300 rounded-full"></div></span>
                             <span className="flex items-center gap-3"><FaHeart className="text-blue-500 text-lg" /> Priya M. donated ₹200 for flood relief</span>
@@ -132,68 +172,9 @@ const CommunitySupportHub = () => {
             </section>
 
             {/* 5. Success Stories Highlights */}
-            <section className="max-w-7xl mx-auto">
-                <div className="text-center mb-12">
-                    <h2 className="text-2xl font-bold text-[#1e2a4a]">Making a Real Difference</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    {[
-                        { count: '127', desc: 'Medical emergencies', sub: 'funded successfully', icon: <FaMedkit />, color: 'text-red-500', bg: 'bg-red-50' },
-                        { count: '89', desc: 'Students supported', sub: 'through scholarships', icon: <FaGraduationCap />, color: 'text-blue-500', bg: 'bg-blue-50' },
-                        { count: '34', desc: 'Families rebuilt', sub: 'after local disasters', icon: <FaHome />, color: 'text-green-500', bg: 'bg-green-50' },
-                        { count: '156', desc: 'Small businesses', sub: 'started with microloans', icon: <FaStore />, color: 'text-purple-500', bg: 'bg-purple-50' }
-                    ].map((item, idx) => (
-                        <div key={idx} className="bg-white p-6 rounded-2xl border border-gray-100 hover:border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 group">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className={`w-12 h-12 rounded-xl ${item.bg} ${item.color} flex items-center justify-center text-xl group-hover:scale-110 transition-transform`}>
-                                    {item.icon}
-                                </div>
-                                <div className="text-3xl font-bold text-gray-800">{item.count}</div>
-                            </div>
-                            <h3 className="font-bold text-gray-900 leading-tight">{item.desc}</h3>
-                            <p className="text-sm text-gray-500">{item.sub}</p>
-                        </div>
-                    ))}
-                </div>
-            </section>
 
-            {/* 6. Action Panels (Glassmorphism) */}
-            <section className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-                <div className="relative overflow-hidden rounded-3xl p-8 md:p-12 border border-gray-200 shadow-xl bg-white group">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-100 transition duration-700"></div>
-                    <div className="relative z-10">
-                        <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase tracking-wide mb-4">Need Assistance?</span>
-                        <h3 className="text-3xl font-bold text-[#1e2a4a] mb-6">Start Your Fundraiser</h3>
-                        <p className="text-gray-500 mb-8 max-w-sm">Facing a financial crisis or need support for a community project? We are here to help you get started.</p>
-                        <div className="flex flex-col gap-3">
-                            <button className="w-full py-4 bg-[#1e2a4a] text-white rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-[#2a3b66] transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                                <FaCloudUploadAlt size={18} /> Submit Request
-                            </button>
 
-                        </div>
-                    </div>
-                </div>
 
-                <div className="relative overflow-hidden rounded-3xl p-8 md:p-12 border border-gray-200 shadow-xl bg-white group">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-green-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-green-100 transition duration-700"></div>
-                    <div className="relative z-10">
-                        <span className="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-wide mb-4">Give Back</span>
-                        <h3 className="text-3xl font-bold text-[#1e2a4a] mb-6">Support Your Community</h3>
-                        <p className="text-gray-500 mb-8 max-w-sm">Every contribution counts. Help your neighbors and strengthen our community bond.</p>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button className="col-span-2 py-4 bg-secondary text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-amber-600 transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                                <FaSearch /> Browse Campaigns
-                            </button>
-                            <button className="py-3 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm hover:bg-blue-100 transition">
-                                Monthly Giving
-                            </button>
-                            <button className="py-3 bg-green-50 text-green-700 rounded-xl font-bold text-sm hover:bg-green-100 transition">
-                                <FaWhatsapp className="inline mr-1" /> Share
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
             {/* Business Advertisement Scroller */}
             <section className="w-full bg-[#f8fafc] py-12 border-y border-gray-200 overflow-hidden">
@@ -251,80 +232,67 @@ const CommunitySupportHub = () => {
                 </div>
             </section>
 
-            {/* 8. Champions & Wall */}
-            <section className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-                <div className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-lg">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h3 className="text-xl font-bold text-[#1e2a4a]">Community Champions</h3>
-                            <p className="text-sm text-gray-400">Top donors this month</p>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center"><FaUserTie /></div>
-                    </div>
+            {/* 8. Donation Champions List */}
+            <section className="max-w-6xl mx-auto py-12 px-4">
+                <div className="text-center mb-10">
+                    <span className="text-amber-600 font-bold uppercase tracking-wider text-sm mb-2 block">Gratitude Wall</span>
+                    <h2 className="text-3xl font-extrabold text-[#1e2a4a]">Donation Champions</h2>
+                    <div className="w-20 h-1.5 bg-amber-400 mx-auto mt-4 rounded-full"></div>
+                </div>
 
-                    <div className="space-y-6">
-                        {[
-                            { rank: 1, name: 'Anonymous Donor', amount: '₹15,000', badge: 'Super Supporter', color: 'bg-amber-100 text-amber-800' },
-                            { rank: 2, name: 'Village Women\'s Group', amount: '₹12,500', badge: 'Hero', color: 'bg-green-100 text-green-800' },
-                            { rank: 3, name: 'Local Business Owner', amount: '₹10,000', badge: 'Regular', color: 'bg-blue-100 text-blue-800' },
-                        ].map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-4 group cursor-default">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 ${idx === 0 ? 'bg-amber-500 border-amber-300 text-white' : 'bg-gray-100 border-transparent text-gray-500'}`}>
-                                    {item.rank}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="font-bold text-gray-900">{item.name}</div>
-                                    <div className="text-xs text-gray-400">Donated {item.amount}</div>
-                                </div>
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${item.color}`}>{item.badge}</span>
-                            </div>
+                {/* Tabs */}
+                <div className="flex justify-center mb-10">
+                    <div className="bg-white p-1.5 rounded-full shadow-sm border border-gray-100 inline-flex">
+                        {['monthly', 'yearly', 'overall'].map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setChampionTab(tab)}
+                                className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 capitalize ${championTab === tab
+                                    ? 'bg-[#1e2a4a] text-white shadow-md'
+                                    : 'text-gray-500 hover:text-[#1e2a4a] hover:bg-gray-50'
+                                    }`}
+                            >
+                                {tab}
+                            </button>
                         ))}
                     </div>
-                    <button className="w-full mt-8 py-3 bg-gray-50 text-gray-500 rounded-xl text-sm font-bold hover:bg-gray-100 transition flex items-center justify-center gap-2 group">
-                        View Full Leaderboard <FaArrowRight className="group-hover:translate-x-1 transition-transform" size={12} />
+                </div>
+
+                {/* Champions Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 justify-center">
+                    {/* Top 3 highlighted bigger if needed, but simple grid for top 5 */}
+                    {championsData[championTab].map((donor, idx) => (
+                        <div key={idx} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group flex items-center gap-4 relative overflow-hidden">
+
+                            {/* Rank Badge */}
+                            <div className={`absolute top-0 right-0 w-16 h-16 flex items-center justify-center rounded-bl-3xl font-black text-xl text-white shadow-sm ${idx === 0 ? 'bg-amber-400' : idx === 1 ? 'bg-gray-300' : idx === 2 ? 'bg-amber-700' : 'bg-[#1e2a4a]/10 text-[#1e2a4a]'
+                                }`}>
+                                #{donor.rank}
+                            </div>
+
+                            <div className="w-16 h-16 rounded-full border-2 border-white shadow-md overflow-hidden shrink-0">
+                                <img src={donor.img} alt={donor.name} className="w-full h-full object-cover" />
+                            </div>
+
+                            <div className="flex-1 pr-8">
+                                <h3 className="font-bold text-lg text-gray-800 leading-tight mb-1">{donor.name}</h3>
+                                <div className="text-sm font-bold text-[#1e2a4a] flex items-center gap-1 mb-1">
+                                    <FaHandHoldingHeart className="text-amber-500" /> {donor.amount}
+                                </div>
+                                <div className="text-xs text-gray-400 font-semibold uppercase tracking-wide">{donor.location}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="text-center mt-10">
+                    <button className="text-blue-600 font-bold hover:text-blue-800 transition flex items-center justify-center gap-2 mx-auto group">
+                        View All Donors <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
                     </button>
                 </div>
-
-                <div className="bg-[#1e2a4a] rounded-[2rem] p-8 text-white relative overflow-hidden shadow-lg">
-                    {/* Background decoration */}
-                    <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
-                    <div className="absolute bottom-0 left-0 w-40 h-40 bg-secondary/10 rounded-full blur-3xl"></div>
-
-                    <h3 className="text-xl font-bold mb-8 relative z-10">Thank You Wall</h3>
-                    <div className="space-y-6 relative z-10">
-                        {(() => {
-                            // Mock Data from Backend/Database
-                            const recentMessages = [
-                                { msg: "Thanks to everyone who helped with my surgery. I'm recovering well!", author: "Ravi Kumar", type: "Health" },
-                                { msg: "My daughter can now continue her engineering studies. Grateful!", author: "Priya's Father", type: "Education" },
-                                { msg: "50 families received relief supplies thanks to your donations.", author: "Relief Committee", type: "Disaster" }
-                            ];
-
-                            // System Default Message (Fallback)
-                            const systemDefault = {
-                                msg: "We deeply appreciate every contribution. Your support empowers the community!",
-                                author: "MEWS Team",
-                                type: "General"
-                            };
-
-                            // Logic: Use recent messages if available, otherwise use system default
-                            const displayMessages = recentMessages && recentMessages.length > 0
-                                ? recentMessages
-                                : [systemDefault];
-
-                            return displayMessages.map((item, idx) => (
-                                <div key={idx} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/5 hover:bg-white/15 transition">
-                                    <p className="text-sm text-gray-200 italic mb-3">"{item.msg}"</p>
-                                    <div className="flex justify-between items-center text-xs">
-                                        <span className="font-bold text-secondary text-opacity-90">- {item.author}</span>
-                                        <span className="px-2 py-0.5 rounded bg-white/10 text-gray-300">{item.type}</span>
-                                    </div>
-                                </div>
-                            ));
-                        })()}
-                    </div>
-                </div>
             </section>
+
+
         </div>
     );
 };

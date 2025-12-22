@@ -1,0 +1,40 @@
+Mando DB Credientails :
+
+uniluxsolar_db_user
+r8wjvZ5WSpLgqUe9
+
+URI : mongodb+srv://uniluxsolar_db_user:r8wjvZ5WSpLgqUe9@cluster0.xkaqz3k.mongodb.net/?appName=Cluster0
+
+
+Here is the list of Admin Users currently in your database, along with their assigned role and location:
+
+Verification Complete: All accounts have been reset and verified. Every account below uses the password: admin123 You can log in using either the Username or Email.
+
+User Type	Username		Email			Correct Role Selection
+Village		GundlapallyAdmin	gundlapally@mews.com	Village Admin
+Village		VillageAdmin1		village1@mews.com	Village Admin
+Village		VillageAdmin2		village2@mews.com	Village Admin
+		ChervugattuAdmin
+Mandal		MandalAdmin		mandal@mews.com		Mandal Admin
+Mandal		MandalAdmin2		mandal2@mews.com	Mandal Admin
+District	DistrictAdmin1		district1@mews.com	District Admin
+Global		SuperAdmin		super@mews.com		Super Admin
+
+Important: Please ensure you select the matching Role from the dropdown menu (e.g., Select "Mandal Admin" if logging in as mandal@mews.com). Selecting the wrong role will cause a login error.
+
+
+
+I updated VillageAdmin1 to correctly point to Gundlapally (Village).
+I updated MandalAdmin to correctly point to Choutuppal (Mandal).
+I updated DistrictAdmin1 to correctly point to Yadadri Bhongiri (District).
+I performed a data migration to move 24 test members into Gundlapally so VillageAdmin1 can see them.
+
+
+final login admins data 
+
+VillageAdmin1 -> Assigned to Gundlapally.
+VillageAdmin2 -> Assigned to Allikori.
+ChervugattuAdmin -> Assigned to Chervugattu.
+MandalAdmin -> Assigned to Choutuppal.
+MandalAdmin2 -> Assigned to Adilabad Rural.
+DistrictAdmin1 -> Assigned to Yadadri Bhongiri.
