@@ -9,6 +9,8 @@ import {
     FaFileExcel, FaPlus, FaFilter, FaEye, FaEdit, FaPhoneAlt, FaWhatsapp, FaComment,
     FaChevronLeft, FaChevronRight
 } from 'react-icons/fa';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 
@@ -63,6 +65,18 @@ const MemberRow = ({ photo, name, id, dbId, mobile, age, bloodGroup, familyCount
             </div>
         </td>
     </tr>
+);
+
+const ScoreCard = ({ title, value, icon, color }) => (
+    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+        <div>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">{title}</p>
+            <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+        </div>
+        <div className={`p-3 rounded-lg ${color}`}>
+            {icon}
+        </div>
+    </div>
 );
 
 const MemberManagement = () => {
@@ -188,7 +202,26 @@ const MemberManagement = () => {
                             <p className="text-sm text-gray-500 mt-1">Manage existing village members | Last updated: Today, 14:30 IST</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button className="bg-[#1e2a4a] hover:bg-[#2a3b66] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition">
+                            <button
+                                onClick={() => {
+                                    const dataToExport = filteredMembers.map(m => ({
+                                        "ID": m.mewsId || m._id,
+                                        "Name": `${m.name} ${m.surname}`,
+                                        "Mobile": m.mobileNumber,
+                                        "Age": m.age,
+                                        "Gender": m.gender,
+                                        "Blood Group": m.bloodGroup,
+                                        "Family Members": m.familyDetails?.memberCount || 0,
+                                        "Joined Date": new Date(m.createdAt).toLocaleDateString()
+                                    }));
+                                    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+                                    const workbook = XLSX.utils.book_new();
+                                    XLSX.utils.book_append_sheet(workbook, worksheet, "Members");
+                                    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                                    const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+                                    saveAs(data, `Existing_Members_${new Date().toISOString().split('T')[0]}.xlsx`);
+                                }}
+                                className="bg-[#1e2a4a] hover:bg-[#2a3b66] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition">
                                 <FaFileExcel size={14} /> Export Excel
                             </button>
                             <button onClick={fetchMembers} className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition">
@@ -197,6 +230,18 @@ const MemberManagement = () => {
                             <Link to="/admin/members/new" className="bg-[#e85d04] hover:bg-[#d05304] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition">
                                 <FaPlus size={12} /> Add New Member
                             </Link>
+                        </div>
+                    </div>
+
+                    {/* Scorecard Section */}
+                    <div className="mb-8">
+                        <div className="w-full md:w-1/4">
+                            <ScoreCard
+                                title="Total Members"
+                                value={filteredMembers.length}
+                                icon={<FaUsers size={20} className="text-blue-600" />}
+                                color="bg-blue-50"
+                            />
                         </div>
                     </div>
 
@@ -235,6 +280,7 @@ const MemberManagement = () => {
                                 <option value="O-">O-</option>
                                 <option value="AB+">AB+</option>
                                 <option value="AB-">AB-</option>
+                                <option value="Oh">Oh (Bombay Blood Group)</option>
                             </select>
 
                             {/* Age Filter */}
@@ -281,6 +327,23 @@ const MemberManagement = () => {
                             >
                                 Joined Today
                             </button>
+
+                            {/* Reset Filters */}
+                            {(searchTerm || selectedBloodGroup || selectedAgeGroup || selectedProfession || filterLargeFamilies || filterJoinedToday) && (
+                                <button
+                                    onClick={() => {
+                                        setSearchTerm('');
+                                        setSelectedBloodGroup('');
+                                        setSelectedAgeGroup('');
+                                        setSelectedProfession('');
+                                        setFilterLargeFamilies(false);
+                                        setFilterJoinedToday(false);
+                                    }}
+                                    className="px-4 py-1.5 text-xs font-bold rounded-lg transition shadow-sm border bg-red-50 border-red-200 text-red-600 hover:bg-red-100 ml-auto"
+                                >
+                                    Reset Filters
+                                </button>
+                            )}
 
                         </div>
                     </div>

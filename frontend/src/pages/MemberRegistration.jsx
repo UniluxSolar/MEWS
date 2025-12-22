@@ -283,10 +283,19 @@ const MemberRegistration = () => {
     });
 
     const toggleSection = (id) => {
-        setOpenSections(prev => ({
-            ...prev,
-            [id]: !prev[id]
-        }));
+        setOpenSections(prev => {
+            const newState = {};
+            Object.keys(prev).forEach(key => {
+                // If this is the clicked section, toggle it.
+                // Otherwise, force it closed.
+                if (String(key) === String(id)) {
+                    newState[key] = !prev[key];
+                } else {
+                    newState[key] = false;
+                }
+            });
+            return newState;
+        });
     };
 
     // Reset Form
@@ -1667,7 +1676,7 @@ const MemberRegistration = () => {
                         <CollapsibleSection
                             title="Voter ID Details"
                             icon={FaVoteYea}
-                            sectionNumber={6}
+                            sectionNumber={5}
                             isOpen={openSections[6]}
                             onToggle={() => toggleSection(6)}
                         >
@@ -1688,7 +1697,7 @@ const MemberRegistration = () => {
                         <CollapsibleSection
                             title="Document Uploads"
                             icon={FaFileImage}
-                            sectionNumber={7}
+                            sectionNumber={6}
                             isOpen={openSections[7]}
                             onToggle={() => toggleSection(7)}
                         >
@@ -1741,7 +1750,7 @@ const MemberRegistration = () => {
                         <CollapsibleSection
                             title="Family & Economic Information"
                             icon={FaRupeeSign}
-                            sectionNumber={8}
+                            sectionNumber={7}
                             isOpen={openSections[8]}
                             onToggle={() => toggleSection(8)}
                         >
@@ -1852,7 +1861,7 @@ const MemberRegistration = () => {
                         <CollapsibleSection
                             title="Ration Card Details"
                             icon={FaIdCard}
-                            sectionNumber={9}
+                            sectionNumber={8}
                             isOpen={openSections[9]}
                             onToggle={() => toggleSection(9)}
                         >

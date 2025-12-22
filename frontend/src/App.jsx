@@ -16,6 +16,10 @@ import EditInstitution from './pages/EditInstitution';
 import SOSManagement from './pages/SOSManagement';
 import FundingRequests from './pages/FundingRequests';
 import ReportsAnalytics from './pages/ReportsAnalytics';
+import AdminAnnouncements from './pages/AdminAnnouncements';
+import AdminActivityLog from './pages/AdminActivityLog';
+import AdminVillageSettings from './pages/AdminVillageSettings';
+import AdminHelpSupport from './pages/AdminHelpSupport';
 import DashboardLayout from './layouts/DashboardLayout';
 import MyApplications from './pages/MyApplications';
 import DashboardHome from './pages/DashboardHome';
@@ -55,6 +59,10 @@ function App() {
                 <Route path="/admin/sos" element={<SOSManagement />} />
                 <Route path="/admin/funding" element={<FundingRequests />} />
                 <Route path="/admin/reports" element={<ReportsAnalytics />} />
+                <Route path="/admin/announcements" element={<AdminAnnouncements />} />
+                <Route path="/admin/activity-log" element={<AdminActivityLog />} />
+                <Route path="/admin/settings" element={<AdminVillageSettings />} />
+                <Route path="/admin/help" element={<AdminHelpSupport />} />
                 <Route path="/admin/members/:id" element={<MemberProfile />} />
                 <Route path="/admin/members/edit/:id" element={<EditMember />} />
                 <Route path="/about" element={<div className="p-10 text-center">About Page Coming Soon</div>} />

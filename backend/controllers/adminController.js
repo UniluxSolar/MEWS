@@ -121,6 +121,127 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     });
 });
 
+const Donation = require('../models/Donation');
+
+// @desc    Get detailed analytics
+// @route   GET /api/admin/analytics
+// @access  Private
+const getAnalyticsData = asyncHandler(async (req, res) => {
+    let memberQuery = {};
+    let locationName = 'All Locations';
+
+    // Standardized Role-Based Filtering (Matches memberController.js)
+    if (req.user.assignedLocation) {
+        const locationId = req.user.assignedLocation;
+        // Fetch location name for naming
+        const locationDoc = await Location.findById(locationId);
+        if (locationDoc) locationName = locationDoc.name;
+
+        if (req.user.role === 'VILLAGE_ADMIN') {
+            memberQuery = { 'address.village': locationId };
+        } else if (req.user.role === 'MANDAL_ADMIN') {
+            memberQuery = { 'address.mandal': locationId };
+        } else if (req.user.role === 'DISTRICT_ADMIN') {
+            memberQuery = { 'address.district': locationId };
+        } else if (req.user.role === 'STATE_ADMIN') {
+            // Find all districts under this state
+            const districts = await Location.find({ parent: locationId, type: 'DISTRICT' }).select('_id');
+            const districtIds = districts.map(d => d._id);
+            memberQuery = { 'address.district': { $in: districtIds } };
+        }
+        // SUPER_ADMIN (with assignedLocation??) -> Shows all or restricted?
+        // memberController allows SUPER_ADMIN to see all despite assignedLocation.
+        else if (req.user.role === 'SUPER_ADMIN') {
+            memberQuery = {}; // Show All
+        }
+
+    } else {
+        // No assigned location
+        if (req.user.role !== 'SUPER_ADMIN') {
+            // Force empty result for safety if non-super admin has no location
+            // But if memberController allows it/blocks it... memberController blocks it.
+            // Let's block it here too to be safe.
+            memberQuery = { _id: null };
+        }
+        // If SUPER_ADMIN, memberQuery remains {} -> Show All
+    }
+
+    console.log(`[ANALYTICS] Role: ${req.user.role}, Query:`, JSON.stringify(memberQuery));
+
+    // 1. Member Stats
+    const totalMembers = await Member.countDocuments(memberQuery);
+
+    const last30Days = new Date();
+    last30Days.setDate(last30Days.getDate() - 30);
+    const newMembers = await Member.countDocuments({
+        ...memberQuery,
+        createdAt: { $gte: last30Days }
+    });
+
+    const pendingMembers = await Member.countDocuments({ ...memberQuery, verificationStatus: 'PENDING' });
+
+    // 2. Demographics - Gender
+    const genderStats = await Member.aggregate([
+        { $match: memberQuery },
+        { $group: { _id: "$gender", count: { $sum: 1 } } }
+    ]);
+
+    // 3. Demographics - Occupation (Projecting to standardize)
+    const occupationStats = await Member.aggregate([
+        { $match: memberQuery },
+        {
+            $group: {
+                _id: "$occupation",
+                count: { $sum: 1 }
+            }
+        },
+        { $sort: { count: -1 } },
+        { $limit: 5 } // Top 5 occupations
+    ]);
+
+    // 4. Funds (Global sum for now, can be refined to location based if needed)
+    const fundsAgg = await Donation.aggregate([
+        { $match: { status: 'SUCCESS' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+    const totalFunds = fundsAgg.length > 0 ? fundsAgg[0].total : 0;
+
+    // 5. SOS
+    // Re-calculating SOS query based on user role would duplicate code, 
+    // for now we fetch total active stats loosely or reuse if we pull logic out.
+    // Let's do a simple count globally for the location if possible, or just ignore location strictness for SOS in this detailed view 
+    // to avoid complexity, OR replicate the regex logic.
+    // Replicating regex logic safely:
+    let sosCount = 0;
+    if (req.user.assignedLocation) {
+        const location = await Location.findById(req.user.assignedLocation);
+        if (location) {
+            const regex = new RegExp(location.name, 'i');
+            sosCount = await SOSRequest.countDocuments({ 'location.address': { $regex: regex }, status: { $in: ['OPEN', 'IN_PROGRESS'] } });
+        }
+    } else {
+        sosCount = await SOSRequest.countDocuments({ status: { $in: ['OPEN', 'IN_PROGRESS'] } });
+    }
+
+    console.log(`Analytics Debug: User=${req.user.role}, Loc=${locationName}, Members=${totalMembers}, Funds=${totalFunds}`);
+
+    res.json({
+        period: 'Last 30 Days',
+        metrics: {
+            totalMembers,
+            newMembers,
+            totalFunds,
+            sosActive: sosCount,
+            pending: pendingMembers
+        },
+        demographics: {
+            gender: genderStats,
+            occupation: occupationStats
+        }
+    });
+});
+
 module.exports = {
-    getDashboardStats
+    getDashboardStats,
+    getAnalyticsData
 };

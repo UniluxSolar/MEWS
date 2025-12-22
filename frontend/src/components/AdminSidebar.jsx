@@ -49,10 +49,10 @@ const AdminSidebar = ({ activePage }) => {
                 <SidebarItem to="/admin/sos" icon={FaExclamationTriangle} label="SOS Management" active={activePage === 'sos'} />
                 <SidebarItem to="/admin/funding" icon={FaHandHoldingUsd} label="Funding Requests" active={activePage === 'funding'} />
                 <SidebarItem to="/admin/reports" icon={FaFileAlt} label="Reports & Analytics" active={activePage === 'reports'} />
-                <SidebarItem icon={FaChartLine} label="Activity Logs" />
-                <SidebarItem icon={FaCog} label="Village Settings" />
-                <SidebarItem icon={FaQuestionCircle} label="Help & Support" />
-                <SidebarItem icon={FaBullhorn} label="Announcements" />
+                <SidebarItem to="/admin/activity-log" icon={FaChartLine} label="Activity Logs" active={activePage === 'activity'} />
+                <SidebarItem to="/admin/settings" icon={FaCog} label="Village Settings" active={activePage === 'settings'} />
+                <SidebarItem to="/admin/help" icon={FaQuestionCircle} label="Help & Support" active={activePage === 'help'} />
+                <SidebarItem to="/admin/announcements" icon={FaBullhorn} label="Announcements" active={activePage === 'announcements'} />
             </div>
 
             <div className="mt-auto p-4 border-t border-gray-100">

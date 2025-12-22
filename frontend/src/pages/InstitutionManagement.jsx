@@ -9,8 +9,7 @@ import {
     FaHome, FaMoneyBillWave, FaMapMarkerAlt, FaPhoneAlt, FaEye, FaEdit
 } from 'react-icons/fa';
 import AdminSidebar from '../components/AdminSidebar';
-
-
+import AdminHeader from '../components/AdminHeader';
 
 const InstitutionCard = ({ icon: Icon, id, name, type, status, address, stats, phone, color }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
@@ -86,50 +85,9 @@ const InstitutionManagement = () => {
 
     return (
         <div className="min-h-screen bg-[#f3f4f6] font-sans flex flex-col">
-            {/* Top Header */}
-            <header className="bg-[#0f172a] text-white h-16 flex items-center justify-between px-4 z-20 shadow-md flex-shrink-0">
-                <div className="flex items-center gap-12">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center border border-blue-500/50">
-                            <FaShieldAlt className="text-blue-400" />
-                        </div>
-                        <div>
-                            <div className="font-bold text-lg leading-none">MEWS 2.0</div>
-                            <div className="text-[10px] text-gray-400 leading-none mt-1">Peddakaparthy Village Admin</div>
-                        </div>
-                    </div>
-                    <div className="relative hidden md:block w-96">
-                        <FaSearch className="absolute left-3 top-2.5 text-gray-400 text-sm" />
-                        <input
-                            type="text"
-                            placeholder="Search members, activities..."
-                            className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 pl-9 pr-4 text-sm text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-6">
-                    <button className="hidden sm:flex items-center gap-2 bg-[#f59e0b] hover:bg-amber-600 text-slate-900 px-3 py-1.5 rounded text-xs font-bold transition">
-                        <FaExclamationTriangle /> Live SOS: 0
-                    </button>
-                    <div className="relative cursor-pointer">
-                        <FaBell className="text-gray-400 hover:text-white transition" />
-                        <span className="absolute -top-1.5 -right-1.5 bg-[#f59e0b] text-slate-900 w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-bold">2</span>
-                    </div>
-                    <div className="flex items-center gap-2 pl-4 border-l border-slate-700 cursor-pointer">
-                        <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Admin" className="w-8 h-8 rounded-full border border-slate-500" />
-                        <FaChevronDown size={10} className="text-gray-400" />
-                    </div>
-                </div>
-            </header>
-
+            <AdminHeader />
             <div className="flex flex-1 overflow-hidden">
-                {/* Sidebar */}
                 <AdminSidebar activePage="institutions" />
-
-                {/* Main Content */}
                 <main className="flex-1 overflow-y-auto p-4 md:p-8">
                     {/* Page Header */}
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">

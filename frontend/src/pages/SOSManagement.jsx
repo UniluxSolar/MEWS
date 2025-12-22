@@ -1,20 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api';
-import { Link } from 'react-router-dom';
 import {
-    FaThLarge, FaUsers, FaBuilding, FaExclamationTriangle, FaFileAlt,
-    FaHandHoldingUsd, FaChartLine, FaCog, FaQuestionCircle, FaBullhorn,
-    FaSignOutAlt, FaSearch, FaBell, FaChevronDown, FaShieldAlt,
-    FaSync, FaPhoneAlt, FaCheckCircle, FaMapMarkerAlt, FaExternalLinkAlt, FaArrowRight
+    FaPhoneAlt, FaCheckCircle, FaMapMarkerAlt, FaExternalLinkAlt, FaArrowRight, FaSync
 } from 'react-icons/fa';
-
-// Reusing Sidebar from other admin pages for consistency
-const SidebarItem = ({ icon: Icon, label, active, to }) => (
-    <Link to={to || '#'} className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-colors mb-1 ${active ? 'bg-[#1e2a4a] text-white font-bold' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 font-medium'}`}>
-        <Icon size={18} className={active ? 'text-white' : 'text-gray-400'} />
-        <span className="text-sm">{label}</span>
-    </Link>
-);
+import AdminHeader from '../components/AdminHeader';
+import AdminSidebar from '../components/AdminSidebar';
 
 const SOSCard = ({ id, name, memberId, age, gender, photo, type, time, location, description, isResolved }) => (
     <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-4 flex flex-col lg:flex-row gap-6 hover:shadow-md transition-shadow relative overflow-hidden ${!isResolved ? 'border-l-4 border-l-red-500' : ''}`}>
@@ -39,7 +29,7 @@ const SOSCard = ({ id, name, memberId, age, gender, photo, type, time, location,
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                <img src={photo} alt={name} className="w-16 h-16 rounded-full object-cover border-2 border-gray-100" />
+                <img src={photo || 'https://randomuser.me/api/portraits/men/32.jpg'} alt={name} className="w-16 h-16 rounded-full object-cover border-2 border-gray-100" />
                 <div>
                     <h3 className="font-bold text-lg text-gray-900 leading-tight">{name}</h3>
                     <div className="text-xs text-gray-500 mt-1">
@@ -82,26 +72,20 @@ const SOSCard = ({ id, name, memberId, age, gender, photo, type, time, location,
     </div>
 );
 
-// Dummy data imports removed
-
 const SOSManagement = () => {
-
     const [sosAlerts, setSosAlerts] = useState([]);
 
     useEffect(() => {
         const fetchSOS = async () => {
             try {
                 const { data } = await API.get('/sos');
-                // Transform data if needed, but SOSRequest schema matches pretty close
-                // Note: Backend 'location' is object {latitude, longitude, address}
-                // Frontend expects {address, lat, lng}
                 const mapped = data.map(alert => ({
                     id: alert._id,
                     name: alert.name || 'Unknown',
                     memberId: alert.member || 'Guest',
-                    age: 'N/A', // Not stored in SOS model directly unless linked
+                    age: 'N/A',
                     gender: 'N/A',
-                    photo: sosMan, // placeholder
+                    photo: 'https://randomuser.me/api/portraits/men/32.jpg',
                     type: alert.type,
                     time: new Date(alert.createdAt).toLocaleTimeString(),
                     location: {
@@ -119,69 +103,16 @@ const SOSManagement = () => {
         };
 
         fetchSOS();
-        const interval = setInterval(fetchSOS, 5000); // Poll every 5 seconds
+        const interval = setInterval(fetchSOS, 5000);
         return () => clearInterval(interval);
     }, []);
 
     return (
         <div className="min-h-screen bg-[#f3f4f6] font-sans flex flex-col">
-            {/* Top Header */}
-            <header className="bg-[#0f172a] text-white h-16 flex items-center justify-between px-4 z-20 shadow-md flex-shrink-0">
-                <div className="flex items-center gap-12">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center border border-blue-500/50">
-                            <FaShieldAlt className="text-blue-400" />
-                        </div>
-                        <div>
-                            <div className="font-bold text-lg leading-none">MEWS 2.0</div>
-                            <div className="text-[10px] text-gray-400 leading-none mt-1">Peddakaparthy Village Admin</div>
-                        </div>
-                    </div>
-                    {/* Search bar removed for focus on SOS */}
-                </div>
-
-                <div className="flex items-center gap-6">
-                    <button className="hidden sm:flex items-center gap-2 bg-[#f59e0b] hover:bg-amber-600 text-slate-900 px-3 py-1.5 rounded text-xs font-bold transition animate-pulse">
-                        <FaExclamationTriangle /> Live SOS: 2
-                    </button>
-                    <div className="relative cursor-pointer">
-                        <FaBell className="text-gray-400 hover:text-white transition" />
-                        <span className="absolute -top-1.5 -right-1.5 bg-[#f59e0b] text-slate-900 w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-bold">2</span>
-                    </div>
-                    <div className="flex items-center gap-2 pl-4 border-l border-slate-700 cursor-pointer">
-                        <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Admin" className="w-8 h-8 rounded-full border border-slate-500" />
-                        <FaChevronDown size={10} className="text-gray-400" />
-                    </div>
-                </div>
-            </header>
-
+            <AdminHeader />
             <div className="flex flex-1 overflow-hidden">
-                {/* Sidebar */}
-                <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col overflow-y-auto">
-                    <div className="p-4 space-y-1">
-                        <SidebarItem to="/admin/dashboard" icon={FaThLarge} label="Village Dashboard" />
-                        <SidebarItem to="/admin/members" icon={FaUsers} label="Member Management" />
-                        <SidebarItem to="/admin/institutions" icon={FaBuilding} label="Institution Management" />
-                        <SidebarItem to="/admin/sos" icon={FaExclamationTriangle} label="SOS Management" active={true} />
-                        <SidebarItem icon={FaFileAlt} label="Reports & Analytics" />
-                        <SidebarItem icon={FaHandHoldingUsd} label="Funding Requests" />
-                        <SidebarItem icon={FaChartLine} label="Activity Logs" />
-                        <SidebarItem icon={FaCog} label="Village Settings" />
-                        <SidebarItem icon={FaQuestionCircle} label="Help & Support" />
-                        <SidebarItem icon={FaBullhorn} label="Announcements" />
-                    </div>
-                    <div className="mt-auto p-4 border-t border-gray-100">
-                        <Link to="/admin/login" className="flex items-center gap-3 px-4 py-2 text-red-600 cursor-pointer hover:bg-red-50 rounded-lg transition-colors font-medium text-sm">
-                            <FaSignOutAlt />
-                            <span>Logout</span>
-                        </Link>
-                    </div>
-                </aside>
-
-                {/* Main Content */}
+                <AdminSidebar activePage="sos" />
                 <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#f8fafc]">
-
-                    {/* Header Panel */}
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">SOS Emergency Panel</h1>
@@ -190,7 +121,7 @@ const SOSManagement = () => {
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2 text-sm font-bold text-red-600 animate-pulse">
                                 <div className="w-2 h-2 rounded-full bg-red-600"></div>
-                                2 Live Alerts
+                                {sosAlerts.length} Live Alerts
                             </div>
                             <button className="bg-[#1e2a4a] hover:bg-[#2a3b66] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition">
                                 <FaSync size={12} /> Manual Refresh
@@ -198,22 +129,21 @@ const SOSManagement = () => {
                         </div>
                     </div>
 
-                    {/* Alerts List */}
                     <div className="space-y-4 mb-8">
                         {sosAlerts.map(alert => (
                             <SOSCard key={alert.id} {...alert} />
                         ))}
                     </div>
 
-                    {/* All Clear Status */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 flex flex-col items-center justify-center text-center">
-                        <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mb-4">
-                            <FaCheckCircle className="text-green-500 text-3xl" />
+                    {sosAlerts.length === 0 && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 flex flex-col items-center justify-center text-center">
+                            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mb-4">
+                                <FaCheckCircle className="text-green-500 text-3xl" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 mb-1">All Monitoring Areas Clear</h3>
+                            <p className="text-sm text-gray-500">No active emergency alerts at this time.</p>
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-1">All Other Areas Clear</h3>
-                        <p className="text-sm text-gray-500">No additional emergency alerts at this time. System monitoring continues.</p>
-                    </div>
-
+                    )}
                 </main>
             </div>
         </div>
