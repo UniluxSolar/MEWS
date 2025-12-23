@@ -13,7 +13,7 @@ connectDB();
 app.use(cors());
 app.use(express.json()); // Body parser
 app.use(express.urlencoded({ extended: true })); // Form data parser
-app.use('/uploads', express.static('uploads')); // Serve uploaded files
+// app.use('/uploads', express.static('uploads')); // Disabled: Files served from GCS
 
 // Basic Route
 app.get('/', (req, res) => {

@@ -13,10 +13,15 @@ const registerMember = asyncHandler(async (req, res) => {
 
         // Auto-generate a temp ID
         const mewsId = `MEW${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`;
-        const baseUrl = `${req.protocol}://${req.get('host')}/uploads/`;
-
+        // For GCS, 'req.files[fieldname][0].path' usually contains the public URL
         const getFilePath = (fieldname) => {
-            return req.files && req.files[fieldname] ? baseUrl + req.files[fieldname][0].filename : undefined;
+            // Note: multer-google-storage populates 'path' with the public link if acl is public
+            // or we might need to construct it manually if it returns gs://...
+            // Let's assume it returns the http url or we fallback.
+            if (req.files && req.files[fieldname]) {
+                return req.files[fieldname][0].path;
+            }
+            return undefined;
         };
 
         // Helper to clean empty strings
@@ -165,7 +170,7 @@ const registerMember = asyncHandler(async (req, res) => {
 
                         const getFamilyFile = (field, indexRef) => {
                             if (indexRef >= 0 && req.files && req.files[field] && req.files[field][indexRef]) {
-                                return req.files[field][indexRef].path.replace(/\\/g, "/");
+                                return req.files[field][indexRef].path; // GCS URL
                             }
                             return undefined;
                         };

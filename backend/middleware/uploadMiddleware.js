@@ -9,36 +9,29 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // Configure storage
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/');
-    },
+const multerGoogleStorage = require('multer-google-storage');
+
+// Configure GCS storage
+const storage = multerGoogleStorage.storageEngine({
+    bucket: process.env.GCS_BUCKET_NAME || 'mews-uploads', // Default to what user showed if env missing
+    projectId: process.env.GCS_PROJECT_ID,
+    keyFilename: process.env.GCS_KEYFILE_PATH, // Optional: for local dev. Cloud Run uses auto-auth.
     filename: function (req, file, cb) {
-        // Create unique filename: fieldname-timestamp-e.g-document.jpg
+        // Create unique filename: fieldname-timestamp-random.ext
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    },
+    acl: 'publicRead', // Ensure files are public if your app requires public URLs
+    contentType: (req, file) => {
+        return file.mimetype;
     }
 });
 
 // File filter (optional but good)
+// File filter
 const fileFilter = (req, file, cb) => {
-    console.log(`[UPLOAD DEBUG] Processing file. Name: ${file.originalname}, MimeType: ${file.mimetype}, Size: ${req.headers['content-length']}`);
-
-    // Temporarily allowing ALL files to bypass the "Images and PDFs only" error
-    // We will inspect the logs to see what the actual mimetype is
-    return cb(null, true);
-
-    /* Original strict filter
-    const allowedTypes = /jpeg|jpg|png|pdf/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-
-    if (extname && mimetype) {
-        return cb(null, true);
-    } else {
-        cb(new Error('Images and PDFs only!'));
-    }
-    */
+    console.log(`[UPLOAD DEBUG] Processing file: ${file.originalname}, Type: ${file.mimetype}`);
+    cb(null, true);
 };
 
 const upload = multer({
