@@ -386,7 +386,7 @@ const MemberManagement = () => {
                                                 photo={member.photoUrl ? (
                                                     member.photoUrl.startsWith('http') || member.photoUrl.startsWith('/profiles')
                                                         ? member.photoUrl
-                                                        : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}${member.photoUrl}`
+                                                        : `${import.meta.env.VITE_API_BASE_URL || ''}${member.photoUrl}`
                                                 ) : member1}
                                                 name={`${member.name} ${member.surname}`}
                                                 id={member.mewsId || member._id.substring(0, 8)}

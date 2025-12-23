@@ -904,7 +904,7 @@ const MemberRegistration = () => {
 
             dataPayload.append('familyMembers', JSON.stringify(finalFamilyMembers));
 
-            const { data } = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/members`, dataPayload);
+            const { data } = await axios.post(`${import.meta.env.VITE_API_URL || '/api'}/members`, dataPayload);
 
             // Show Success Modal instead of immediate navigate
             setCreatedMemberData(data);
