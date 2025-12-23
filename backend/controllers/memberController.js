@@ -2,6 +2,47 @@ const Member = require('../models/Member');
 const Location = require('../models/Location');
 const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
+const { getSignedUrl } = require('../utils/gcsSigner');
+
+// Helper to sign all URLs in a member object
+const signMemberData = async (memberDoc) => {
+    // Convert to plain object if it's a Mongoose document
+    const member = memberDoc.toObject ? memberDoc.toObject() : memberDoc;
+
+    // 1. Top Level Fields
+    if (member.photoUrl) member.photoUrl = await getSignedUrl(member.photoUrl);
+    if (member.aadhaarCardUrl) member.aadhaarCardUrl = await getSignedUrl(member.aadhaarCardUrl);
+
+    // 2. Nested Objects
+    if (member.casteDetails?.certificateUrl) {
+        member.casteDetails.certificateUrl = await getSignedUrl(member.casteDetails.certificateUrl);
+    }
+    if (member.partnerDetails?.certificateUrl) {
+        member.partnerDetails.certificateUrl = await getSignedUrl(member.partnerDetails.certificateUrl);
+    }
+    if (member.rationCard?.fileUrl) {
+        member.rationCard.fileUrl = await getSignedUrl(member.rationCard.fileUrl);
+    }
+    if (member.voterId?.fileUrl) {
+        member.voterId.fileUrl = await getSignedUrl(member.voterId.fileUrl);
+    }
+    if (member.bankDetails?.passbookUrl) {
+        member.bankDetails.passbookUrl = await getSignedUrl(member.bankDetails.passbookUrl);
+    }
+
+    // 3. Family Members
+    if (member.familyMembers && Array.isArray(member.familyMembers)) {
+        for (const fam of member.familyMembers) {
+            if (fam.photo) fam.photo = await getSignedUrl(fam.photo);
+            if (fam.aadhaarFront) fam.aadhaarFront = await getSignedUrl(fam.aadhaarFront);
+            if (fam.aadhaarBack) fam.aadhaarBack = await getSignedUrl(fam.aadhaarBack);
+            if (fam.voterIdFront) fam.voterIdFront = await getSignedUrl(fam.voterIdFront);
+            if (fam.voterIdBack) fam.voterIdBack = await getSignedUrl(fam.voterIdBack);
+        }
+    }
+
+    return member;
+};
 
 // @desc    Register a member (Admin or Self)
 // @route   POST /api/members
@@ -231,16 +272,16 @@ const registerMember = asyncHandler(async (req, res) => {
             .populate('permanentAddress.mandal')
             .populate('permanentAddress.village');
 
-        res.status(201).json(populatedMember);
+        // SIGN URLs
+        const signedMember = await signMemberData(populatedMember);
+
+        res.status(201).json(signedMember);
     } catch (error) {
         console.error(error);
         res.status(400).json({ message: error.message });
     }
 });
 
-// @desc    Get all members
-// @route   GET /api/members
-// @access  Private (Admin)
 // @desc    Get all members
 // @route   GET /api/members
 // @access  Private (Admin)
@@ -296,7 +337,11 @@ const getMembers = asyncHandler(async (req, res) => {
         .populate('address.mandal')
         .populate('address.district') // Populate to show names
         .sort({ createdAt: -1 });
-    res.json(members);
+
+    // SIGN URLs for all members
+    const signedMembers = await Promise.all(members.map(m => signMemberData(m)));
+
+    res.json(signedMembers);
 });
 
 // @desc    Get member by ID
@@ -305,19 +350,24 @@ const getMembers = asyncHandler(async (req, res) => {
 const getMemberById = asyncHandler(async (req, res) => {
     const member = await Member.findById(req.params.id);
     if (member) {
-        res.json(member);
+        const signedMember = await signMemberData(member);
+        res.json(signedMember);
     } else {
         res.status(404);
         throw new Error('Member not found');
     }
 });
+
 const updateMemberStatus = asyncHandler(async (req, res) => {
     const member = await Member.findById(req.params.id);
 
     if (member) {
         member.verificationStatus = req.body.status || member.verificationStatus;
         const updatedMember = await member.save();
-        res.json(updatedMember);
+
+        // Return signed version for consistency
+        const signedMember = await signMemberData(updatedMember);
+        res.json(signedMember);
     } else {
         res.status(404);
         throw new Error('Member not found');
@@ -349,16 +399,6 @@ const updateMember = asyncHandler(async (req, res) => {
                 ...member.address,
                 ...req.body.address
             };
-        } else {
-            // Handle flat fields if sent flattened from frontend
-            if (req.body.presentDistrict) member.address.district = req.body.presentDistrict; // Note: Typically strictly ObjectId, ideally frontend sends IDs
-            // However, existing schema allows Mixed for legacy specific fields, but we should be careful. 
-            // The frontend form seems to send names? Or we should populate names.
-            // Wait, registerMember ensures IDs are stored.
-            // If frontend sends Names for updates, we might break the ID link if we overwrite.
-            // Ideally, user shouldn't edit Location hierarchy easily without re-selection logic.
-            // For now, let's assume specific basic fields update. 
-            // If the user wants to Edit "District", they usually select from a dropdown.
         }
 
         // Manual updates for specific flattened address fields if passed
@@ -369,7 +409,10 @@ const updateMember = asyncHandler(async (req, res) => {
         if (req.body.presentConstituency) member.address.constituency = req.body.presentConstituency;
 
         const updatedMember = await member.save();
-        res.json(updatedMember);
+
+        // Return signed version
+        const signedMember = await signMemberData(updatedMember);
+        res.json(signedMember);
     } else {
         res.status(404);
         throw new Error('Member not found');
