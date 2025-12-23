@@ -386,7 +386,7 @@ const MemberManagement = () => {
                                                 photo={member.photoUrl ? (
                                                     member.photoUrl.startsWith('http') || member.photoUrl.startsWith('/profiles')
                                                         ? member.photoUrl
-                                                        : `http://localhost:5000${member.photoUrl}`
+                                                        : `http://localhost:8080${member.photoUrl}`
                                                 ) : member1}
                                                 name={`${member.name} ${member.surname}`}
                                                 id={member.mewsId || member._id.substring(0, 8)}

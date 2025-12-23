@@ -904,7 +904,7 @@ const MemberRegistration = () => {
 
             dataPayload.append('familyMembers', JSON.stringify(finalFamilyMembers));
 
-            const { data } = await axios.post('http://localhost:5000/api/members', dataPayload);
+            const { data } = await axios.post('http://localhost:8080/api/members', dataPayload);
 
             // Show Success Modal instead of immediate navigate
             setCreatedMemberData(data);

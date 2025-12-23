@@ -29,7 +29,7 @@ app.use('/api/sos', require('./routes/sosRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/locations', require('./routes/locationRoutes'));
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

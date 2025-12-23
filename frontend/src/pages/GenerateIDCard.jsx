@@ -110,7 +110,7 @@ const GenerateIDCard = () => {
                     id: generatedId,
                     mobile: newMember.mobileNumber || '+91 XXXXX XXXXX',
                     // Handle both full URL from backend or relative path if needed
-                    photo: newMember.photoUrl ? (newMember.photoUrl.startsWith('http') ? newMember.photoUrl : `http://localhost:5000${newMember.photoUrl}`) : member2,
+                    photo: newMember.photoUrl ? (newMember.photoUrl.startsWith('http') ? newMember.photoUrl : `http://localhost:8080${newMember.photoUrl}`) : member2,
                     bloodGroup: newMember.bloodGroup || '-',
                     village: vName || 'Unknown',
                     mandal: mName || '',
