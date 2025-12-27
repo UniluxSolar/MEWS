@@ -1,0 +1,2 @@
+root: D:\MEWS\frontend
+path: C:\nvm4w\nodejs

@@ -1,0 +1,200 @@
+1. System Setup (One-time / Admin Level)
+1.	Define Geography & Hierarchy
+o	Create structure: Village → Mandal → District → State → superAdmin
+o	Assign admins at each level:
+	Village Admin
+	Mandal Admin
+	District Admin
+	State Admin
+	Super Admin
+1.	Create User Roles
+o	Village Admin
+o	Mandal
+o	District
+o	State Admin
+o	Super Admin
+o	Community Member
+o	Institution Partner
+2.	Register Institutions
+o	Institutions apply to join MEWS.
+o	Verified by respective regional admins or Super Admin (if statewide).
+o	Institution profile requires:
+	Type (Health / Education / Legal / Employment)
+	Institution Name
+	Owner/Administrator
+	Mobile Number
+	WhatsApp Number
+	MEWS Discount Offered
+	Full Address
+	Google Maps Pin
+	Services Offered
+	Institution Photos
+________________________________________
+2.	Link to Village / Mandal
+o	Member selects village & mandal during registration.
+o	Village Admin sees all new join requests.
+3.	Approve / Reject Request
+o	Village Admin reviews documents and approves.
+o	Mandal Admin may verify for additional validation.
+4.	MEWS Member Activation
+o	Member becomes MEWS Registered.
+o	Receives:
+	MEWS ID
+	Access to benefits
+	Ability to request support
+	Ability to donate
+________________________________________
+3. Accessing Benefits (Health / Education / Legal / Employment)
+1.	Member Logs In
+2.	System Shows Benefits Based on Location
+1.	Institution Profile Shows:
+o	Discounts for MEWS members
+o	Services offered
+o	Contact details
+o	Address & Google Map link
+2.	Member Visits Institution
+o	Shows MEWS ID / QR code
+o	Institution verifies membership
+o	Member receives discount
+________________________________________
+4. Donations from Members
+1.	Donation Entry Point
+o	Member goes to Donate section.
+2.	Choose Donation Type
+o	Community Fund
+o	Specific Fundraising Campaign
+3.	Enter Donation Amount
+4.	Make Payment (UPI/Card/Net Banking)
+5.	Track Donations
+________________________________________
+5. Creating Fund Requests (Medical / Education / Emergency)
+1.	Identify Need
+2.	Village Admin Creates Request
+________________________________________
+Fund-Raising Fields (Added to Flow)
+A. Purpose of Funding
+(e.g., Medical, Education, Emergency, Legal)
+B. Amount Required
+C. Event / Activity Date
+D. Detailed Description
+E. Supporting Materials
+•	Supporting Photos
+•	Budget Document
+•	Additional Files
+F. Submit Request
+________________________________________
+6. Approval Workflow (Mandal / District / State/super admin)
+1.	Mandal/District/State/Super Admin reviews request
+2.	Verifies documents, beneficiary details
+3.	Admin takes action:
+•	Approve
+•	Reject
+•	Modify
+•	Request more information
+4.	Once approved → Campaign becomes live
+________________________________________
+7. Community Fundraising & Support
+1.	Community receives campaign notifications
+2.	Members donate
+3.	System shows:
+•	Target amount
+•	Amount collected
+•	Supporter count
+•	Urgency level
+4.	MEWS Central Fund may contribute (optional)
+________________________________________
+8. Fund Disbursement
+1.	When goal reached OR admin closes:
+2.	Admin verifies final documents
+3.	Funds disbursed:
+•	To hospital/school/institution
+•	OR to beneficiary’s verified bank account
+4.	Campaign status becomes:
+Completed – Fund Disbursed
+5.	Donors & community notified
+________________________________________
+9. Reporting & Transparency
+Member Dashboard
+•	Donations made
+•	Benefits used
+•	Fund support received
+Admin Dashboard
+•	Total members
+•	Active fundraisers
+•	Fund usage statistics
+•	Institution performance
+Institution Dashboard
+•	MEWS members served
+•	Discounts given
+•	Service analytics
+________________________________________
+
+
+10. Region-Specific Admin Dashboards
+Each admin sees only the data related to their region.
+________________________________________
+A. Village Admin Dashboard
+Shows data for their village only:
+•	Total members
+•	Pending member verifications
+•	Institutions in the village
+•	Fund requests created in village
+•	Donations received for village campaigns
+•	Member benefit usage
+•	Village-level reports
+________________________________________
+B. Mandal Admin Dashboard
+Covers all villages under that mandal:
+•	Total villages
+•	Member statistics per village
+•	Institution registrations pending approval
+•	Fundraising requests from all villages
+•	Donation overview (mandal-wise)
+•	Approval queue
+•	Mandal performance reports
+________________________________________
+C. District Admin Dashboard
+Covers all mandals in the district:
+•	Total mandals & villages
+•	Member growth trends
+•	District-wide institution data
+•	Fundraising approval workflow
+•	High-value fund requests
+•	District-level donation analytics
+•	Social & economic impact indicators
+________________________________________
+D. State Admin Dashboard
+Highest-level dashboard covering entire state:
+•	Total Members across state
+•	Total Institutions & category-wise stats
+•	State-level fund usage reports
+•	District comparison charts
+•	Emergency fund allocations
+•	State-wide performance & impact metrics
+•	Exportable reports for government/NGOs
+E. SUPER ADMIN Dashboard
+Super Admin has full system-wide control and visibility across all states, districts, mandals, and villages.
+Super Admin Sees:
+•	Total members (state-wise, district-wise, mandal-wise)
+•	Total institutions in system
+•	Global donation flow
+•	All fundraising campaigns across regions
+•	High-value requests needing final approval
+•	System-wide benefit usage
+•	Admin performance logs
+•	Audit trails
+•	Fraud/risk detection reports
+Super Admin Controls:
+•	Create/disable any admin account
+•	Override any approval
+•	Freeze/unfreeze fund campaigns
+•	View all system logs
+•	Manage central MEWS Fund
+•	Approve statewide or national-level institutions
+Super Admin Reports:
+•	State-wide social impact metrics
+•	Financial summaries
+•	Top-benefited regions
+•	Underperforming regions
+•	Alert & escalation reports
+

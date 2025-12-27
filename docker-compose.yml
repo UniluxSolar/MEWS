@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    # ports:
+    #   - "8080:8080"
+    environment:
+      - PORT=8080
+      - MONGO_URI=mongodb://mongo:27017/mews
+      # Add other environment variables here or use env_file
+      # - JWT_SECRET=your_jwt_secret
+      # - CLOUDINARY_CLOUD_NAME=...
+    depends_on:
+      - mongo
+    networks:
+      - mews-network
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+    networks:
+      - mews-network
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - mews-network
+
+networks:
+  mews-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
