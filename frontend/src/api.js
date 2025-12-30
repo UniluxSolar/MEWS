@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Ensure the base URL includes /api
-let baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+let baseURL = import.meta.env.VITE_API_URL || '/api';
 if (baseURL && !baseURL.endsWith('/api')) {
     baseURL += '/api';
 }

@@ -106,7 +106,7 @@ const GenerateIDCard = () => {
                     id: generatedId,
                     mobile: newMember.mobileNumber || '+91 XXXXX XXXXX',
                     // Handle both full URL from backend or relative path if needed
-                    photo: newMember.photoUrl ? (newMember.photoUrl.startsWith('http') ? newMember.photoUrl : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/${newMember.photoUrl.replace(/\\/g, '/')}`) : member2,
+                    photo: newMember.photoUrl ? (newMember.photoUrl.startsWith('http') ? newMember.photoUrl : `${import.meta.env.VITE_API_BASE_URL || ''}/${newMember.photoUrl.replace(/\\/g, '/')}`) : member2,
                     bloodGroup: newMember.bloodGroup || '-',
                     village: vName || 'Unknown',
                     mandal: mName || '',
