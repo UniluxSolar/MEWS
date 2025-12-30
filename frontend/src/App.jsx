@@ -41,6 +41,7 @@ import StudentProfile from './pages/StudentProfile';
 import MyDonations from './pages/MyDonations';
 import DonationCheckout from './pages/DonationCheckout';
 import DonationSuccess from './pages/DonationSuccess';
+import TermsAndConditions from './pages/TermsAndConditions';
 
 const ThemeInitializer = () => {
     useEffect(() => {
@@ -60,6 +61,7 @@ function App() {
             <ThemeInitializer />
             <Routes>
                 <Route path="/" element={<UserLandingPage />} />
+                <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/admin/login" element={<AdminLoginPage />} />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />

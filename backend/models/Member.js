@@ -117,7 +117,8 @@ const MemberSchema = new mongoose.Schema({
     relationToHead: { type: String, default: 'Head' }, // 'Head', 'Spouse', 'Son', 'Daughter', etc.
 
     familyMembers: [{
-        relation: { type: String, enum: ['Spouse', 'Son', 'Daughter', 'Father', 'Mother'] }, // Added relation
+        relation: { type: String, enum: ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister'] }, // Added relation
+        maritalStatus: { type: String, enum: ['Unmarried', 'Married', 'Widowed', 'Divorced'] }, // Added maritalStatus
         surname: String,
         name: String,
         fatherName: String,

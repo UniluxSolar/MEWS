@@ -5,7 +5,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import {
     FaSearch, FaFilter, FaEye, FaEdit, FaPhoneAlt, FaFileDownload, FaFileUpload,
     FaChevronLeft, FaChevronRight, FaEllipsisV, FaCheckSquare, FaTrash, FaIdCard,
-    FaThLarge, FaTable, FaMapMarkedAlt, FaUser, FaUserTie, FaMapMarkerAlt
+    FaThLarge, FaTable, FaMapMarkedAlt, FaUser, FaUserTie, FaMapMarkerAlt, FaPlus,
+    FaSort, FaSortUp, FaSortDown
 } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -91,6 +92,9 @@ const MemberManagement = () => {
     const [activeFilters, setActiveFilters] = useState([]);
     const [activeMenuId, setActiveMenuId] = useState(null);
 
+    // Selection Logic
+    const [selectedMemberIds, setSelectedMemberIds] = useState([]);
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (activeMenuId && !event.target.closest('.action-menu-container')) {
@@ -124,7 +128,7 @@ const MemberManagement = () => {
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = viewMode === 'cards' ? 12 : 10;
+    const [itemsPerPage, setItemsPerPage] = useState(20);
 
     // Filter Logic
     const filteredMembers = members.filter(member => {
@@ -154,8 +158,95 @@ const MemberManagement = () => {
         return true;
     });
 
-    const pageCount = Math.ceil(filteredMembers.length / itemsPerPage);
-    const displayedMembers = filteredMembers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    // Sorting Logic
+    const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
+
+    const requestSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const sortedMembers = React.useMemo(() => {
+        let sortableItems = [...filteredMembers];
+        if (sortConfig.key !== null) {
+            sortableItems.sort((a, b) => {
+                let aValue, bValue;
+
+                // Extract values based on key
+                switch (sortConfig.key) {
+                    case 'name':
+                        aValue = `${a.name} ${a.surname}`.toLowerCase();
+                        bValue = `${b.name} ${b.surname}`.toLowerCase();
+                        break;
+                    case 'village':
+                        aValue = getVillageName(a.address?.village).toLowerCase();
+                        bValue = getVillageName(b.address?.village).toLowerCase();
+                        break;
+                    case 'mobileNumber':
+                        aValue = a.mobileNumber || '';
+                        bValue = b.mobileNumber || '';
+                        break;
+                    case 'age':
+                        aValue = Number(a.age) || 0;
+                        bValue = Number(b.age) || 0;
+                        break;
+                    case 'gender':
+                        aValue = (a.gender || '').toLowerCase();
+                        bValue = (b.gender || '').toLowerCase();
+                        break;
+                    case 'occupation':
+                        aValue = (a.occupation || '').toLowerCase();
+                        bValue = (b.occupation || '').toLowerCase();
+                        break;
+                    case 'family':
+                        aValue = a.familyDetails?.memberCount || 0;
+                        bValue = b.familyDetails?.memberCount || 0;
+                        break;
+                    case 'createdAt':
+                        aValue = new Date(a.createdAt).getTime();
+                        bValue = new Date(b.createdAt).getTime();
+                        break;
+                    default:
+                        return 0;
+                }
+
+                if (aValue < bValue) {
+                    return sortConfig.direction === 'asc' ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                    return sortConfig.direction === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return sortableItems;
+    }, [filteredMembers, sortConfig]);
+
+    const pageCount = Math.ceil(sortedMembers.length / itemsPerPage);
+    const displayedMembers = sortedMembers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            const allIds = displayedMembers.map(m => m._id);
+            setSelectedMemberIds(allIds);
+        } else {
+            setSelectedMemberIds([]);
+        }
+    };
+
+    const handleSelectMember = (id) => {
+        setSelectedMemberIds(prev => {
+            if (prev.includes(id)) {
+                return prev.filter(mid => mid !== id);
+            } else {
+                return [...prev, id];
+            }
+        });
+    };
 
     const handleGenderChange = (type) => {
         if (type === 'All') {
@@ -275,6 +366,9 @@ const MemberManagement = () => {
                     >
                         {/* Actions */}
                         <div className="flex items-center gap-3">
+                            <Link to="/admin/members/new" className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg transition transform hover:scale-105">
+                                <FaPlus /> Register New Member
+                            </Link>
                             <button onClick={exportToExcel} className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-md text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 border border-white/20 transition"><FaFileDownload /> Export Data</button>
                             <button className="bg-[#1e2a4a] text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-900/30 hover:bg-[#2a3b66] transition"><FaFileUpload /> Bulk Import</button>
                         </div>
@@ -314,14 +408,52 @@ const MemberManagement = () => {
                                                 <table className="w-full text-left border-collapse">
                                                     <thead>
                                                         <tr className="bg-slate-50/50 border-b border-slate-100 text-sm font-bold text-slate-400 uppercase tracking-wider">
-                                                            <th className="px-6 py-4 w-10"><input type="checkbox" className="rounded border-slate-300" /></th>
-                                                            <th className="px-6 py-4">Name</th><th className="px-6 py-4">Village</th><th className="px-6 py-4">Phone</th><th className="px-6 py-4">Age</th><th className="px-6 py-4">Gender</th><th className="px-6 py-4">Occupation</th><th className="px-6 py-4 text-center">Family</th><th className="px-6 py-4">Joined</th><th className="px-6 py-4 text-center">Actions</th>
+                                                            <th className="px-6 py-4 w-10">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="rounded border-slate-300 w-4 h-4 cursor-pointer"
+                                                                    checked={displayedMembers.length > 0 && selectedMemberIds.length === displayedMembers.length}
+                                                                    onChange={handleSelectAll}
+                                                                />
+                                                            </th>
+                                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('name')}>
+                                                                <div className="flex items-center gap-1">Name {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
+                                                            </th>
+                                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('village')}>
+                                                                <div className="flex items-center gap-1">Village {sortConfig.key === 'village' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
+                                                            </th>
+                                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('mobileNumber')}>
+                                                                <div className="flex items-center gap-1">Phone {sortConfig.key === 'mobileNumber' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
+                                                            </th>
+                                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('age')}>
+                                                                <div className="flex items-center gap-1">Age {sortConfig.key === 'age' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
+                                                            </th>
+                                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('gender')}>
+                                                                <div className="flex items-center gap-1">Gender {sortConfig.key === 'gender' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
+                                                            </th>
+                                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('occupation')}>
+                                                                <div className="flex items-center gap-1">Occupation {sortConfig.key === 'occupation' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
+                                                            </th>
+                                                            <th className="px-6 py-4 text-center cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('family')}>
+                                                                <div className="flex items-center justify-center gap-1">Family {sortConfig.key === 'family' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
+                                                            </th>
+                                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('createdAt')}>
+                                                                <div className="flex items-center gap-1">Joined {sortConfig.key === 'createdAt' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
+                                                            </th>
+                                                            <th className="px-6 py-4 text-center">Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-50">
                                                         {displayedMembers.map(member => (
-                                                            <tr key={member._id} className="hover:bg-slate-50/80 transition-colors group">
-                                                                <td className="px-6 py-4"><input type="checkbox" className="rounded border-slate-200" /></td>
+                                                            <tr key={member._id} className={`transition-colors group ${selectedMemberIds.includes(member._id) ? 'bg-blue-50/50' : 'hover:bg-slate-50/80'}`}>
+                                                                <td className="px-6 py-4">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="rounded border-slate-200 w-4 h-4 cursor-pointer"
+                                                                        checked={selectedMemberIds.includes(member._id)}
+                                                                        onChange={() => handleSelectMember(member._id)}
+                                                                    />
+                                                                </td>
                                                                 <td className="px-6 py-4"><div className="flex flex-col"><Link to={`/admin/members/${member._id}`} className="text-base font-bold text-slate-800 hover:text-blue-600 cursor-pointer">{member.name} {member.surname}</Link><div className="text-xs text-slate-400 font-mono">ID: {member.mewsId || member._id.substring(0, 6)}</div></div></td>
                                                                 <td className="px-6 py-4 text-sm font-semibold text-blue-600">{getVillageName(member.address?.village) || 'N/A'}</td>
                                                                 <td className="px-6 py-4 text-sm text-slate-600 font-mono">{member.mobileNumber}</td>
@@ -369,7 +501,20 @@ const MemberManagement = () => {
                                             {displayedMembers.map(member => (
                                                 <div key={member._id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition relative group">
                                                     <div className="absolute top-4 right-4"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide ${(member.occupation || '').toLowerCase().includes('farmer') ? 'bg-green-50 text-green-600' : (member.occupation || '').toLowerCase().includes('student') ? 'bg-blue-50 text-blue-600' : (member.occupation || '').toLowerCase().includes('business') ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>{member.occupation || 'Member'}</span></div>
-                                                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-2xl font-bold text-slate-400 mb-4 border-2 border-white shadow-lg mx-auto"> {member.profileImage ? (<img src={member.profileImage} alt="" className="w-full h-full rounded-full object-cover" />) : (<span>{(member.name || '').charAt(0)}</span>)} </div>
+                                                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-2xl font-bold text-slate-400 mb-4 border-2 border-white shadow-lg mx-auto overflow-hidden">
+                                                        {(member.photoUrl || member.profileImage) ? (
+                                                            <img
+                                                                src={(member.photoUrl || member.profileImage).startsWith('http')
+                                                                    ? (member.photoUrl || member.profileImage)
+                                                                    : `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000'}/${(member.photoUrl || member.profileImage).replace(/\\/g, '/')}`}
+                                                                alt={member.name}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
+                                                            />
+                                                        ) : (
+                                                            <span>{(member.name || '').charAt(0)}</span>
+                                                        )}
+                                                    </div>
                                                     <div className="text-center mb-6"> <h3 className="font-bold text-slate-800 text-lg mb-1">{member.name} {member.surname}</h3> <p className="text-xs text-blue-500 font-bold mb-2">{getVillageName(member.address?.village)}</p> <p className="text-xs text-slate-400 font-mono">{member.mobileNumber}</p> </div>
                                                     <div className="grid grid-cols-2 gap-2 mb-6 text-center"> <div className="bg-slate-50 rounded-lg py-2"> <div className="text-[10px] text-slate-400 font-bold uppercase">Age</div> <div className="font-bold text-slate-700">{member.age}</div> </div> <div className="bg-slate-50 rounded-lg py-2"> <div className="text-[10px] text-slate-400 font-bold uppercase">Gender</div> <div className="font-bold text-slate-700">{member.gender?.charAt(0)}</div> </div> </div>
                                                     <div className="flex gap-2"> <Link to={`/admin/members/${member._id}`} className="flex-1 bg-[#1e2a4a] text-white py-2 rounded-lg text-xs font-bold hover:bg-[#2a3b66] transition flex items-center justify-center gap-2 shadow-sm"><FaEye /> View</Link> <Link to={`/admin/members/edit/${member._id}`} className="bg-slate-50 hover:bg-amber-50 hover:text-amber-600 text-slate-400 py-2 px-3 rounded-lg text-xs font-bold transition border border-slate-200 hover:border-amber-200"><FaEdit size={14} /></Link> </div>
@@ -408,7 +553,23 @@ const MemberManagement = () => {
                                     {/* Pagination (Common) */}
                                     {viewMode !== 'map' && (
                                         <div className="p-4 flex items-center justify-between mt-4">
-                                            <div className="flex items-center gap-2"><span className="text-xs text-slate-500">Show</span><select className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-bold text-slate-600 focus:outline-none"><option>10</option><option>20</option><option>50</option></select><span className="text-xs text-slate-500">per page</span></div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs text-slate-500">Show</span>
+                                                <select
+                                                    value={itemsPerPage}
+                                                    onChange={(e) => {
+                                                        setItemsPerPage(Number(e.target.value));
+                                                        setCurrentPage(1);
+                                                    }}
+                                                    className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-bold text-slate-600 focus:outline-none"
+                                                >
+                                                    <option value={10}>10</option>
+                                                    <option value={20}>20</option>
+                                                    <option value={50}>50</option>
+                                                    <option value={100}>100</option>
+                                                </select>
+                                                <span className="text-xs text-slate-500">per page</span>
+                                            </div>
                                             <div className="flex items-center gap-2">
                                                 <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="w-10 h-10 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-white disabled:opacity-50 text-sm bg-white shadow-sm transition"><FaChevronLeft /></button>
                                                 <div className="text-xs font-bold text-slate-500 px-2">Page {currentPage} of {pageCount || 1}</div>

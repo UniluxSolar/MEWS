@@ -6,14 +6,14 @@ import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import DashboardHeader from '../components/common/DashboardHeader';
 import {
-    FaArrowLeft, FaShieldAlt, FaSave, FaEraser, FaUpload,
+    FaArrowLeft, FaShieldAlt, FaSave, FaEraser, FaUpload, FaEye,
     FaCalendarAlt, FaIdCard, FaMapMarkerAlt, FaUsers, FaRing,
     FaRupeeSign, FaVoteYea, FaUniversity, FaFileImage, FaChevronRight,
     FaHome, FaCheckSquare,
     // Admin Layout Icons
     FaThLarge, FaBuilding, FaExclamationTriangle, FaFileAlt,
     FaHandHoldingUsd, FaChartLine, FaCog, FaQuestionCircle, FaBullhorn,
-    FaSignOutAlt, FaSearch, FaBell, FaChevronDown, FaChevronUp, FaDownload, FaPlus, FaEdit
+    FaSignOutAlt, FaSearch, FaBell, FaChevronDown, FaChevronUp, FaDownload, FaPlus, FaEdit, FaUser
 } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -33,9 +33,6 @@ const CollapsibleSection = ({ title, icon: Icon, sectionNumber, isOpen, onToggle
             className={`flex items-center justify-between p-4 cursor-pointer transition-colors ${isOpen ? 'bg-blue-50 border-b border-blue-100' : 'bg-white hover:bg-gray-50'}`}
         >
             <div className="flex items-center gap-4">
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold shadow-sm transition-colors ${isOpen ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
-                    {sectionNumber}
-                </div>
                 <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isOpen ? 'bg-white text-blue-600' : 'bg-gray-100 text-gray-400'}`}>
                         <Icon size={16} />
@@ -107,23 +104,42 @@ const FormSelect = ({ label, options, required = false, colSpan = "col-span-1", 
 );
 
 // File Upload Component
-const FileUpload = ({ label, name, onChange, colSpan = "col-span-1", fileName, error }) => (
+// File Upload Component
+const FileUpload = ({ label, name, onChange, colSpan = "col-span-1", fileName, error, fileUrl }) => (
     <div className={colSpan}>
         <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
             {label}
         </label>
-        <div className={`border-2 border-dashed ${error ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-gray-50'} rounded-lg p-4 flex flex-col items-center justify-center hover:bg-gray-100 transition cursor-pointer text-center h-[52px] box-border relative group`}>
-            <div className="absolute inset-0 flex items-center justify-center gap-2 text-gray-500 group-hover:text-blue-600">
+        <div className={`border-2 border-dashed ${error ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-gray-50'} rounded-lg p-2 flex flex-col items-center justify-center hover:bg-gray-100 transition cursor-pointer text-center h-[52px] box-border relative group`}>
+
+            {/* View Link if URL exists */}
+            {fileUrl && (
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20" title="View Document">
+                    <a
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <FaEye size={14} />
+                    </a>
+                </div>
+            )}
+
+            <div className={`absolute inset-0 flex items-center ${fileUrl ? 'justify-start pl-4' : 'justify-center'} gap-2 text-gray-500 group-hover:text-blue-600 pointer-events-none`}>
                 <FaUpload size={14} className={error ? 'text-red-500' : ''} />
-                <span className={`text-xs font-bold ${error ? 'text-red-600' : ''}`}>
-                    {fileName ? (fileName.length > 20 ? fileName.substring(0, 20) + '...' : fileName) : 'Choose File'}
+                <span className={`text-xs font-bold truncate max-w-[180px] ${error ? 'text-red-600' : ''}`}>
+                    {fileName ? fileName : (fileUrl ? 'File Uploaded' : 'Choose File')}
                 </span>
             </div>
+
             <input
                 type="file"
                 name={name}
                 onChange={onChange}
-                className="opacity-0 absolute inset-0 cursor-pointer"
+                className="opacity-0 absolute inset-0 cursor-pointer z-10"
+                title={fileName || "Choose a file"}
             />
         </div>
         {error && <p className="text-red-500 text-xs mt-1 font-medium">{error}</p>}
@@ -137,6 +153,36 @@ const MemberRegistration = () => {
     const location = useLocation();
     const isEditMode = location.pathname.includes('/edit/');
     const isViewMode = Boolean(id) && !isEditMode;
+
+    // Helper: Calculate Age from DD-MM-YYYY
+    const calculateAge = (dobString) => {
+        if (!dobString || dobString.length !== 10) return '';
+        const [day, month, year] = dobString.split('-').map(Number);
+        if (!day || !month || !year) return '';
+
+        const today = new Date();
+        let age = today.getFullYear() - year;
+        const m = today.getMonth() + 1 - month;
+        if (m < 0 || (m === 0 && today.getDate() < day)) {
+            age--;
+        }
+        return age >= 0 ? age : 0;
+    };
+
+    // Helper: Handle Date Input with Masking
+    const handleDateChange = (e, setFormState, fieldName) => {
+        let val = e.target.value.replace(/\D/g, ''); // Remove non-digits
+        if (val.length > 8) val = val.substring(0, 8); // Max 8 digits
+
+        // Format DD-MM-YYYY
+        if (val.length > 4) {
+            val = `${val.slice(0, 2)}-${val.slice(2, 4)}-${val.slice(4)}`;
+        } else if (val.length > 2) {
+            val = `${val.slice(0, 2)}-${val.slice(2)}`;
+        }
+
+        setFormState(prev => ({ ...prev, [fieldName]: val }));
+    };
 
     // Form State
     const [formData, setFormData] = useState({
@@ -183,7 +229,7 @@ const MemberRegistration = () => {
         caste: 'MALA',
         subCaste: '',
         communityCertNumber: '',
-        maritalStatus: 'Unmarried',
+        maritalStatus: '',
 
         // Marriage
         partnerCaste: '',
@@ -224,25 +270,50 @@ const MemberRegistration = () => {
     // Family Member State
     const [showFamilyModal, setShowFamilyModal] = useState(false);
     const [familyMembers, setFamilyMembers] = useState([]);
+    const [editingMemberIndex, setEditingMemberIndex] = useState(null); // Track which member is being edited
     const [familyMemberForm, setFamilyMemberForm] = useState({
-        relation: '', surname: '', name: '', dob: '', age: '', occupation: '', educationLevel: '', gender: '', mobileNumber: '', aadhaarNumber: '',
+        relation: '', maritalStatus: '', surname: '', name: '', fatherName: '', dob: '', age: '', occupation: '', educationLevel: '', gender: '', mobileNumber: '', aadhaarNumber: '',
         epicNumber: '', voterName: '', pollingBooth: ''
     });
     const [familyMemberFiles, setFamilyMemberFiles] = useState({});
 
     const handleFamilyChange = (e) => {
         const { name, value } = e.target;
+
+        let updatedForm = { [name]: value };
+
         if (name === 'aadhaarNumber') {
-            // Remove non-digits
             const raw = value.replace(/\D/g, '');
-            // Limit to 12 digits
             if (raw.length > 12) return;
-            // Format: 0000 0000 0000
-            const formatted = raw.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
-            setFamilyMemberForm(prev => ({ ...prev, [name]: formatted }));
-            return;
+            updatedForm[name] = raw.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
         }
-        setFamilyMemberForm(prev => ({ ...prev, [name]: value }));
+
+        if (name === 'mobileNumber') {
+            if (!/^\d*$/.test(value)) return;
+            if (value.length > 10) return;
+        }
+
+        if (name === 'epicNumber') {
+            updatedForm[name] = value.toUpperCase();
+        }
+
+        // Auto-populate Father Name based on Relation
+        if (name === 'relation') {
+            if (value === 'Son' || value === 'Daughter') {
+                if (formData.gender === 'Male') {
+                    updatedForm.fatherName = formData.name;
+                } else if (formData.gender === 'Female' && formData.maritalStatus === 'Married') {
+                    // Try to get husband's name if available (partnerName)
+                    updatedForm.fatherName = formData.partnerName || '';
+                }
+            }
+            // Auto-set Marital Status to 'Married' for Father, Mother, Spouse
+            if (['Father', 'Mother', 'Spouse'].includes(value)) {
+                updatedForm.maritalStatus = 'Married';
+            }
+        }
+
+        setFamilyMemberForm(prev => ({ ...prev, ...updatedForm }));
     };
 
     const handleFamilyFileChange = (e) => {
@@ -252,29 +323,95 @@ const MemberRegistration = () => {
         }
     };
 
+    const handleEditFamilyMember = (index) => {
+        const member = familyMembers[index];
+        setFamilyMemberForm({
+            relation: member.relation, maritalStatus: member.maritalStatus || '', surname: member.surname, name: member.name, fatherName: member.fatherName || '', dob: member.dob, age: member.age,
+            occupation: member.occupation, educationLevel: member.educationLevel || '', gender: member.gender,
+            mobileNumber: member.mobileNumber || '', aadhaarNumber: member.aadhaarNumber || '',
+            epicNumber: member.epicNumber || '', voterName: member.voterName || '', pollingBooth: member.pollingBooth || ''
+        });
+        setFamilyMemberFiles(member.files || {});
+        setEditingMemberIndex(index);
+        setShowFamilyModal(true);
+    };
+
+    const openAddFamilyModal = () => {
+        setFamilyMemberForm({
+            relation: '', maritalStatus: '', surname: createdMemberData ? createdMemberData.surname : formData.surname, name: '', fatherName: '', dob: '', age: '', occupation: '', educationLevel: '', gender: '', mobileNumber: '', aadhaarNumber: '',
+            epicNumber: '', voterName: '', pollingBooth: ''
+        });
+        setFamilyMemberFiles({});
+        setEditingMemberIndex(null);
+        setShowFamilyModal(true);
+    };
+
+
     const saveFamilyMember = () => {
         // Basic Validation
         if (!familyMemberForm.name || !familyMemberForm.surname || !familyMemberForm.relation) {
             alert("Name, Surname, and Relation are required"); return;
         }
 
-        // Spouse Check
+        if (familyMemberForm.mobileNumber && familyMemberForm.mobileNumber.length !== 10) {
+            alert("Family member mobile number must be 10 digits"); return;
+        }
+
+        if (familyMemberForm.epicNumber) {
+            const epicRegex = /^[A-Z]{3,4}[0-9]{7}$/;
+            if (!epicRegex.test(familyMemberForm.epicNumber)) {
+                alert("Invalid Family Member Voter ID format (e.g., ABC1234567)"); return;
+            }
+        }
+
+        // Spouse Check (Skip check if we are editing the spouse themselves)
         if (familyMemberForm.relation === 'Spouse') {
-            const hasSpouse = familyMembers.some(m => m.relation === 'Spouse');
+            const hasSpouse = familyMembers.some((m, idx) => m.relation === 'Spouse' && idx !== editingMemberIndex);
             if (hasSpouse) {
                 alert("You can only add one Spouse.");
                 return;
             }
         }
 
-        setFamilyMembers(prev => [...prev, { ...familyMemberForm, tempId: Date.now(), files: familyMemberFiles }]);
+        if (editingMemberIndex !== null) {
+            // Update existing member
+            const updatedMembers = [...familyMembers];
+            updatedMembers[editingMemberIndex] = {
+                ...updatedMembers[editingMemberIndex], // Keep any internal fields like tempId if needed
+                ...familyMemberForm,
+                files: familyMemberFiles
+            };
+            setFamilyMembers(updatedMembers);
+            alert("Family member updated successfully.");
+        } else {
+            // Add new member
+            setFamilyMembers(prev => [...prev, { ...familyMemberForm, tempId: Date.now(), files: familyMemberFiles }]);
+        }
+
         setShowFamilyModal(false);
         setFamilyMemberForm({
-            relation: '', surname: '', name: '', dob: '', age: '', occupation: '', gender: '', mobileNumber: '', aadhaarNumber: '',
+            relation: '', surname: '', name: '', fatherName: '', dob: '', age: '', occupation: '', educationLevel: '', gender: '', mobileNumber: '', aadhaarNumber: '',
             epicNumber: '', voterName: '', pollingBooth: ''
         });
         setFamilyMemberFiles({});
+        setEditingMemberIndex(null);
     };
+
+    // Auto-calculate Age for Family Member
+    useEffect(() => {
+        if (familyMemberForm.dob && familyMemberForm.dob.length === 10) {
+            const calculatedAge = calculateAge(familyMemberForm.dob);
+
+            setFamilyMemberForm(prev => ({
+                ...prev,
+                age: calculatedAge,
+                // Auto-fill mobile if under 18 and phone is empty
+                mobileNumber: (calculatedAge !== '' && parseInt(calculatedAge) < 18 && !prev.mobileNumber) ? formData.mobileNumber : prev.mobileNumber
+            }));
+        } else {
+            setFamilyMemberForm(prev => ({ ...prev, age: '' }));
+        }
+    }, [familyMemberForm.dob, formData.mobileNumber]);
 
     // collapsible sections state
     const [openSections, setOpenSections] = useState({
@@ -348,6 +485,7 @@ const MemberRegistration = () => {
                 caste: 'MALA',
                 subCaste: '',
                 communityCertNumber: '',
+                maritalStatus: '',
                 partnerCaste: '',
                 partnerSubCaste: '',
                 isInterCaste: '',
@@ -600,163 +738,6 @@ const MemberRegistration = () => {
         fetchDistricts();
     }, []);
 
-    // Fetch Member Details for Edit Mode
-    useEffect(() => {
-        if (isEditMode) {
-            const fetchMember = async () => {
-                try {
-                    const { data } = await API.get(`/members/${id}`);
-                    console.log("Fetched Member Data:", data);
-
-                    // Helper to safely get nested value or empty string
-                    const getVal = (val) => val || '';
-                    const getAddr = (field) => data.address?.[field] || '';
-                    const getCaste = (field) => data.casteDetails?.[field] || '';
-                    const getFamily = (field) => data.familyDetails?.[field] || '';
-
-                    // --- Populate Form Data ---
-                    setFormData(prev => ({
-                        ...prev,
-                        surname: getVal(data.surname),
-                        name: getVal(data.name),
-                        fatherName: getVal(data.fatherName),
-                        dob: data.dob ? data.dob.split('T')[0] : '',
-                        age: getVal(data.age),
-                        gender: getVal(data.gender),
-                        mobileNumber: getVal(data.mobileNumber),
-                        alternateMobile: getVal(data.alternateMobile),
-                        email: getVal(data.email),
-                        bloodGroup: getVal(data.bloodGroup),
-                        aadhaarNumber: getVal(data.aadhaarNumber),
-                        occupation: getVal(data.occupation),
-                        maritalStatus: getVal(data.maritalStatus),
-                        educationLevel: getVal(data.educationLevel),
-
-                        // Job (if any)
-                        jobSector: getVal(data.jobSector),
-                        jobOrganization: getVal(data.jobOrganization),
-                        jobDesignation: getVal(data.jobDesignation),
-
-                        // Address - Present
-                        presentHouseNo: getAddr('houseNumber'),
-                        presentStreet: getAddr('street'),
-                        presentLandmark: getAddr('landmark'),
-                        presentPincode: data.address?.pinCode || data.address?.pincode || '',
-                        presentDistrict: data.address?.district?._id || data.address?.district || '',
-                        presentMandal: data.address?.mandal?._id || data.address?.mandal || '',
-                        presentVillage: data.address?.village?._id || data.address?.village || '',
-                        // Note: Constituency might need specific handling if not directly in address object but inferred
-                        presentConstituency: data.address?.constituency || '',
-
-                        // Address - Permanent
-                        permHouseNo: data.permanentAddress?.houseNumber || '',
-                        permStreet: data.permanentAddress?.street || '',
-                        permLandmark: data.permanentAddress?.landmark || '',
-                        permPincode: data.permanentAddress?.pinCode || data.permanentAddress?.pincode || '',
-                        permDistrict: data.permanentAddress?.district?._id || data.permanentAddress?.district || '',
-                        permMandal: data.permanentAddress?.mandal?._id || data.permanentAddress?.mandal || '',
-                        permVillage: data.permanentAddress?.village?._id || data.permanentAddress?.village || '',
-                        permConstituency: data.permanentAddress?.constituency || '',
-
-                        // Caste
-                        caste: getCaste('caste'),
-                        subCaste: getCaste('subCaste'),
-                        communityCertNumber: getCaste('communityCertNumber'),
-
-                        // Partner
-                        partnerCaste: data.partnerDetails?.caste || '',
-                        partnerSubCaste: data.partnerDetails?.subCaste || '',
-                        isInterCaste: data.partnerDetails?.isInterCaste ? 'Yes' : 'No',
-                        partnerName: data.partnerDetails?.name || '',
-                        partnerMarriageCert: data.partnerDetails?.marriageCertNumber || '',
-
-                        // Family & Economic
-                        annualIncome: getFamily('annualIncome'),
-                        memberCount: getFamily('memberCount'),
-                        dependentCount: getFamily('dependentCount'),
-                        rationCardTypeFamily: getFamily('rationCardType'),
-                        hasRationCard: !!data.rationCard?.number,
-                        fatherOccupation: getFamily('fatherOccupation'),
-                        motherOccupation: getFamily('motherOccupation'),
-
-                        // Ration Card
-                        rationCardNumber: data.rationCard?.number || '',
-                        rationCardHolderName: data.rationCard?.holderName || '',
-
-                        // Voter ID
-                        epicNumber: data.voterId?.epicNumber || '',
-                        voterName: data.voterId?.nameOnCard || '',
-                        pollingBooth: data.voterId?.pollingBooth || '',
-
-                        // Bank
-                        bankName: data.bankDetails?.bankName || '',
-                        branchName: data.bankDetails?.branchName || '',
-                        accountNo: data.bankDetails?.accountNumber || '',
-                        ifsc: data.bankDetails?.ifscCode || '',
-                        bankHolder: data.bankDetails?.holderName || ''
-                    }));
-
-                    // Load Family Members
-                    if (data.familyMembers && Array.isArray(data.familyMembers)) {
-                        setFamilyMembers(data.familyMembers.map(fm => ({
-                            ...fm,
-                            tempId: fm._id || Date.now(), // Use DB ID or temp
-                            mobileNumber: fm.mobile || '',
-                            epicNumber: fm.voterId || ''
-                        })));
-                    }
-
-                    // Trigger cascades for locations (This is tricky async, might just set IDs and let user re-select if needed)
-                    // Or implement a robust "fetch locations for selected district/mandal" here.
-                    // For now, setting IDs. The dropdowns will be empty until corresponding district is "re-selected" or initial data loaded.
-                    // Ideally we fetch Mandals for the set valid District.
-                    // Trigger cascades for locations
-                    // 1. Fetch Mandals and Constituencies for the District
-                    if (data.address?.district?._id || data.address?.district) {
-                        const dId = data.address?.district?._id || data.address?.district;
-
-                        // Fetch Mandals
-                        const { data: mandalsData } = await API.get(`/locations?parent=${dId}`);
-                        setAllMandals(mandalsData);
-                        setMandals(mandalsData);
-
-                        // Fetch Constituencies (If district has mapped constituencies, use that logic. 
-                        // For now we assume we might need to fetch them or filter if hardcoded. 
-                        // Existing logic uses 'presentConstituencies' state which depends on district.
-                        // We need to set 'presentConstituencies' state here if it's dynamic.
-                        // If it's static mapping, we trigger the mapping update.)
-                        const districtName = districts.find(d => d._id === dId)?.name || '';
-
-                        // 2. Fetch Villages for the Mandal
-                        if (data.address?.mandal?._id || data.address?.mandal) {
-                            const mId = data.address?.mandal?._id || data.address?.mandal;
-                            const { data: villagesData } = await API.get(`/locations?parent=${mId}`);
-                            setVillages(villagesData);
-                        }
-                    }
-
-                    // Permanent Address Logic (Similar if we used separate dropdowns for permanent)
-                    if (!sameAsPresent && (data.permanentAddress?.district?._id || data.permanentAddress?.district)) {
-                        const pdId = data.permanentAddress?.district?._id || data.permanentAddress?.district;
-                        const { data: permMandalsData } = await API.get(`/locations?parent=${pdId}`);
-                        setPermMandals(permMandalsData);
-
-                        if (data.permanentAddress?.mandal?._id || data.permanentAddress?.mandal) {
-                            const pmId = data.permanentAddress?.mandal?._id || data.permanentAddress?.mandal;
-                            const { data: permVillagesData } = await API.get(`/locations?parent=${pmId}`);
-                            setPermVillages(permVillagesData);
-                        }
-                    }
-
-                } catch (error) {
-                    console.error("Failed to fetch member details", error);
-                    alert("Failed to load member details.");
-                }
-            };
-            fetchMember();
-        }
-    }, [id, isEditMode]);
-
     // Handle Present Address District Change
     const handleDistrictChange = async (e) => {
         const districtId = e.target.value;
@@ -939,6 +920,19 @@ const MemberRegistration = () => {
             return;
         }
 
+        if (name === 'rationCardNumber') {
+            // Only digits, max 12
+            if (!/^\d*$/.test(value)) return;
+            if (value.length > 12) return;
+        }
+
+        if (name === 'epicNumber') {
+            // Uppercase only
+            const uppercased = value.toUpperCase();
+            setFormData(prev => ({ ...prev, [name]: uppercased }));
+            return;
+        }
+
         if (name === 'presentPincode' || name === 'permPincode' || name === 'annualIncome' || name === 'memberCount' || name === 'dependentCount') {
             // Basic number check for other numeric fields if desired, but strict length only for mobile/aadhar
             // Keeping it simple for now as requested specifically for mobile/aadhar
@@ -982,6 +976,28 @@ const MemberRegistration = () => {
         setSameAsPresent(checked);
 
         if (checked) {
+            // Auto-fill and populate lists
+            const districtName = districts.find(d => d._id === formData.presentDistrict)?.name || '';
+            const relevantConstituencies = getConstituenciesForDistrict(districtName);
+            setPermConstituencies(relevantConstituencies);
+
+            // For Mandals and Villages, we need to fetch them or copy them if they are loaded
+            // Since Mandals depend on API, we might need to copy the list or refetch
+            // But visually, copying the selected ID is primary. The dropdown options might be missing if we don't set them.
+            // If we assume same district = same mandal list, we can copy allMandals to PermMandals?
+            // Actually, handleDistrictChange fetches mandals.
+            // Let's copy the current lists if we want them to be viewable immediately, 
+            // but usually for "Same as Present" we disable fields, so just showing value is enough?
+            // User complained it's not auto-filling. Value is filling, but maybe dropdown is empty/invalid?
+            // If fields are disabled, dropdown valid options matter less as long as value is shown.
+            // But if user unchecks later, they need options.
+            // Let's at least set the Constituency list which is local.
+
+            // For API based lists (Mandal/Village), we should ideally fetch or copy. 
+            // Since we have 'mandals' and 'villages' state for present, we can copy to perm.
+            setPermMandals(mandals);
+            setPermVillages(villages);
+
             setFormData(prev => ({
                 ...prev,
                 permDistrict: prev.presentDistrict,
@@ -993,20 +1009,18 @@ const MemberRegistration = () => {
                 permLandmark: prev.presentLandmark,
                 permPincode: prev.presentPincode,
             }));
+        } else {
+            // Optional: clear perm fields or leave them? Usually leave them.
+            // But we should probably clear the options if they are specific to the previous selection?
+            // Leaving them is safer for UX in case of accidental uncheck.
         }
     };
 
     // Auto-calculate Age
     useEffect(() => {
-        if (formData.dob) {
-            const birthDate = new Date(formData.dob);
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const m = today.getMonth() - birthDate.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
-            }
-            setFormData(prev => ({ ...prev, age: age >= 0 ? age : 0 }));
+        if (formData.dob && formData.dob.length === 10) {
+            const age = calculateAge(formData.dob);
+            setFormData(prev => ({ ...prev, age: age }));
         } else {
             setFormData(prev => ({ ...prev, age: '' }));
         }
@@ -1051,6 +1065,19 @@ const MemberRegistration = () => {
             if (!formData.permPincode) newErrors.permPincode = "Pincode is required";
         }
 
+        // Ration Card
+        if (formData.hasRationCard && formData.rationCardNumber) {
+            if (formData.rationCardNumber.length !== 12) newErrors.rationCardNumber = "Ration card number must be 12 digits";
+        }
+
+        // Voter ID
+        if (formData.epicNumber) {
+            const epicRegex = /^[A-Z]{3,4}[0-9]{7}$/;
+            if (!epicRegex.test(formData.epicNumber)) {
+                newErrors.epicNumber = "Invalid Voter ID format (e.g., ABC1234567)";
+            }
+        }
+
         // Other Details
         if (!formData.caste) newErrors.caste = "Caste is required";
         if (!formData.maritalStatus) newErrors.maritalStatus = "Marital status is required";
@@ -1081,7 +1108,12 @@ const MemberRegistration = () => {
         try {
             const dataPayload = new FormData();
             Object.keys(formData).forEach(key => {
-                dataPayload.append(key, formData[key]);
+                if (key === 'dob' && formData[key] && /^\d{2}-\d{2}-\d{4}$/.test(formData[key])) {
+                    const [dd, mm, yyyy] = formData[key].split('-');
+                    dataPayload.append(key, `${yyyy}-${mm}-${dd}`);
+                } else {
+                    dataPayload.append(key, formData[key]);
+                }
             });
 
             Object.keys(files).forEach(key => {
@@ -1102,6 +1134,12 @@ const MemberRegistration = () => {
                 const memberObj = { ...fm };
                 delete memberObj.files;
                 delete memberObj.tempId;
+
+                // Convert DOB from DD-MM-YYYY to YYYY-MM-DD for backend
+                if (memberObj.dob && /^\d{2}-\d{2}-\d{4}$/.test(memberObj.dob)) {
+                    const [dd, mm, yyyy] = memberObj.dob.split('-');
+                    memberObj.dob = `${yyyy}-${mm}-${dd}`;
+                }
 
                 const fmFiles = fm.files || {};
 
@@ -1171,6 +1209,21 @@ const MemberRegistration = () => {
         const fetchMember = async () => {
             setLoading(true);
             try {
+                // 1. Fetch Districts First (to ensure we can map names for Constituencies)
+                // We fetch specific state logic or just rely on 'districts' state?
+                // Using 'districts' state is unreliable due to race conditions.
+                // Safest: Fetch the districts list locally here.
+                let localDistricts = districts;
+                if (!localDistricts || localDistricts.length === 0) {
+                    const { data: states } = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/locations?type=STATE`);
+                    const telangana = states.find(s => s.name === 'Telangana') || states[0];
+                    if (telangana) {
+                        const { data: dists } = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/locations?parent=${telangana._id}`);
+                        setDistricts(dists);
+                        localDistricts = dists;
+                    }
+                }
+
                 const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
                 const token = adminInfo?.token;
 
@@ -1183,19 +1236,29 @@ const MemberRegistration = () => {
                 const { data } = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/members/${id}`, config);
 
                 // Flatten and Map Data to Form State
+                // Helper to normalize gender case
+                const normalizeGender = (g) => {
+                    if (!g) return '';
+                    if (g.toLowerCase() === 'male') return 'Male';
+                    if (g.toLowerCase() === 'female') return 'Female';
+                    return 'Other';
+                };
+
                 const mappedData = {
                     ...formData, // Keep defaults
                     surname: data.surname,
                     name: data.name,
-                    fatherName: data.fatherName,
-                    dob: new Date(data.dob).toISOString().split('T')[0],
+                    fatherName: data.fatherName || data.familyDetails?.fatherName || '', // Fallback to familyDetails
+                    // Date Formats: Backend YYYY-MM-DD -> Frontend DD-MM-YYYY
+                    dob: data.dob ? new Date(data.dob).toLocaleDateString('en-GB').replace(/\//g, '-') : '',
                     age: data.age,
-                    gender: data.gender,
-                    bloodGroup: data.bloodGroup,
-                    mobileNumber: data.mobileNumber,
-                    alternateMobile: data.alternateMobile,
-                    email: data.email,
+                    gender: normalizeGender(data.gender),
+                    bloodGroup: data.bloodGroup || '',
+                    mobileNumber: data.mobileNumber || data.contactDetails?.mobileNumber || '',
+                    alternateMobile: data.alternateMobile || data.contactDetails?.alternateMobile || '',
+                    email: data.email || data.contactDetails?.email || '',
                     occupation: data.occupation,
+                    educationLevel: data.educationLevel || '', // Add education level
                     jobSector: data.jobSector,
                     jobOrganization: data.jobOrganization,
 
@@ -1226,7 +1289,7 @@ const MemberRegistration = () => {
                     permPincode: data.permanentAddress?.pinCode || '',
 
                     // Caste Details
-                    caste: data.casteDetails?.caste || '',
+                    caste: data.casteDetails?.caste || 'MALA',
                     subCaste: data.casteDetails?.subCaste || '',
                     communityCertNumber: data.casteDetails?.communityCertNumber || '',
 
@@ -1235,31 +1298,23 @@ const MemberRegistration = () => {
                     partnerName: data.partnerDetails?.name || '',
                     partnerCaste: data.partnerDetails?.caste || '',
                     partnerSubCaste: data.partnerDetails?.subCaste || '',
-                    isInterCaste: data.partnerDetails?.isInterCaste || false,
-                    marriageDate: data.partnerDetails?.marriageDate ? new Date(data.partnerDetails.marriageDate).toISOString().split('T')[0] : '',
+                    isInterCaste: data.partnerDetails?.isInterCaste ? 'Yes' : 'No', // Convert boolean to "Yes"/"No"
+                    marriageDate: data.partnerDetails?.marriageDate ? new Date(data.partnerDetails.marriageDate).toLocaleDateString('en-GB').replace(/\//g, '-') : '',
                     marriageCertNumber: data.partnerDetails?.marriageCertNumber || '',
 
                     // Family & Economic
-                    fatherOccupation: data.familyDetails?.fatherOccupation || '',
-                    motherOccupation: data.familyDetails?.motherOccupation || '',
                     annualIncome: data.familyDetails?.annualIncome || '',
                     memberCount: data.familyDetails?.memberCount || '',
                     dependentCount: data.familyDetails?.dependentCount || '',
                     rationCardTypeFamily: data.familyDetails?.rationCardType || '',
 
                     // Other IDs
-                    hasRationCard: !!data.rationCard?.number,
+                    hasRationCard: !!(data.rationCard?.number),
                     rationCardNumber: data.rationCard?.number || '',
                     rationCardHolderName: data.rationCard?.holderName || '',
                     epicNumber: data.voterId?.epicNumber || '',
                     voterName: data.voterId?.nameOnCard || '',
                     pollingBooth: data.voterId?.pollingBooth || '',
-
-                    // Bank Details
-                    bankName: data.bankDetails?.bankName || '',
-                    branchName: data.bankDetails?.branchName || '',
-                    accountNumber: data.bankDetails?.accountNumber || '',
-                    ifscCode: data.bankDetails?.ifscCode || '',
 
                     mewsId: data.mewsId
                 };
@@ -1270,19 +1325,27 @@ const MemberRegistration = () => {
                 const initialFiles = {};
                 if (data.documents) {
                     data.documents.forEach(doc => {
-                        // Assuming doc.type corresponds to the file state key (e.g., 'photo', 'aadhaarFront')
-                        // And doc.url is the URL to the existing file
-                        initialFiles[doc.type] = { name: doc.url.split('/').pop(), url: doc.url, existing: true };
+                        const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
+                        const fullUrl = doc.url.startsWith('http') ? doc.url : `${baseUrl}/${doc.url.replace(/\\/g, '/')}`;
+                        initialFiles[doc.type] = {
+                            name: doc.url.split(/[/\\]/).pop(),
+                            url: fullUrl,
+                            existing: true,
+                            type: 'existing' // Marker
+                        };
                     });
                 }
                 setFiles(initialFiles);
 
                 // Populate family members
                 if (data.familyMembers && Array.isArray(data.familyMembers)) {
+                    // Check if family members use "father's details" (inheritance) logic
+                    // If necessary, but usually they have their own.
                     const loadedFamilyMembers = data.familyMembers.map((fm, index) => ({
                         ...fm,
+                        dob: fm.dob ? new Date(fm.dob).toLocaleDateString('en-GB').replace(/\//g, '-') : '',
                         tempId: fm._id || `existing-${index}`, // Use existing _id or generate tempId
-                        files: {} // Files for family members are handled separately during submission
+                        files: {} // Files for family members are handled separately
                     }));
                     setFamilyMembers(loadedFamilyMembers);
                 }
@@ -1292,6 +1355,54 @@ const MemberRegistration = () => {
                 const permAddressFields = ['permDistrict', 'permConstituency', 'permMandal', 'permVillage', 'permHouseNo', 'permStreet', 'permLandmark', 'permPincode'];
                 const addressesMatch = presentAddressFields.every((field, index) => mappedData[field] === mappedData[permAddressFields[index]]);
                 setSameAsPresent(addressesMatch);
+
+                // [FIX] Trigger Cascading Logic to fill Dropdowns
+                // 1. Present Address Cascades
+                if (mappedData.presentDistrict) {
+                    const dId = mappedData.presentDistrict;
+                    // Fetch Mandals
+                    const { data: mandalsData } = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/locations?parent=${dId}`);
+                    setAllMandals(mandalsData);
+                    setMandals(mandalsData);
+
+                    // Set presentConstituencies using localDistricts lookup
+                    const districtName = localDistricts.find(d => d._id === dId)?.name || '';
+                    if (districtName) {
+                        const relevent = getConstituenciesForDistrict(districtName);
+                        setPresentConstituencies(relevent);
+                    }
+
+                    // Fetch Villages
+                    if (mappedData.presentMandal) {
+                        const mId = mappedData.presentMandal;
+                        const { data: villagesData } = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/locations?parent=${mId}`);
+                        setVillages(villagesData);
+                    }
+                }
+
+                // 2. Permanent Address Cascades
+                if (!addressesMatch && mappedData.permDistrict) {
+                    const pdId = mappedData.permDistrict;
+                    // Fetch Perm Mandals
+                    const { data: permMandalsData } = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/locations?parent=${pdId}`);
+                    setAllPermMandals(permMandalsData);
+                    setPermMandals(permMandalsData);
+
+                    // Set permConstituencies
+                    const pDistrictName = localDistricts.find(d => d._id === pdId)?.name || '';
+                    if (pDistrictName) {
+                        const releventP = getConstituenciesForDistrict(pDistrictName);
+                        setPermConstituencies(releventP);
+                    }
+
+                    // Fetch Perm Villages
+                    if (mappedData.permMandal) {
+                        const pmId = mappedData.permMandal;
+                        const { data: permVillagesData } = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/locations?parent=${pmId}`);
+                        setPermVillages(permVillagesData);
+                    }
+                }
+
 
             } catch (error) {
                 console.error("Failed to fetch member data:", error);
@@ -1351,11 +1462,24 @@ const MemberRegistration = () => {
 
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            const imgWidth = 210;
+            const pageHeight = 297;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let heightLeft = imgHeight;
+            let position = 0;
 
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft >= 0) {
+                position = position - pageHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+
             pdf.save(`Application_${createdMemberData?.mewsId || 'Form'}.pdf`);
+
         } catch (error) {
             console.error("PDF Gen Error:", error);
             alert("Failed to generate application PDF.");
@@ -1378,109 +1502,299 @@ const MemberRegistration = () => {
 
                         <div className="p-8 space-y-8">
                             {/* Basic Info Preview */}
-                            <div>
-                                <h3 className="text-lg font-bold text-blue-700 border-b pb-2 mb-4">Basic Information</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                                    <p><span className="font-bold text-gray-600">Surname:</span> {formData.surname}</p>
-                                    <p><span className="font-bold text-gray-600">Name:</span> {formData.name}</p>
-                                    <p><span className="font-bold text-gray-600">Father's Name:</span> {formData.fatherName}</p>
-                                    <p><span className="font-bold text-gray-600">DOB:</span> {formData.dob}</p>
-                                    <p><span className="font-bold text-gray-600">Age:</span> {formData.age}</p>
-                                    <p><span className="font-bold text-gray-600">Occupation:</span> {formData.occupation}</p>
-                                    <p><span className="font-bold text-gray-600">Gender:</span> {formData.gender}</p>
-                                    <p><span className="font-bold text-gray-600">Mobile:</span> {formData.mobileNumber}</p>
-                                    <p><span className="font-bold text-gray-600">Alt Mobile:</span> {formData.alternateMobile || '-'}</p>
-                                    <p><span className="font-bold text-gray-600">Email:</span> {formData.email || '-'}</p>
-                                    <p><span className="font-bold text-gray-600">Aadhar:</span> {formData.aadhaarNumber}</p>
-                                    <p><span className="font-bold text-gray-600">Blood Group:</span> {formData.bloodGroup || '-'}</p>
+                            <div className="mb-8">
+                                <h3 className="text-lg font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
+                                    <FaUser className="text-blue-600" /> Basic Information
+                                </h3>
+                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    <table className="w-full text-sm text-left">
+                                        <tbody className="divide-y divide-gray-100">
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700 w-1/3">Full Name</td>
+                                                <td className="px-4 py-3 text-gray-900 font-bold">{formData.name} {formData.surname}</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">S/o , W/o, D/o</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.fatherName}</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Date of Birth / Age</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.dob} ({formData.age} Years)</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Gender / Blood Group</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.gender} / {formData.bloodGroup || '-'}</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Occupation</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.occupation}</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Contact Number</td>
+                                                <td className="px-4 py-3 text-gray-900 font-mono">{formData.mobileNumber} {formData.alternateMobile ? `/ ${formData.alternateMobile}` : ''}</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Email / Aadhaar</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.email || '-'} / <span className="font-mono">{formData.aadhaarNumber}</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
                             {/* Present Address Preview */}
-                            <div>
-                                <h3 className="text-lg font-bold text-blue-700 border-b pb-2 mb-4">Present Address</h3>
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                                    <p><span className="font-bold text-gray-600">State:</span> Telangana</p>
-                                    <p><span className="font-bold text-gray-600">District:</span> {districts.find(d => d._id === formData.presentDistrict)?.name || formData.presentDistrict}</p>
-                                    <p><span className="font-bold text-gray-600">Constituency:</span> {formData.presentConstituency}</p>
-                                    <p><span className="font-bold text-gray-600">Mandal:</span> {mandals.find(m => m._id === formData.presentMandal)?.name || formData.presentMandal}</p>
-                                    <p><span className="font-bold text-gray-600">Village:</span> {villages.find(v => v._id === formData.presentVillage)?.name || formData.presentVillage}</p>
-                                    <p><span className="font-bold text-gray-600">House No:</span> {formData.presentHouseNo}</p>
-                                    <p><span className="font-bold text-gray-600">Street:</span> {formData.presentStreet || '-'}</p>
-                                    <p><span className="font-bold text-gray-600">Landmark:</span> {formData.presentLandmark || '-'}</p>
-                                    <p><span className="font-bold text-gray-600">Pincode:</span> {formData.presentPincode}</p>
-                                    <p className="col-span-2"><span className="font-bold text-gray-600">Residence:</span> {formData.residenceType || '-'}</p>
+                            <div className="mb-8">
+                                <h3 className="text-lg font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
+                                    <FaMapMarkerAlt className="text-blue-600" /> Present Address
+                                </h3>
+                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    <table className="w-full text-sm text-left">
+                                        <tbody className="divide-y divide-gray-100">
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700 w-1/3">Address Line</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.presentHouseNo}, {formData.presentStreet || ''}, {formData.presentLandmark || ''}</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Village / Mandal</td>
+                                                <td className="px-4 py-3 text-gray-900">
+                                                    {villages.find(v => v._id === formData.presentVillage)?.name || formData.presentVillage}, {' '}
+                                                    {mandals.find(m => m._id === formData.presentMandal)?.name || formData.presentMandal}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">District / State</td>
+                                                <td className="px-4 py-3 text-gray-900">
+                                                    {districts.find(d => d._id === formData.presentDistrict)?.name || formData.presentDistrict}, Telangana
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Constituency / Pincode</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.presentConstituency} - {formData.presentPincode}</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Residence Type</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.residenceType || '-'}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
                             {/* Permanent Address Preview */}
-                            <div>
-                                <h3 className="text-lg font-bold text-blue-700 border-b pb-2 mb-4">Permanent Address</h3>
-                                {sameAsPresent ? (
-                                    <p className="text-sm text-gray-600 italic">Same as Present Address</p>
-                                ) : (
-                                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                                        <p><span className="font-bold text-gray-600">State:</span> Telangana</p>
-                                        <p><span className="font-bold text-gray-600">District:</span> {districts.find(d => d._id === formData.permDistrict)?.name || formData.permDistrict}</p>
-                                        <p><span className="font-bold text-gray-600">Constituency:</span> {formData.permConstituency}</p>
-                                        <p><span className="font-bold text-gray-600">Mandal:</span> {permMandals.find(m => m._id === formData.permMandal)?.name || formData.permMandal}</p>
-                                        <p><span className="font-bold text-gray-600">Village:</span> {permVillages.find(v => v._id === formData.permVillage)?.name || formData.permVillage}</p>
-                                        <p><span className="font-bold text-gray-600">House No:</span> {formData.permHouseNo}</p>
-                                        <p><span className="font-bold text-gray-600">Street:</span> {formData.permStreet || '-'}</p>
-                                        <p><span className="font-bold text-gray-600">Landmark:</span> {formData.permLandmark || '-'}</p>
-                                        <p><span className="font-bold text-gray-600">Pincode:</span> {formData.permPincode}</p>
-                                    </div>
-                                )}
+                            <div className="mb-8">
+                                <h3 className="text-lg font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
+                                    <FaHome className="text-blue-600" /> Permanent Address
+                                </h3>
+                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    <table className="w-full text-sm text-left">
+                                        <tbody className="divide-y divide-gray-100">
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700 w-1/3">Address Line</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.permHouseNo}, {formData.permStreet || ''}, {formData.permLandmark || ''}</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Village / Mandal</td>
+                                                <td className="px-4 py-3 text-gray-900">
+                                                    {permVillages.find(v => v._id === formData.permVillage)?.name || formData.permVillage}, {' '}
+                                                    {permMandals.find(m => m._id === formData.permMandal)?.name || formData.permMandal}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">District / State</td>
+                                                <td className="px-4 py-3 text-gray-900">
+                                                    {districts.find(d => d._id === formData.permDistrict)?.name || formData.permDistrict}, Telangana
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Constituency / Pincode</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.permConstituency} - {formData.permPincode}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
 
                             {/* Caste & Community Info */}
-                            <div>
-                                <h3 className="text-lg font-bold text-blue-700 border-b pb-2 mb-4">Caste & Community</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                                    <p><span className="font-bold text-gray-600">Caste:</span> {formData.caste}</p>
-                                    <p><span className="font-bold text-gray-600">Sub-Caste:</span> {formData.subCaste || '-'}</p>
-                                    <p><span className="font-bold text-gray-600">Comm Cert No:</span> {formData.communityCertNumber || '-'}</p>
+                            <div className="mb-8">
+                                <h3 className="text-lg font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
+                                    <FaUsers className="text-blue-600" /> Caste & Community
+                                </h3>
+                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    <table className="w-full text-sm text-left">
+                                        <tbody className="divide-y divide-gray-100">
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700 w-1/3">Caste / Sub-Caste</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.caste} {formData.subCaste ? `/ ${formData.subCaste}` : ''}</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Community Cert No.</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.communityCertNumber || '-'}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
                             {/* Marriage Info */}
-                            <div>
-                                <h3 className="text-lg font-bold text-blue-700 border-b pb-2 mb-4">Marriage Information</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                                    <p><span className="font-bold text-gray-600">Status:</span> {formData.maritalStatus}</p>
-                                    {formData.maritalStatus === 'Married' && (
-                                        <>
-                                            <p><span className="font-bold text-gray-600">Partner Name:</span> {formData.partnerName}</p>
-                                            <p><span className="font-bold text-gray-600">Inter-Caste:</span> {formData.isInterCaste}</p>
-                                            <p><span className="font-bold text-gray-600">Partner Caste:</span> {formData.partnerCaste || '-'}</p>
-                                            <p><span className="font-bold text-gray-600">Partner Sub-Caste:</span> {formData.partnerSubCaste || '-'}</p>
-                                            <p><span className="font-bold text-gray-600">Marriage Date:</span> {formData.marriageDate || '-'}</p>
-                                            <p><span className="font-bold text-gray-600">Cert No:</span> {formData.marriageCertNumber || '-'}</p>
-                                        </>
-                                    )}
+                            <div className="mb-8">
+                                <h3 className="text-lg font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
+                                    <FaRing className="text-blue-600" /> Marriage Information
+                                </h3>
+                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    <table className="w-full text-sm text-left">
+                                        <tbody className="divide-y divide-gray-100">
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700 w-1/3">Marital Status</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.maritalStatus}</td>
+                                            </tr>
+                                            {formData.maritalStatus === 'Married' && (
+                                                <>
+                                                    <tr>
+                                                        <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Inter-Caste Marriage</td>
+                                                        <td className="px-4 py-3 text-gray-900 font-bold text-purple-600">{formData.isInterCaste}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Partner Details (Caste)</td>
+                                                        <td className="px-4 py-3 text-gray-900">{formData.partnerName || 'Partner'} - {formData.partnerCaste || '-'} / {formData.partnerSubCaste || '-'}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Marriage Date / Cert No.</td>
+                                                        <td className="px-4 py-3 text-gray-900">{formData.marriageDate || '-'} / {formData.marriageCertNumber || '-'}</td>
+                                                    </tr>
+                                                </>
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
                             {/* Family & Economic */}
-                            <div>
-                                <h3 className="text-lg font-bold text-blue-700 border-b pb-2 mb-4">Family & Economic</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                                    <p><span className="font-bold text-gray-600">Father Occ:</span> {formData.fatherOccupation}</p>
-                                    <p><span className="font-bold text-gray-600">Mother Occ:</span> {formData.motherOccupation}</p>
-                                    <p><span className="font-bold text-gray-600">Annual Income:</span> {formData.annualIncome}</p>
-                                    <p><span className="font-bold text-gray-600">Family Members:</span> {formData.memberCount}</p>
-                                    <p><span className="font-bold text-gray-600">Dependents:</span> {formData.dependentCount}</p>
-                                    <p><span className="font-bold text-gray-600">Ration Card Type:</span> {formData.rationCardTypeFamily || '-'}</p>
+                            <div className="mb-8">
+                                <h3 className="text-lg font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
+                                    <FaRupeeSign className="text-blue-600" /> Family & Economic
+                                </h3>
+                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    <table className="w-full text-sm text-left">
+                                        <tbody className="divide-y divide-gray-100">
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700 w-1/3">Annual Income</td>
+                                                <td className="px-4 py-3 text-gray-900 font-bold">{formData.annualIncome}</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Total Family Members</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.memberCount}</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Ration Card Type</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.rationCardTypeFamily || '-'}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
-                            {/* Other IDs */}
-                            <div>
+                            {/* Family Members Preview */}
+                            {familyMembers.length > 0 && (
+                                <div className="mb-8">
+                                    <h3 className="text-lg font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
+                                        <FaUsers className="text-blue-600" /> Family Members
+                                    </h3>
+                                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                        <table className="w-full text-sm text-left">
+                                            <thead className="bg-gray-50 text-gray-700 font-bold uppercase text-xs">
+                                                <tr>
+                                                    <th className="px-4 py-3 border-b border-gray-200">#</th>
+                                                    <th className="px-4 py-3 border-b border-gray-200">Name & Relation</th>
+                                                    <th className="px-4 py-3 border-b border-gray-200">Age / Gender</th>
+                                                    <th className="px-4 py-3 border-b border-gray-200">Occupation</th>
+                                                    <th className="px-4 py-3 border-b border-gray-200">Aadhaar</th>
+                                                    <th className="px-4 py-3 border-b border-gray-200 text-center">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                                {familyMembers.map((fm, idx) => (
+                                                    <tr key={fm.tempId} className="hover:bg-gray-50 transition">
+                                                        <td className="px-4 py-3 text-gray-500 font-mono w-10 text-center">{idx + 1}</td>
+                                                        <td className="px-4 py-3 text-gray-900">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-200">
+                                                                    {fm.files?.photo ? (
+                                                                        <img src={URL.createObjectURL(fm.files.photo)} alt={fm.name} className="w-full h-full object-cover" />
+                                                                    ) : (fm.photo && typeof fm.photo === 'string' ? (
+                                                                        <img
+                                                                            src={fm.photo.startsWith('http') ? fm.photo : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/${fm.photo.replace(/\\/g, '/')}`}
+                                                                            alt={fm.name}
+                                                                            className="w-full h-full object-cover"
+                                                                        />
+                                                                    ) : (
+                                                                        <FaUser className="text-gray-300 m-auto mt-1" size={14} />
+                                                                    ))}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="font-bold">{fm.name} {fm.surname}</div>
+                                                                    <div className="text-[10px] text-blue-600 font-bold uppercase tracking-wide">{fm.relation}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-gray-700">{fm.age} Years / {fm.gender}</td>
+                                                        <td className="px-4 py-3 text-gray-700">{fm.occupation}</td>
+                                                        <td className="px-4 py-3 text-gray-700 font-mono">{fm.aadhaarNumber || '-'}</td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <button
+                                                                onClick={() => handleEditFamilyMember(idx)}
+                                                                className="text-blue-600 hover:text-blue-800 p-1.5 hover:bg-blue-50 rounded transition"
+                                                                title="Edit Member"
+                                                            >
+                                                                <FaEdit />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Other Details - Table Format */}
+                            <div className="mb-8">
                                 <h3 className="text-lg font-bold text-blue-700 border-b pb-2 mb-4">Other Details</h3>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                                    <p className="col-span-2"><span className="font-bold text-gray-600">Ration Card:</span> {formData.hasRationCard ? `${formData.rationCardNumber} (${formData.rationCardHolderName})` : 'Not Added'}</p>
-                                    <p className="col-span-2"><span className="font-bold text-gray-600">Voter ID:</span> {formData.epicNumber} ({formData.voterName}), Booth: {formData.pollingBooth}</p>
-                                    <p className="col-span-2"><span className="font-bold text-gray-600">Bank:</span> {formData.bankName}, Acc: {formData.accountNumber}, IFSC: {formData.ifscCode}</p>
+                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-gray-50 text-gray-700 font-bold">
+                                            <tr>
+                                                <th className="px-4 py-3 border-b border-gray-200 w-1/3">Document Type</th>
+                                                <th className="px-4 py-3 border-b border-gray-200">Details</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium text-gray-900 bg-gray-50/50">Ration Card</td>
+                                                <td className="px-4 py-3 text-gray-700">
+                                                    {formData.hasRationCard ? (
+                                                        <>
+                                                            <span className="font-mono font-bold bg-blue-50 px-2 py-0.5 rounded text-blue-700 mr-2">{formData.rationCardNumber}</span>
+                                                            {formData.rationCardHolderName && <span className="text-gray-500">({formData.rationCardHolderName})</span>}
+                                                        </>
+                                                    ) : <span className="text-gray-400 italic">Not available</span>}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-4 py-3 font-medium text-gray-900 bg-gray-50/50">Voter ID</td>
+                                                <td className="px-4 py-3 text-gray-700">
+                                                    {formData.epicNumber ? (
+                                                        <div className="flex flex-col gap-1">
+                                                            <div>
+                                                                <span className="font-mono font-bold bg-purple-50 px-2 py-0.5 rounded text-purple-700 mr-2">{formData.epicNumber}</span>
+                                                                {formData.voterName && <span className="text-gray-500">({formData.voterName})</span>}
+                                                            </div>
+                                                            {formData.pollingBooth && <div className="text-xs text-gray-500">Booth: {formData.pollingBooth}</div>}
+                                                        </div>
+                                                    ) : <span className="text-gray-400 italic">Not available</span>}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
@@ -1526,6 +1840,38 @@ const MemberRegistration = () => {
                                         )
                                     ))}
                                 </div>
+
+                                {familyMembers.some(fm => fm.files && Object.keys(fm.files).length > 0) && (
+                                    <div className="mt-8 border-t pt-4">
+                                        <h4 className="text-sm font-bold text-gray-700 mb-3">Family Member Documents</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            {familyMembers.map((fm, idx) => {
+                                                const fmDocs = [
+                                                    { key: 'photo', label: 'Photo' },
+                                                    { key: 'aadhaarFront', label: 'Aadhaar Front' },
+                                                    { key: 'aadhaarBack', label: 'Aadhaar Back' },
+                                                    { key: 'voterIdFront', label: 'Voter Front' },
+                                                    { key: 'voterIdBack', label: 'Voter Back' }
+                                                ];
+                                                return fmDocs.map(doc => (
+                                                    fm.files && fm.files[doc.key] && (
+                                                        <div key={`${idx}-${doc.key}`} className="border rounded-lg p-2 bg-gray-50 text-center">
+                                                            <p className="text-xs font-bold text-gray-700 mb-2 truncate" title={`${fm.name} - ${doc.label}`}>{fm.name} - {doc.label}</p>
+                                                            <div className="w-full h-32 bg-gray-200 rounded flex items-center justify-center overflow-hidden">
+                                                                {fm.files[doc.key] instanceof File ? (
+                                                                    <img src={URL.createObjectURL(fm.files[doc.key])} alt={doc.label} className="w-full h-full object-contain" />
+                                                                ) : (
+                                                                    <div className="flex flex-col items-center text-gray-500"><FaFileAlt size={24} /></div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                ));
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {Object.keys(files).length === 0 && <p className="text-sm text-gray-500 italic">No documents uploaded.</p>}
                             </div>
 
@@ -1610,7 +1956,7 @@ const MemberRegistration = () => {
                                             error={errors.name}
                                         />
                                         <FormInput
-                                            label="Father's Name"
+                                            label="S/o , W/o, D/o"
                                             name="fatherName"
                                             value={formData.fatherName || ''}
                                             onChange={handleChange}
@@ -1620,21 +1966,13 @@ const MemberRegistration = () => {
                                         />
 
                                         <FormInput
-                                            label="Date of Birth"
+                                            label="Date of Birth (DD-MM-YYYY)"
                                             name="dob"
                                             value={formData.dob}
-                                            onChange={(e) => {
-                                                const selectedDate = e.target.value;
-                                                const today = new Date().toISOString().split('T')[0];
-                                                if (selectedDate === today) {
-                                                    alert("Date of Birth cannot be today's date.");
-                                                    e.target.value = '';
-                                                    return;
-                                                }
-                                                handleChange(e);
-                                            }}
-                                            type="date"
-                                            max={new Date().toISOString().split('T')[0]}
+                                            onChange={(e) => handleDateChange(e, setFormData, 'dob')}
+                                            type="text"
+                                            placeholder="DD-MM-YYYY"
+                                            maxLength={10}
                                             // required
                                             error={errors.dob}
                                         />
@@ -1645,111 +1983,115 @@ const MemberRegistration = () => {
                                             disabled={true}
                                         />
 
-                                        <FormSelect
-                                            label="Occupation"
-                                            name="occupation"
-                                            value={formData.occupation}
-                                            onChange={handleChange}
-                                            options={memberOccupations}
-                                            disabled={false}
-                                            required
-                                            error={errors.occupation}
-                                        />
-
-                                        {formData.occupation === 'Private Employee' && (
+                                        {(parseInt(formData.age) >= 5 || !formData.age) && (
                                             <>
                                                 <FormSelect
-                                                    label="Job Sector"
-                                                    name="jobSector"
-                                                    value={formData.jobSector}
+                                                    label="Occupation"
+                                                    name="occupation"
+                                                    value={formData.occupation}
                                                     onChange={handleChange}
-                                                    options={[
-                                                        "IT / Software", "Education", "Healthcare", "Manufacturing",
-                                                        "Banking / Finance", "Retail", "Services", "Other"
-                                                    ]}
+                                                    options={memberOccupations}
+                                                    disabled={false}
                                                     required
-                                                    error={errors.jobSector}
+                                                    error={errors.occupation}
                                                 />
-                                                <FormInput
-                                                    label="Organization / Company"
-                                                    name="jobOrganization"
-                                                    value={formData.jobOrganization}
-                                                    onChange={handleChange}
-                                                    placeholder="Enter company name"
-                                                    required
-                                                    error={errors.jobOrganization}
-                                                />
-                                                <FormInput
-                                                    label="Designation"
-                                                    name="jobDesignation"
-                                                    value={formData.jobDesignation}
-                                                    onChange={handleChange}
-                                                    placeholder="Enter designation"
-                                                    required
-                                                    error={errors.jobDesignation}
-                                                />
-                                            </>
-                                        )}
 
-                                        {formData.occupation === 'Government Employee' && (
-                                            <>
-                                                <FormSelect
-                                                    label="Job Category"
-                                                    name="jobCategory"
-                                                    value={formData.jobCategory}
-                                                    onChange={handleJobCategoryChange}
-                                                    options={Object.keys(GOVT_JOB_CATEGORIES)}
-                                                    required
-                                                    error={errors.jobCategory}
-                                                />
-                                                <FormSelect
-                                                    label="Job Sub-Category"
-                                                    name="jobSubCategory"
-                                                    value={formData.jobSubCategory}
-                                                    onChange={handleChange}
-                                                    options={formData.jobCategory ? GOVT_JOB_CATEGORIES[formData.jobCategory] : []}
-                                                    required
-                                                    disabled={!formData.jobCategory}
-                                                    error={errors.jobSubCategory}
-                                                />
-                                                <FormInput
-                                                    label="Department / Organization"
-                                                    name="jobOrganization"
-                                                    value={formData.jobOrganization}
-                                                    onChange={handleChange}
-                                                    placeholder="Enter department name"
-                                                    required
-                                                    error={errors.jobOrganization}
-                                                />
-                                                <FormInput
-                                                    label="Designation"
-                                                    name="jobDesignation"
-                                                    value={formData.jobDesignation}
-                                                    onChange={handleChange}
-                                                    placeholder="Enter designation"
-                                                    required
-                                                    error={errors.jobDesignation}
-                                                />
-                                            </>
-                                        )}
+                                                {formData.occupation === 'Private Employee' && (
+                                                    <>
+                                                        <FormSelect
+                                                            label="Job Sector"
+                                                            name="jobSector"
+                                                            value={formData.jobSector}
+                                                            onChange={handleChange}
+                                                            options={[
+                                                                "IT / Software", "Education", "Healthcare", "Manufacturing",
+                                                                "Banking / Finance", "Retail", "Services", "Other"
+                                                            ]}
+                                                            required
+                                                            error={errors.jobSector}
+                                                        />
+                                                        <FormInput
+                                                            label="Organization / Company"
+                                                            name="jobOrganization"
+                                                            value={formData.jobOrganization}
+                                                            onChange={handleChange}
+                                                            placeholder="Enter company name"
+                                                            required
+                                                            error={errors.jobOrganization}
+                                                        />
+                                                        <FormInput
+                                                            label="Designation"
+                                                            name="jobDesignation"
+                                                            value={formData.jobDesignation}
+                                                            onChange={handleChange}
+                                                            placeholder="Enter designation"
+                                                            required
+                                                            error={errors.jobDesignation}
+                                                        />
+                                                    </>
+                                                )}
 
-                                        {formData.occupation === 'Student' && (
-                                            <FormSelect
-                                                label="Education Level"
-                                                name="educationLevel"
-                                                value={formData.educationLevel}
-                                                onChange={handleChange}
-                                                options={["School", "Intermediate", "Degree", "PG"]}
-                                                required
-                                            />
+                                                {formData.occupation === 'Government Employee' && (
+                                                    <>
+                                                        <FormSelect
+                                                            label="Job Category"
+                                                            name="jobCategory"
+                                                            value={formData.jobCategory}
+                                                            onChange={handleJobCategoryChange}
+                                                            options={Object.keys(GOVT_JOB_CATEGORIES)}
+                                                            required
+                                                            error={errors.jobCategory}
+                                                        />
+                                                        <FormSelect
+                                                            label="Job Sub-Category"
+                                                            name="jobSubCategory"
+                                                            value={formData.jobSubCategory}
+                                                            onChange={handleChange}
+                                                            options={formData.jobCategory ? GOVT_JOB_CATEGORIES[formData.jobCategory] : []}
+                                                            required
+                                                            disabled={!formData.jobCategory}
+                                                            error={errors.jobSubCategory}
+                                                        />
+                                                        <FormInput
+                                                            label="Department / Organization"
+                                                            name="jobOrganization"
+                                                            value={formData.jobOrganization}
+                                                            onChange={handleChange}
+                                                            placeholder="Enter department name"
+                                                            required
+                                                            error={errors.jobOrganization}
+                                                        />
+                                                        <FormInput
+                                                            label="Designation"
+                                                            name="jobDesignation"
+                                                            value={formData.jobDesignation}
+                                                            onChange={handleChange}
+                                                            placeholder="Enter designation"
+                                                            required
+                                                            error={errors.jobDesignation}
+                                                        />
+                                                    </>
+                                                )}
+
+                                                {formData.occupation === 'Student' && (
+                                                    <FormSelect
+                                                        label="Education Level"
+                                                        name="educationLevel"
+                                                        value={formData.educationLevel}
+                                                        onChange={handleChange}
+                                                        options={["School", "Intermediate", "Degree", "PG"]}
+                                                        required
+                                                    />
+                                                )}
+                                            </>
                                         )}
 
                                         <div className="col-span-1">
                                             <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Gender</label>
                                             <div className="flex items-center gap-6 mt-3">
-                                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Male" onChange={handleChange} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Male</span></label>
-                                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Female" onChange={handleChange} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Female</span></label>
-                                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Other" onChange={handleChange} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Other</span></label>
+                                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Male" onChange={handleChange} checked={formData.gender === 'Male'} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Male</span></label>
+                                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Female" onChange={handleChange} checked={formData.gender === 'Female'} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Female</span></label>
+                                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Other" onChange={handleChange} checked={formData.gender === 'Other'} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Other</span></label>
                                             </div>
                                             {errors.gender && <p className="text-red-500 text-xs mt-1 font-medium">{errors.gender}</p>}
                                         </div>
@@ -1894,7 +2236,7 @@ const MemberRegistration = () => {
 
                                     {/* Permanent Address Header inside same section */}
                                     <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
-                                        <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
+                                        <div className="flex items-center justify-start gap-4 mb-4 pb-2 border-b border-gray-200">
                                             <h4 className="text-lg font-bold text-gray-800">Permanent Address</h4>
                                             <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50 transition shadow-sm">
                                                 <input
@@ -1903,7 +2245,7 @@ const MemberRegistration = () => {
                                                     onChange={handleSameAsPresentChange}
                                                     className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-400"
                                                 />
-                                                <span className="text-xs font-bold text-blue-800">SAME AS PRESENT</span>
+                                                <span className="text-xs font-bold text-blue-800">SAME AS PRESENT ADDRESS</span>
                                             </label>
                                         </div>
 
@@ -2018,7 +2360,7 @@ const MemberRegistration = () => {
                                         <FormSelect label="Member's Sub-Caste" name="subCaste" value={formData.subCaste} onChange={handleChange} options={subCastes} placeholder="Select sub-caste" />
 
                                         <FormInput label="Community Certificate Number" name="communityCertNumber" value={formData.communityCertNumber} onChange={handleChange} placeholder="Enter certificate number" />
-                                        <FileUpload label="Community Certificate Upload" name="communityCert" onChange={handleFileChange} fileName={files.communityCert?.name} />
+                                        <FileUpload label="Community Certificate Upload" name="communityCert" onChange={handleFileChange} fileName={files.communityCert?.name} fileUrl={files.communityCert?.url} />
                                     </div>
                                 </CollapsibleSection>
 
@@ -2113,23 +2455,25 @@ const MemberRegistration = () => {
 
 
                                 {/* Voter ID */}
-                                <CollapsibleSection
-                                    title="Voter ID Details"
-                                    icon={FaVoteYea}
-                                    sectionNumber={5}
-                                    isOpen={openSections[6]}
-                                    onToggle={() => toggleSection(6)}
-                                >
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <FormInput label="Voter ID Number (EPIC Number)" name="epicNumber" value={formData.epicNumber} onChange={handleChange} placeholder="Enter EPIC number" />
-                                        <FormInput label="Voter Name as per Card" name="voterName" value={formData.voterName} onChange={handleChange} placeholder="Enter name as per voter ID" />
-                                        <FormInput label="Polling Booth Number" name="pollingBooth" value={formData.pollingBooth} onChange={handleChange} placeholder="Enter booth number" />
-                                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <FileUpload label="Upload Voter ID Front" name="voterIdFront" onChange={handleFileChange} fileName={files.voterIdFront?.name} />
-                                            <FileUpload label="Upload Voter ID Back" name="voterIdBack" onChange={handleFileChange} fileName={files.voterIdBack?.name} />
+                                {(!formData.age || parseInt(formData.age) >= 18) && (
+                                    <CollapsibleSection
+                                        title="Voter ID Details"
+                                        icon={FaVoteYea}
+                                        sectionNumber={5}
+                                        isOpen={openSections[6]}
+                                        onToggle={() => toggleSection(6)}
+                                    >
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <FormInput label="Voter ID Number (EPIC Number)" name="epicNumber" value={formData.epicNumber} onChange={handleChange} placeholder="Enter EPIC number" />
+                                            <FormInput label="Voter Name as per Card" name="voterName" value={formData.voterName} onChange={handleChange} placeholder="Enter name as per voter ID" />
+                                            <FormInput label="Polling Booth Number" name="pollingBooth" value={formData.pollingBooth} onChange={handleChange} placeholder="Enter booth number" />
+                                            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <FileUpload label="Upload Voter ID Front" name="voterIdFront" onChange={handleFileChange} fileName={files.voterIdFront?.name} fileUrl={files.voterIdFront?.url} />
+                                                <FileUpload label="Upload Voter ID Back" name="voterIdBack" onChange={handleFileChange} fileName={files.voterIdBack?.name} fileUrl={files.voterIdBack?.url} />
+                                            </div>
                                         </div>
-                                    </div>
-                                </CollapsibleSection>
+                                    </CollapsibleSection>
+                                )}
 
 
 
@@ -2143,6 +2487,19 @@ const MemberRegistration = () => {
                                 >
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                                         <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${errors.photo ? 'border-red-500 bg-red-50' : (files.photo ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100')}`}>
+                                            {files.photo?.url && (
+                                                <div className="absolute right-2 top-2 z-20" title="View Photo">
+                                                    <a
+                                                        href={files.photo.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <FaEye size={14} />
+                                                    </a>
+                                                </div>
+                                            )}
                                             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
                                                 <FaFileImage className={errors.photo ? 'text-red-500' : (files.photo ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500')} />
                                             </div>
@@ -2153,9 +2510,22 @@ const MemberRegistration = () => {
                                                 {errors.photo ? errors.photo : (files.photo ? 'Click to change' : 'Click to upload photo')}
                                             </p>
                                             <button type="button" className={`mt-3 text-xs font-bold hover:underline ${errors.photo ? 'text-red-600' : 'text-blue-600'}`}>Choose File</button>
-                                            <input type="file" name="photo" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer" />
+                                            <input type="file" name="photo" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer z-10" />
                                         </div>
                                         <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${errors.aadhaarFront ? 'border-red-500 bg-red-50' : (files.aadhaarFront ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100')}`}>
+                                            {files.aadhaarFront?.url && (
+                                                <div className="absolute right-2 top-2 z-20" title="View Document">
+                                                    <a
+                                                        href={files.aadhaarFront.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <FaEye size={14} />
+                                                    </a>
+                                                </div>
+                                            )}
                                             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
                                                 <FaIdCard className={errors.aadhaarFront ? 'text-red-500' : (files.aadhaarFront ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500')} />
                                             </div>
@@ -2166,16 +2536,29 @@ const MemberRegistration = () => {
                                                 {errors.aadhaarFront ? errors.aadhaarFront : (files.aadhaarFront ? 'Click to change' : 'Upload front side')}
                                             </p>
                                             <button type="button" className="mt-3 text-blue-600 text-xs font-bold hover:underline">Choose File</button>
-                                            <input type="file" name="aadhaarFront" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer" />
+                                            <input type="file" name="aadhaarFront" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer z-10" />
                                         </div>
                                         <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${files.aadhaarBack ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
+                                            {files.aadhaarBack?.url && (
+                                                <div className="absolute right-2 top-2 z-20" title="View Document">
+                                                    <a
+                                                        href={files.aadhaarBack.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <FaEye size={14} />
+                                                    </a>
+                                                </div>
+                                            )}
                                             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
                                                 <FaIdCard className={files.aadhaarBack ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500'} />
                                             </div>
                                             <h4 className="text-sm font-bold text-gray-700">{files.aadhaarBack ? files.aadhaarBack.name : "Aadhar Card Back"}</h4>
                                             <p className="text-xs text-gray-400 mt-1">{files.aadhaarBack ? 'Click to change' : 'Upload back side'}</p>
                                             <button type="button" className="mt-3 text-blue-600 text-xs font-bold hover:underline">Choose File</button>
-                                            <input type="file" name="aadhaarBack" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer" />
+                                            <input type="file" name="aadhaarBack" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer z-10" />
                                         </div>
                                         <div className="col-span-1 md:col-span-3 text-center">
                                             <p className="text-xs text-amber-600 font-bold bg-amber-50 inline-block px-3 py-1 rounded-full border border-amber-100">
@@ -2212,7 +2595,7 @@ const MemberRegistration = () => {
                                     <div className="flex justify-start mb-8">
                                         <button
                                             type="button"
-                                            onClick={() => setShowFamilyModal(true)}
+                                            onClick={openAddFamilyModal}
                                             className="flex items-center gap-2 cursor-pointer bg-blue-100 px-4 py-2 rounded-lg border border-blue-300 hover:bg-blue-200 transition shadow-sm"
                                         >
                                             <FaPlus className="text-blue-700" />
@@ -2248,14 +2631,24 @@ const MemberRegistration = () => {
                                                                         <p className="text-xs font-bold text-blue-600 uppercase tracking-wide mb-0.5">{fm.relation}</p>
                                                                         <h4 className="font-bold text-gray-900 truncate">{fm.surname} {fm.name}</h4>
                                                                     </div>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => setFamilyMembers(prev => prev.filter((_, i) => i !== idx))}
-                                                                        className="text-gray-400 hover:text-red-500 transition p-1"
-                                                                        title="Remove Member"
-                                                                    >
-                                                                        <FaSignOutAlt className="transform rotate-0" size={14} /> {/* Using SignOut icon as generic close/remove or just Times */}
-                                                                    </button>
+                                                                    <div className="flex gap-2">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleEditFamilyMember(idx)}
+                                                                            className="text-gray-400 hover:text-blue-600 transition p-1"
+                                                                            title="Edit Member"
+                                                                        >
+                                                                            <FaEdit size={14} />
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setFamilyMembers(prev => prev.filter((_, i) => i !== idx))}
+                                                                            className="text-gray-400 hover:text-red-500 transition p-1"
+                                                                            title="Remove Member"
+                                                                        >
+                                                                            <FaSignOutAlt className="transform rotate-0" size={14} />
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
 
                                                                 <div className="mt-2 space-y-0.5">
@@ -2334,7 +2727,7 @@ const MemberRegistration = () => {
                                             <FormInput label="Ration Card Holder Name" name="rationCardHolderName" value={formData.rationCardHolderName} onChange={handleChange} placeholder="Enter card holder name" />
                                             <FormSelect label="Ration Card Type" name="rationCardTypeFamily" value={formData.rationCardTypeFamily} onChange={handleChange} options={["Food Security Card", "Antyodaya Anna Yojana", "Annapurna Scheme"]} />
                                             <div className="md:col-span-2">
-                                                <FileUpload label="Upload Ration Card" name="rationCardFile" onChange={handleFileChange} fileName={files.rationCardFile?.name} />
+                                                <FileUpload label="Upload Ration Card" name="rationCardFile" onChange={handleFileChange} fileName={files.rationCardFile?.name} fileUrl={files.rationCardFile?.url} />
                                                 <p className="text-[10px] text-gray-500 mt-1">Max file size: 5 MB</p>
                                             </div>
                                         </div>
@@ -2354,7 +2747,7 @@ const MemberRegistration = () => {
                                                 className="mt-1 w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                                             />
                                             <div className="text-sm text-gray-700 leading-relaxed">
-                                                <span className="font-bold text-gray-800">Declaration:</span> I hereby declare that the details furnished above are true and correct to the best of my knowledge and belief. I undertake to inform you of any changes therein, immediately. In case any of the above information is found to be false or untrue or misleading or misrepresenting, I am aware that I may be held liable for it. I agree to the <span className="text-blue-600 font-bold">Terms & Conditions</span>.
+                                                <span className="font-bold text-gray-800">Declaration:</span> I hereby declare that the details furnished above are true and correct to the best of my knowledge and belief. I undertake to inform you of any changes therein, immediately. In case any of the above information is found to be false or untrue or misleading or misrepresenting, I am aware that I may be held liable for it. I agree to the <Link to="/terms-and-conditions" target="_blank" className="text-blue-600 font-bold hover:underline">Terms & Conditions</Link>.
                                             </div>
                                         </label>
                                         {errors.legalConsent && (
@@ -2466,233 +2859,340 @@ const MemberRegistration = () => {
             {/* Hidden Printable Application Form */}
             {
                 createdMemberData && (
-                    <div id="application-form-print" className="fixed top-0 left-0 bg-white w-[210mm] min-h-[297mm] p-8 hidden text-black">
-                        {/* Header */}
-                        <div className="border-b-2 border-gray-800 pb-2 mb-4 flex justify-between items-center">
-                            <div>
-                                <h1 className="text-xl font-bold uppercase tracking-wide">Mala Educational Welfare Society</h1>
-                                <p className="text-sm text-gray-600 font-bold">Membership Registration Application</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-xs font-bold text-gray-500">Date: {new Date().toLocaleDateString()}</p>
-                                <p className="text-xs font-bold text-gray-500">App ID: {createdMemberData.mewsId}</p>
-                            </div>
-                        </div>
+                    <div id="application-form-print" className="hidden print:block text-black bg-white">
+                        <style>
+                            {`
+                                @media print {
+                                    @page { size: A4; margin: 10mm; }
+                                    body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+                                    .print-page { min-height: 297mm; position: relative; }
+                                    .page-break { page-break-after: always; }
+                                    .no-break { break-inside: avoid; }
+                                }
+                            `}
+                        </style>
 
-                        {/* Basic Info & Photo Row */}
-                        <div className="flex gap-4 mb-4">
-                            <div className="w-28 h-32 border border-gray-300 flex items-center justify-center bg-gray-50 shrink-0">
-                                {createdMemberData.photoUrl ? (
-                                    <img
-                                        src={createdMemberData.photoUrl.startsWith('http') ? createdMemberData.photoUrl : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/${createdMemberData.photoUrl.replace(/\\/g, '/')}`}
-                                        alt="Member"
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <span className="text-[10px] text-gray-400">Photo</span>
-                                )}
-                            </div>
-                            <div className="flex-1 space-y-1">
-                                <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-1 border border-gray-200">Basic Information</h3>
-                                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
-                                    <p><span className="font-bold w-24 inline-block">Surname:</span> {createdMemberData.surname}</p>
-                                    <p><span className="font-bold w-24 inline-block">Name:</span> {createdMemberData.name}</p>
-                                    <p><span className="font-bold w-24 inline-block">Father Name:</span> {createdMemberData.fatherName}</p>
-                                    <p><span className="font-bold w-24 inline-block">DOB (Age):</span> {new Date(createdMemberData.dob).toLocaleDateString()} ({createdMemberData.age})</p>
-                                    <p><span className="font-bold w-24 inline-block">Occupation:</span> {createdMemberData.occupation || 'N/A'}</p>
-                                    <p><span className="font-bold w-24 inline-block">Gender:</span> {createdMemberData.gender}</p>
-                                    <p><span className="font-bold w-24 inline-block">Blood Group:</span> {createdMemberData.bloodGroup}</p>
-                                    <p><span className="font-bold w-24 inline-block">Mobile:</span> {createdMemberData.mobileNumber}</p>
-                                    <p><span className="font-bold w-24 inline-block">Alt Mobile:</span> {createdMemberData.alternateMobile || 'N/A'}</p>
-                                    <p><span className="font-bold w-24 inline-block">Email:</span> {createdMemberData.email || 'N/A'}</p>
-                                    <p><span className="font-bold w-24 inline-block">Aadhar:</span> {createdMemberData.aadhaarNumber}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Addresses */}
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-1 border border-gray-200">Present Address</h3>
-                                <div className="text-xs space-y-1 px-1">
-                                    <p>{createdMemberData.address.houseNumber}, {createdMemberData.address.street}</p>
-                                    <p>{createdMemberData.address.landmark ? `Near ${createdMemberData.address.landmark}, ` : ''}</p>
-                                    <p>{createdMemberData.address.village?.name || createdMemberData.address.village}, {createdMemberData.address.mandal?.name || createdMemberData.address.mandal} ({createdMemberData.address.constituency})</p>
-                                    <p>{createdMemberData.address.district?.name || createdMemberData.address.district} - {createdMemberData.address.pinCode}</p>
-                                    <p><span className="font-bold">Residence:</span> {createdMemberData.address.residencyType || 'N/A'}</p>
-                                </div>
-                            </div>
-                            <div>
-                                <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-1 border border-gray-200">Permanent Address</h3>
-                                <div className="text-xs space-y-1 px-1">
-                                    <p>{createdMemberData.permanentAddress.houseNumber}, {createdMemberData.permanentAddress.street}</p>
-                                    <p>{createdMemberData.permanentAddress.landmark ? `Near ${createdMemberData.permanentAddress.landmark}, ` : ''}</p>
-                                    <p>{createdMemberData.permanentAddress.village?.name || createdMemberData.permanentAddress.village}, {createdMemberData.permanentAddress.mandal?.name || createdMemberData.permanentAddress.mandal} ({createdMemberData.permanentAddress.constituency})</p>
-                                    <p>{createdMemberData.permanentAddress.district?.name || createdMemberData.permanentAddress.district} - {createdMemberData.permanentAddress.pinCode}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Social & Family */}
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-1 border border-gray-200">Caste & Marriage</h3>
-                                <div className="text-xs space-y-1 px-1">
-                                    <p><span className="font-bold">Caste:</span> {createdMemberData.casteDetails.caste} - {createdMemberData.casteDetails.subCaste}</p>
-                                    <p><span className="font-bold">Cert No:</span> {createdMemberData.casteDetails.communityCertNumber || 'N/A'}</p>
-                                    <p><span className="font-bold">Marital Status:</span> {createdMemberData.maritalStatus}</p>
-                                    {createdMemberData.maritalStatus === 'Married' && (
-                                        <>
-                                            <p><span className="font-bold">Partner Caste:</span> {createdMemberData.partnerDetails.caste}</p>
-                                            <p><span className="font-bold">Inter-Caste:</span> {createdMemberData.partnerDetails.isInterCaste ? 'Yes' : 'No'}</p>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                            <div>
-                                <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-1 border border-gray-200">Family & Economic</h3>
-                                <div className="text-xs space-y-1 px-1">
-                                    <p><span className="font-bold">Father Occ:</span> {createdMemberData.familyDetails.fatherOccupation || 'N/A'}</p>
-                                    <p><span className="font-bold">Mother Occ:</span> {createdMemberData.familyDetails.motherOccupation || 'N/A'}</p>
-                                    <p><span className="font-bold">Annual Income:</span> ₹{createdMemberData.familyDetails.annualIncome}</p>
-                                    <p><span className="font-bold">Members:</span> {createdMemberData.familyDetails.memberCount}</p>
-                                    <p><span className="font-bold">Ration Card Type:</span> {createdMemberData.familyDetails.rationCardType || 'N/A'}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Family Members List */}
-                        {createdMemberData.familyMembers && createdMemberData.familyMembers.length > 0 && (
-                            <div className="mb-4">
-                                <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-1 border border-gray-200">Family Members Details</h3>
-                                <table className="w-full text-[10px] border-collapse border border-gray-300">
-                                    <thead>
-                                        <tr className="bg-gray-50">
-                                            <th className="border border-gray-300 p-1 text-left">Relation</th>
-                                            <th className="border border-gray-300 p-1 text-left">Name</th>
-                                            <th className="border border-gray-300 p-1 text-left">Age/Gender</th>
-                                            <th className="border border-gray-300 p-1 text-left">Occupation</th>
-                                            <th className="border border-gray-300 p-1 text-left">Aadhaar</th>
-                                            <th className="border border-gray-300 p-1 text-left">Voter ID</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {createdMemberData.familyMembers.map((fm, idx) => (
-                                            <tr key={idx}>
-                                                <td className="border border-gray-300 p-1">{fm.relation}</td>
-                                                <td className="border border-gray-300 p-1">{fm.surname} {fm.name}</td>
-                                                <td className="border border-gray-300 p-1">{fm.age} / {fm.gender}</td>
-                                                <td className="border border-gray-300 p-1">{fm.occupation}</td>
-                                                <td className="border border-gray-300 p-1">{fm.aadhaarNumber}</td>
-                                                <td className="border border-gray-300 p-1">{fm.epicNumber || '-'}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-
-
-
-                        {/* Employment & Education (New Section) */}
-                        <div className="mb-4">
-                            <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-1 border border-gray-200">Education & Employment</h3>
-                            <div className="grid grid-cols-2 gap-4 text-xs px-1">
-                                <div>
-                                    <p><span className="font-bold">Education:</span> {createdMemberData.educationLevel || 'N/A'}</p>
-                                    <p><span className="font-bold">Occupation:</span> {createdMemberData.occupation || 'N/A'}</p>
-                                </div>
-                                {createdMemberData.occupation !== 'Farmer' && createdMemberData.occupation !== 'Student' && createdMemberData.occupation !== 'Unemployed' && (
-                                    <div>
-                                        <p><span className="font-bold">Sector:</span> {createdMemberData.jobSector || 'N/A'}</p>
-                                        <p><span className="font-bold">Organization:</span> {createdMemberData.jobOrganization || 'N/A'}</p>
-                                        <p><span className="font-bold">Designation:</span> {createdMemberData.jobDesignation || 'N/A'}</p>
+                        {/* --- PAGE 1: Member Personal & Social Details --- */}
+                        <div className="print-page flex flex-col page-break p-[10px]">
+                            <div className="border-2 border-black h-full p-6 flex flex-col">
+                                {/* Header */}
+                                <div className="border-b-2 border-black pb-4 mb-6 flex flex-col items-center justify-center relative">
+                                    <div className="text-center">
+                                        <h1 className="text-3xl font-black uppercase tracking-wider text-gray-900 mb-1">Mala Educational Welfare Society</h1>
+                                        <p className="text-sm text-gray-600 font-bold uppercase tracking-wide">Membership Registration Application</p>
                                     </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* IDs & Bank */}
-                        <div className="mb-4">
-                            <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-1 border border-gray-200">KYC & Bank Details</h3>
-                            <div className="grid grid-cols-3 gap-2 text-xs px-1">
-                                <div>
-                                    <p className="font-bold underline mb-1">Ration Card</p>
-                                    <p>No: {createdMemberData.rationCard.number || 'N/A'}</p>
-                                    <p>Holder: {createdMemberData.rationCard.holderName || 'N/A'}</p>
+                                    <div className="absolute right-0 top-0 text-right hidden sm:block">
+                                        <div className="bg-white border border-black px-3 py-2">
+                                            <p className="text-xs font-bold text-gray-600 uppercase">Application ID</p>
+                                            <p className="text-lg font-mono font-black text-black">{createdMemberData.mewsId || 'PENDING'}</p>
+                                        </div>
+                                        <p className="text-xs font-bold text-black mt-1">Date: {new Date().toLocaleDateString()}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="font-bold underline mb-1">Voter ID</p>
-                                    <p>EPIC: {createdMemberData.voterId.epicNumber || 'N/A'}</p>
-                                    <p>Name: {createdMemberData.voterId.nameOnCard || 'N/A'}</p>
-                                    <p>Booth: {createdMemberData.voterId.pollingBooth || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <p className="font-bold underline mb-1">Bank Account</p>
-                                    <p>Bank: {createdMemberData.bankDetails.bankName || 'N/A'}</p>
-                                    <p>Branch: {createdMemberData.bankDetails.branchName || 'N/A'}</p>
-                                    <p>A/c No: {createdMemberData.bankDetails.accountNumber || 'N/A'}</p>
-                                    <p>IFSC: {createdMemberData.bankDetails.ifscCode || 'N/A'}</p>
-                                </div>
-                            </div>
-                        </div>
 
+                                {/* Main Grid Layout for Page 1 */}
+                                <div className="flex gap-6 mb-6 no-break">
+                                    {/* Photo Column */}
+                                    <div className="w-32 shrink-0">
+                                        <div className="w-32 h-40 border-2 border-black flex items-center justify-center bg-white overflow-hidden shadow-sm">
+                                            {createdMemberData.photoUrl ? (
+                                                <img
+                                                    src={createdMemberData.photoUrl.startsWith('http') ? createdMemberData.photoUrl : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/${createdMemberData.photoUrl.replace(/\\/g, '/')}`}
+                                                    alt="Member"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <span className="text-xs text-gray-400 font-bold">Paste Photo</span>
+                                            )}
+                                        </div>
+                                    </div>
 
-                        <div className="mb-8">
-                            <h3 className="text-sm font-bold uppercase bg-gray-100 p-2 mb-2 border border-gray-200">Declaration</h3>
-                            <p className="text-xs text-justify leading-relaxed px-2">
-                                I hereby declare that the details furnished above are true and correct to the best of my knowledge and belief. I undertake to inform you of any changes therein, immediately. In case any of the above information is found to be false or untrue or misleading or misrepresenting, I am aware that I may be held liable for it.
-                            </p>
-                        </div>
-
-                        {/* Printable Documents Section */}
-                        <div className="mb-4 break-inside-avoid">
-                            <h3 className="text-xs font-bold uppercase bg-gray-100 p-1 mb-2 border border-gray-200">Attached Documents</h3>
-                            <div className="grid grid-cols-4 gap-2">
-                                {[
-                                    { key: 'communityCert', label: 'Community Cert' },
-                                    { key: 'aadhaarFront', label: 'Aadhaar Front' },
-                                    { key: 'aadhaarBack', label: 'Aadhaar Back' },
-                                    { key: 'rationCardFile', label: 'Ration Card' },
-                                    { key: 'voterIdFront', label: 'Voter Front' },
-                                    { key: 'voterIdBack', label: 'Voter Back' },
-
-                                ].map((doc) => (
-                                    files[doc.key] && (
-                                        <div key={doc.key} className="border border-gray-200 p-1 text-center">
-                                            <p className="text-[10px] font-bold text-gray-700 mb-1">{doc.label}</p>
-                                            <div className="w-full h-24 bg-gray-50 flex items-center justify-center overflow-hidden">
-                                                {files[doc.key].type.startsWith('image/') ? (
-                                                    <img
-                                                        src={URL.createObjectURL(files[doc.key])}
-                                                        alt={doc.label}
-                                                        className="max-w-full max-h-full object-contain"
-                                                    />
-                                                ) : (
-                                                    <span className="text-[8px] text-gray-500">PDF/File</span>
-                                                )}
+                                    {/* Basic Info Column */}
+                                    <div className="flex-1 border border-black p-2">
+                                        <div className="mb-2 border-b-2 border-black pb-1 bg-gray-100 -mx-2 -mt-2 px-2 pt-1">
+                                            <h3 className="text-sm font-bold uppercase text-black">Basic Information</h3>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                            <div className="col-span-2 sm:col-span-1 border-b border-gray-400 pb-1">
+                                                <span className="block text-xs text-gray-600 uppercase font-bold">Full Name</span>
+                                                <span className="font-bold text-base text-black uppercase">{createdMemberData.surname} {createdMemberData.name}</span>
+                                            </div>
+                                            <div className="border-b border-gray-400 pb-1">
+                                                <span className="block text-xs text-gray-600 uppercase font-bold">S/o, W/o, D/o</span>
+                                                <span className="font-semibold text-base text-black uppercase">{createdMemberData.fatherName}</span>
+                                            </div>
+                                            <div className="border-b border-gray-400 pb-1">
+                                                <span className="block text-xs text-gray-600 uppercase font-bold">Date of Birth (Age)</span>
+                                                <span className="font-semibold text-base text-black">{new Date(createdMemberData.dob).toLocaleDateString()} ({createdMemberData.age} Yrs)</span>
+                                            </div>
+                                            <div className="border-b border-gray-400 pb-1">
+                                                <span className="block text-xs text-gray-600 uppercase font-bold">Gender / Blood Group</span>
+                                                <span className="font-semibold text-base text-black">{createdMemberData.gender} / {createdMemberData.bloodGroup}</span>
+                                            </div>
+                                            <div className="border-b border-gray-400 pb-1">
+                                                <span className="block text-xs text-gray-600 uppercase font-bold">Occupation</span>
+                                                <span className="font-semibold text-base text-black">{createdMemberData.occupation || '-'}</span>
+                                            </div>
+                                            <div className="border-b border-gray-400 pb-1">
+                                                <span className="block text-xs text-gray-600 uppercase font-bold">Mobile Number</span>
+                                                <span className="font-semibold text-base text-black">{createdMemberData.mobileNumber}</span>
+                                            </div>
+                                            <div className="border-b border-gray-400 pb-1">
+                                                <span className="block text-xs text-gray-600 uppercase font-bold">Aadhaar Number</span>
+                                                <span className="font-mono font-bold text-base text-black tracking-wide">{createdMemberData.aadhaarNumber}</span>
+                                            </div>
+                                            <div className="col-span-2 border-b border-gray-400 pb-1">
+                                                <span className="block text-xs text-gray-600 uppercase font-bold">Email / Alt. Mobile</span>
+                                                <span className="font-semibold text-base text-black">{createdMemberData.email || '-'} / {createdMemberData.alternateMobile || '-'}</span>
                                             </div>
                                         </div>
-                                    )
-                                ))}
-                            </div>
-                        </div>
+                                    </div>
+                                </div>
 
-                        <div className="flex justify-between mt-12 px-4">
-                            <div className="text-center">
-                                <p className="font-bold text-sm mb-1">______________________</p>
-                                <p className="text-xs">Signature of Applicant</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="font-bold text-sm mb-1">______________________</p>
-                                <p className="text-xs">Authorized Signatory</p>
-                            </div>
-                        </div>
+                                {/* Address Section */}
+                                <div className="grid grid-cols-2 gap-8 mb-6 no-break">
+                                    <div className="bg-gray-50 p-4 border border-gray-200 rounded-lg">
+                                        <h3 className="text-xs font-bold uppercase text-blue-800 border-b border-gray-300 pb-2 mb-2">Present Address</h3>
+                                        <div className="text-xs space-y-1.5 text-gray-800">
+                                            <p><span className="font-bold text-gray-500 w-16 inline-block">H.No:</span> {createdMemberData.address.houseNumber}</p>
+                                            <p><span className="font-bold text-gray-500 w-16 inline-block">Street:</span> {createdMemberData.address.street}</p>
+                                            <p><span className="font-bold text-gray-500 w-16 inline-block">Landmark:</span> {createdMemberData.address.landmark || '-'}</p>
+                                            <p><span className="font-bold text-gray-500 w-16 inline-block">Village:</span> {createdMemberData.address.village?.name || createdMemberData.address.village}</p>
+                                            <p><span className="font-bold text-gray-500 w-16 inline-block">Mandal:</span> {createdMemberData.address.mandal?.name || createdMemberData.address.mandal}</p>
+                                            <p><span className="font-bold text-gray-500 w-16 inline-block">Dist:</span> {createdMemberData.address.district?.name || createdMemberData.address.district}</p>
+                                            <p><span className="font-bold text-gray-500 w-16 inline-block">Pin:</span> {createdMemberData.address.pinCode}</p>
+                                            <p className="mt-2 text-[10px] text-gra-500 bg-white border px-1 rounded inline-block">Type: {createdMemberData.address.residencyType}</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 border border-gray-200 rounded-lg">
+                                        <h3 className="text-xs font-bold uppercase text-blue-800 border-b border-gray-300 pb-2 mb-2">Permanent Address</h3>
+                                        <div className="text-xs space-y-1.5 text-gray-800">
+                                            <p><span className="font-bold text-gray-500 w-16 inline-block">H.No:</span> {createdMemberData.permanentAddress.houseNumber}</p>
+                                            <p><span className="font-bold text-gray-500 w-16 inline-block">Street:</span> {createdMemberData.permanentAddress.street}</p>
+                                            <p><span className="font-bold text-gray-500 w-16 inline-block">Landmark:</span> {createdMemberData.permanentAddress.landmark || '-'}</p>
+                                            <p><span className="font-bold text-gray-500 w-16 inline-block">Village:</span> {createdMemberData.permanentAddress.village?.name || createdMemberData.permanentAddress.village}</p>
+                                            <p><span className="font-bold text-gray-500 w-16 inline-block">Mandal:</span> {createdMemberData.permanentAddress.mandal?.name || createdMemberData.permanentAddress.mandal}</p>
+                                            <p><span className="font-bold text-gray-500 w-16 inline-block">Dist:</span> {createdMemberData.permanentAddress.district?.name || createdMemberData.permanentAddress.district}</p>
+                                            <p><span className="font-bold text-gray-500 w-16 inline-block">Pin:</span> {createdMemberData.permanentAddress.pinCode}</p>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        <div className="mt-auto pt-2 border-t border-gray-300 text-center">
-                            <p className="text-[10px] text-gray-400">Generated by MEWS System on {new Date().toLocaleString()}</p>
+                                {/* Social & Economic Section */}
+                                <div className="grid grid-cols-2 gap-8 mb-6 no-break">
+                                    <div>
+                                        <h3 className="text-xs font-bold uppercase text-blue-800 border-b border-gray-200 pb-1 mb-2">Caste & Marriage Details</h3>
+                                        <table className="w-full text-xs">
+                                            <tbody>
+                                                <tr className="border-b border-gray-100"><td className="py-1 text-gray-500 font-bold">Caste / Sub-Caste</td><td className="py-1 font-semibold">{createdMemberData.casteDetails.caste} / {createdMemberData.casteDetails.subCaste}</td></tr>
+                                                <tr className="border-b border-gray-100"><td className="py-1 text-gray-500 font-bold">Community Cert</td><td className="py-1 font-mono">{createdMemberData.casteDetails.communityCertNumber || 'N/A'}</td></tr>
+                                                <tr className="border-b border-gray-100"><td className="py-1 text-gray-500 font-bold">Marital Status</td><td className="py-1 font-semibold">{createdMemberData.maritalStatus}</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xs font-bold uppercase text-blue-800 border-b border-gray-200 pb-1 mb-2">Family & Economic Status</h3>
+                                        <table className="w-full text-xs">
+                                            <tbody>
+                                                <tr className="border-b border-gray-100"><td className="py-1 text-gray-500 font-bold">Annual Income</td><td className="py-1 font-bold">₹{createdMemberData.familyDetails.annualIncome}</td></tr>
+                                                <tr className="border-b border-gray-100"><td className="py-1 text-gray-500 font-bold">Total Members</td><td className="py-1">{createdMemberData.familyDetails.memberCount}</td></tr>
+                                                <tr className="border-b border-gray-100"><td className="py-1 text-gray-500 font-bold">Ration Card Type</td><td className="py-1">{createdMemberData.familyDetails.rationCardType || '-'}</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* New Table for Other Details (ID Cards) */}
+                                <div className="mb-6 no-break">
+                                    <h3 className="text-xs font-bold uppercase text-blue-800 border-b border-gray-200 pb-1 mb-2">Other Details</h3>
+                                    <table className="w-full text-xs border border-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="border p-2 text-left w-1/4">Document Type</th>
+                                                <th className="border p-2 text-left">Details</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr className="border-b">
+                                                <td className="border p-2 font-bold text-gray-600">Ration Card</td>
+                                                <td className="border p-2">
+                                                    <span className="font-mono font-bold text-blue-900 bg-blue-50 px-1 rounded">{createdMemberData.rationCard.number || '-'}</span>
+                                                    <span className="ml-2 text-gray-500">({createdMemberData.rationCard.holderName || '-'})</span>
+                                                </td>
+                                            </tr>
+                                            <tr className="border-b">
+                                                <td className="border p-2 font-bold text-gray-600">Voter ID</td>
+                                                <td className="border p-2">
+                                                    <span className="font-mono font-bold text-purple-900 bg-purple-50 px-1 rounded">{createdMemberData.voterId.epicNumber || '-'}</span>
+                                                    <span className="ml-2 text-gray-500">({createdMemberData.voterId.nameOnCard || '-'})</span>
+                                                    <div className="text-[10px] text-gray-400 mt-0.5">Booth: {createdMemberData.voterId.pollingBooth || '-'}</div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="mt-auto text-center border-t border-gray-300 pt-2">
+                                    <p className="text-[9px] text-gray-400 uppercase">Page 1 of 3 (Generated by MEWS)</p>
+                                </div>
+                            </div>
+
+                            {/* --- PAGE 2: Family List, Education, Declaration --- */}
+                            <div className="print-page flex flex-col page-break p-[10px]">
+                                <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-2">
+                                    <h2 className="text-lg font-bold uppercase text-gray-800">Additional Details</h2>
+                                    <span className="text-xs text-gray-500 font-mono">App ID: {createdMemberData.mewsId}</span>
+                                </div>
+
+                                {/* Family Members Table */}
+                                <div className="mb-8 no-break">
+                                    <h3 className="text-sm font-bold uppercase text-blue-800 mb-3">Family Members</h3>
+                                    {createdMemberData.familyMembers && createdMemberData.familyMembers.length > 0 ? (
+                                        <table className="w-full text-[10px] border border-gray-300 table-fixed">
+                                            <thead className="bg-gray-100 text-gray-700">
+                                                <tr>
+                                                    <th className="border p-2 text-left w-24">Relation</th>
+                                                    <th className="border p-2 text-left">Name</th>
+                                                    <th className="border p-2 text-left w-20">Age/Gen</th>
+                                                    <th className="border p-2 text-left w-24">Occupation</th>
+                                                    <th className="border p-2 text-left w-28">Aadhaar</th>
+                                                    <th className="border p-2 text-left w-28">Voter ID</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {createdMemberData.familyMembers.map((fm, idx) => (
+                                                    <tr key={idx} className="border-b border-gray-200">
+                                                        <td className="border p-2 font-bold text-gray-600">{fm.relation}</td>
+                                                        <td className="border p-2 font-semibold uppercase">{fm.surname} {fm.name}</td>
+                                                        <td className="border p-2">{fm.age} / {fm.gender.charAt(0)}</td>
+                                                        <td className="border p-2">{fm.occupation}</td>
+                                                        <td className="border p-2 font-mono">{fm.aadhaarNumber}</td>
+                                                        <td className="border p-2 font-mono">{fm.epicNumber || '-'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    ) : (
+                                        <p className="text-xs italic text-gray-500 border p-4 text-center rounded bg-gray-50">No family members registered.</p>
+                                    )}
+                                </div>
+
+                                {/* Education & Employment */}
+                                <div className="mb-8 no-break">
+                                    <h3 className="text-sm font-bold uppercase text-blue-800 mb-3">Education & Employment Details</h3>
+                                    <div className="border border-gray-200 rounded p-4 bg-gray-50 grid grid-cols-2 gap-4 text-xs">
+                                        <div>
+                                            <p className="mb-1"><span className="font-bold text-gray-600 w-24 inline-block">Education:</span> {createdMemberData.educationLevel || 'N/A'}</p>
+                                            <p><span className="font-bold text-gray-600 w-24 inline-block">Primary Occ:</span> {createdMemberData.occupation || 'N/A'}</p>
+                                        </div>
+                                        {createdMemberData.occupation !== 'Farmer' && createdMemberData.occupation !== 'Student' && createdMemberData.occupation !== 'Unemployed' && (
+                                            <div>
+                                                <p className="mb-1"><span className="font-bold text-gray-600 w-24 inline-block">Sector:</span> {createdMemberData.jobSector || 'N/A'}</p>
+                                                <p className="mb-1"><span className="font-bold text-gray-600 w-24 inline-block">Organization:</span> {createdMemberData.jobOrganization || 'N/A'}</p>
+                                                <p><span className="font-bold text-gray-600 w-24 inline-block">Designation:</span> {createdMemberData.jobDesignation || 'N/A'}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Declaration */}
+                                <div className="mb-12 no-break">
+                                    <h3 className="text-sm font-bold uppercase text-blue-800 mb-3 border-b border-gray-200 pb-1">Declaration by Applicant</h3>
+                                    <div className="text-xs text-justify leading-relaxed p-4 bg-gray-50 border border-gray-200 rounded text-gray-800">
+                                        <p>
+                                            I, <strong>{createdMemberData.name} {createdMemberData.surname}</strong>, hereby declare that the details furnished in this application are true and correct to the best of my knowledge and belief. I undertake to inform the Society of any changes therein, immediately. In case any of the above information is found to be false or untrue or misleading or misrepresenting, I am aware that I may be held liable for it and my membership may be cancelled.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Signatures */}
+                                <div className="mt-8 flex justify-between items-end px-8 pb-12 no-break">
+                                    <div className="text-center">
+                                        <div className="w-48 border-t border-gray-400 pt-2">
+                                            <p className="font-bold text-sm">Signature of Applicant</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="w-48 border-t border-gray-400 pt-2">
+                                            <p className="font-bold text-sm">Authorized Signatory</p>
+                                            <p className="text-[10px] text-gray-400">(For Office Use Only)</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-auto text-center border-t border-gray-300 pt-2">
+                                    <p className="text-[9px] text-gray-400 uppercase">Page 2 of 3 (Generated by MEWS)</p>
+                                </div>
+                            </div>
+
+                            {/* --- PAGE 3+: Documents --- */}
+                            <div className="print-page flex flex-col p-[10px]">
+                                <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-2">
+                                    <h2 className="text-lg font-bold uppercase text-gray-800">Attached Documents</h2>
+                                    <span className="text-xs text-gray-500 font-mono">App ID: {createdMemberData.mewsId}</span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-x-6 gap-y-8">
+                                    {/* Main Member Docs */}
+                                    {[
+                                        { key: 'communityCert', label: 'Community Certificate' },
+                                        { key: 'aadhaarFront', label: 'Aadhaar Card (Front)' },
+                                        { key: 'aadhaarBack', label: 'Aadhaar Card (Back)' },
+                                        { key: 'rationCardFile', label: 'Ration Card' },
+                                        { key: 'voterIdFront', label: 'Voter ID (Front)' },
+                                        { key: 'voterIdBack', label: 'Voter ID (Back)' },
+                                    ].map((doc) => (
+                                        files[doc.key] && (
+                                            <div key={doc.key} className="no-break mb-4">
+                                                <p className="text-xs font-bold text-gray-700 mb-2 border-b border-gray-200 pb-1">{doc.label}</p>
+                                                <div className="w-full flex items-center justify-center overflow-hidden">
+                                                    {files[doc.key].type.startsWith('image/') ? (
+                                                        <img
+                                                            src={URL.createObjectURL(files[doc.key])}
+                                                            alt={doc.label}
+                                                            className="max-w-full max-h-60 object-contain p-1"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex flex-col items-center py-8">
+                                                            <FaFileAlt size={32} className="text-gray-400" />
+                                                            <span className="text-[10px] text-gray-500 mt-1">PDF Document</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )
+                                    ))}
+
+                                    {/* Family Member Docs */}
+                                    {familyMembers.map((fm, idx) => {
+                                        const fmDocs = [
+                                            { key: 'photo', label: 'Photo' },
+                                            { key: 'aadhaarFront', label: 'Aadhaar Front' },
+                                            { key: 'voterIdFront', label: 'Voter ID' },
+                                        ];
+                                        return fmDocs.map(doc => (
+                                            fm.files && fm.files[doc.key] && (
+                                                <div key={`${idx}-${doc.key}`} className="no-break mb-4">
+                                                    <p className="text-xs font-bold text-gray-700 mb-2 border-b border-gray-200 pb-1 truncation">{fm.name} ({fm.relation}) - {doc.label}</p>
+                                                    <div className="w-full flex items-center justify-center overflow-hidden">
+                                                        {fm.files[doc.key] instanceof File ? (
+                                                            <img src={URL.createObjectURL(fm.files[doc.key])} alt={doc.label} className="max-w-full max-h-60 object-contain p-1" />
+                                                        ) : (
+                                                            <FaFileAlt size={32} className="text-gray-400" />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )
+                                        ));
+                                    })}
+                                </div>
+
+                                <div className="mt-8 text-center border-t border-gray-300 pt-2">
+                                    <p className="text-[9px] text-gray-400 uppercase">Documents Attached (Generated by MEWS)</p>
+                                </div>
+                            </div>
                         </div>
-                    </div >
+                    </div>
                 )
             }
 
@@ -2702,7 +3202,7 @@ const MemberRegistration = () => {
                     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                         <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                             <div className="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
-                                <h2 className="text-xl font-bold text-gray-800">Add Family Member Details</h2>
+                                <h2 className="text-xl font-bold text-gray-800">{editingMemberIndex !== null ? 'Update' : 'Add'} Family Member Details</h2>
                                 <button onClick={() => setShowFamilyModal(false)} className="text-gray-500 hover:text-red-500 text-2xl font-bold">&times;</button>
                             </div>
                             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2719,40 +3219,62 @@ const MemberRegistration = () => {
                                     }
                                     required
                                 />
+                                <FormSelect
+                                    label="Marital Status"
+                                    name="maritalStatus"
+                                    value={familyMemberForm.maritalStatus}
+                                    onChange={handleFamilyChange}
+                                    options={["Unmarried", "Married", "Widowed", "Divorced"]}
+                                    required
+                                />
                                 <FormInput label="Surname" name="surname" value={familyMemberForm.surname} onChange={handleFamilyChange} placeholder="Surname" required />
                                 <FormInput label="Name" name="name" value={familyMemberForm.name} onChange={handleFamilyChange} placeholder="Name" required />
-                                <FormInput label="Date of Birth" name="dob" value={familyMemberForm.dob} onChange={handleFamilyChange} type="date" />
+                                <FormInput label="Father's Name" name="fatherName" value={familyMemberForm.fatherName} onChange={handleFamilyChange} placeholder="Father Name" required />
+                                <FormInput label="Date of Birth (DD-MM-YYYY)" name="dob" value={familyMemberForm.dob} onChange={(e) => handleDateChange(e, setFamilyMemberForm, 'dob')} placeholder="DD-MM-YYYY" maxLength={10} />
                                 <FormInput label="Age" name="age" value={familyMemberForm.age} onChange={handleFamilyChange} placeholder="Age" type="number" />
                                 <FormSelect label="Gender" name="gender" value={familyMemberForm.gender} onChange={handleFamilyChange} options={["Male", "Female", "Other"]} />
-                                <FormSelect label="Occupation" name="occupation" value={familyMemberForm.occupation} onChange={handleFamilyChange} options={memberOccupations} />
+                                {(parseInt(familyMemberForm.age) >= 5 || !familyMemberForm.age) && (
+                                    <>
+                                        <FormSelect label="Occupation" name="occupation" value={familyMemberForm.occupation} onChange={handleFamilyChange} options={memberOccupations} />
 
-                                {familyMemberForm.occupation === 'Student' && (
-                                    <FormSelect
-                                        label="Education Level"
-                                        name="educationLevel"
-                                        value={familyMemberForm.educationLevel}
-                                        onChange={handleFamilyChange}
-                                        options={["School", "Intermediate", "Degree", "PG"]}
-                                        required
-                                    />
+                                        {familyMemberForm.occupation === 'Student' && (
+                                            <FormSelect
+                                                label="Education Level"
+                                                name="educationLevel"
+                                                value={familyMemberForm.educationLevel}
+                                                onChange={handleFamilyChange}
+                                                options={["School", "Intermediate", "Degree", "PG"]}
+                                                required
+                                            />
+                                        )}
+                                    </>
                                 )}
 
                                 <FormInput label="Mobile Number" name="mobileNumber" value={familyMemberForm.mobileNumber} onChange={handleFamilyChange} placeholder="Mobile" />
                                 <FormInput label="Aadhaar Number" name="aadhaarNumber" value={familyMemberForm.aadhaarNumber} onChange={handleFamilyChange} placeholder="Aadhaar" />
 
-                                {/* Voter ID */}
-                                <div className="md:col-span-2 mt-4"><h3 className="font-bold text-blue-600 border-b pb-1 mb-2">Voter ID Details</h3></div>
-                                <FormInput label="EPIC Number" name="epicNumber" value={familyMemberForm.epicNumber} onChange={handleFamilyChange} placeholder="EPIC No" />
-                                <FormInput label="Voter Name" name="voterName" value={familyMemberForm.voterName} onChange={handleFamilyChange} placeholder="Name on Card" />
-                                <FormInput label="Polling Booth" name="pollingBooth" value={familyMemberForm.pollingBooth} onChange={handleFamilyChange} placeholder="Booth No" />
+                                {/* Voter ID - Only if 18 or older */}
+                                {(!familyMemberForm.age || parseInt(familyMemberForm.age) >= 18) && (
+                                    <>
+                                        <div className="md:col-span-2 mt-4"><h3 className="font-bold text-blue-600 border-b pb-1 mb-2">Voter ID Details</h3></div>
+                                        <FormInput label="EPIC Number" name="epicNumber" value={familyMemberForm.epicNumber} onChange={handleFamilyChange} placeholder="EPIC No" />
+                                        <FormInput label="Voter Name" name="voterName" value={familyMemberForm.voterName} onChange={handleFamilyChange} placeholder="Name on Card" />
+                                        <FormInput label="Polling Booth" name="pollingBooth" value={familyMemberForm.pollingBooth} onChange={handleFamilyChange} placeholder="Booth No" />
+                                    </>
+                                )}
 
                                 {/* Documents */}
                                 <div className="md:col-span-2 mt-4"><h3 className="font-bold text-blue-600 border-b pb-1 mb-2">Document Uploads</h3></div>
                                 <FileUpload label="Member Photo" name="photo" onChange={handleFamilyFileChange} fileName={familyMemberFiles.photo?.name} />
                                 <FileUpload label="Aadhaar Front" name="aadhaarFront" onChange={handleFamilyFileChange} fileName={familyMemberFiles.aadhaarFront?.name} />
                                 <FileUpload label="Aadhaar Back" name="aadhaarBack" onChange={handleFamilyFileChange} fileName={familyMemberFiles.aadhaarBack?.name} />
-                                <FileUpload label="Voter ID Front" name="voterIdFront" onChange={handleFamilyFileChange} fileName={familyMemberFiles.voterIdFront?.name} />
-                                <FileUpload label="Voter ID Back" name="voterIdBack" onChange={handleFamilyFileChange} fileName={familyMemberFiles.voterIdBack?.name} />
+
+                                {(!familyMemberForm.age || parseInt(familyMemberForm.age) >= 18) && (
+                                    <>
+                                        <FileUpload label="Voter ID Front" name="voterIdFront" onChange={handleFamilyFileChange} fileName={familyMemberFiles.voterIdFront?.name} />
+                                        <FileUpload label="Voter ID Back" name="voterIdBack" onChange={handleFamilyFileChange} fileName={familyMemberFiles.voterIdBack?.name} />
+                                    </>
+                                )}
 
                                 <div className="md:col-span-2 bg-blue-50 p-3 rounded text-sm text-blue-800">
                                     <p><strong>Note:</strong> Addresses for this family member will be automatically set to the same as the main applicant's Present and Permanent addresses.</p>
@@ -2760,7 +3282,7 @@ const MemberRegistration = () => {
                             </div>
                             <div className="p-6 border-t border-gray-200 flex justify-end gap-4">
                                 <button onClick={() => setShowFamilyModal(false)} className="px-6 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
-                                <button onClick={saveFamilyMember} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Add Member</button>
+                                <button onClick={saveFamilyMember} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">{editingMemberIndex !== null ? 'Update Member' : 'Add Member'}</button>
                             </div>
                         </div>
                     </div>

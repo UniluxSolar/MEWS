@@ -43,7 +43,15 @@ export const districtConstituencies = {
     "Warangal Urban": ["Warangal East", "Warangal West", "Wardhannapet"], // Sometimes Hanumakonda
     "Hanumakonda": ["Warangal East", "Warangal West", "Wardhannapet"], // Alias
     "Warangal": ["Warangal East", "Warangal West", "Wardhannapet", "Narsampet", "Parkal"], // Fallback
-    "Yadadri Bhuvanagiri": ["Alair", "Bhongir"]
+    "Yadadri Bhuvanagiri": ["Alair", "Bhongir"],
+
+    // Aliases for partial/likely API mismatches
+    "Yadadri Bhpngiri": ["Alair", "Bhongir"], // User reported typo
+    "Yadadri Bhongiri": ["Alair", "Bhongir"], // Common spelling
+    "Yadadri": ["Alair", "Bhongir"],
+    "Bhadradri": ["Aswaraopeta", "Bhadrachalam", "Kothagudem", "Pinapaka", "Yellandu"],
+    "Komaram Bheem": ["Asifabad", "Sirpur"],
+    "Kumuram Bheem": ["Asifabad", "Sirpur"]
 };
 
 // Flattened list for fallback
@@ -68,6 +76,53 @@ export const constituencyMandals = {
     "Pinapaka": ["Pinapaka", "Manuguru", "Gundala", "Burgampahad", "Aswapuram"],
     "Yellandu": ["Yellandu", "Kamepalli", "Bayyaram", "Tekulapally", "Garla"],
     "Aswaraopeta": ["Aswaraopeta", "Dammapeta", "Chandrugonda", "Mulkalapally"],
+
+    // YADADRI BHUVANAGIRI District
+    "Alair": ["Alair", "Rajapet", "Turkapally", "Yadagirigutta", "Bommalaramaram", "Gundala"],
+    "Bhongir": ["Bhongir", "Bibinagar", "Bhoodan Pochampally", "Valigonda"],
+
+    // KOMARAM BHEEM ASIFABAD District
+    "Asifabad": ["Asifabad", "Jainoor", "Kerameri", "Lingapur", "Sirpur (U)", "Tiryani", "Rebbena", "Wankidi"],
+    "Sirpur": ["Sirpur (T)", "Koutala", "Chintalamanepalli", "Dahegaon", "Bejjur", "Penchikalpet", "Kagaznagar"],
+
+    // MEDCHAL MALKAJGIRI District
+    "Medchal": ["Medchal", "Shamirpet", "Ghatkesar", "Keesara", "Medipally", "Kapra", "Muduchinthalapalli"],
+    "Malkajgiri": ["Malkajgiri", "Alwal"],
+    "Uppal": ["Uppal", "Kapra"],
+    "Kukatpally": ["Kukatpally", "Balanagar"],
+    "Quthbullapur": ["Quthbullapur", "Gajularamaram", "Dundigal Gandimaisamma"],
+
+    // RANGA REDDY District
+    "Rajendranagar": ["Rajendranagar", "Shamshabad", "Gandipet"],
+    "Maheshwaram": ["Maheshwaram", "Kandukur", "Kadthal"],
+    "Ibrahimpatnam": ["Ibrahimpatnam", "Manchal", "Yacharam", "Abdullapurmet"],
+    "Chevella": ["Chevella", "Shabad", "Moinabad", "Shankarpally"],
+    "Serilingampally": ["Serilingampally"],
+    "Lal Bahadur Nagar": ["Saroornagar", "Hayathnagar"],
+    "Shadnagar": ["Farooqnagar", "Kothur", "Keshampet", "Kondurg", "Chowdergudem", "Nandigama"],
+
+    // HYDERABAD District (Mapping Mandals often 1:1 or grouped)
+    "Amberpet": ["Amberpet"],
+    "Bahadurpura": ["Bahadurpura"],
+    "Chandrayangutta": ["Chandrayangutta"],
+    "Charminar": ["Charminar"],
+    "Goshamahal": ["Goshamahal"],
+    "Jubilee Hills": ["Shaikpet"],
+    "Karwan": ["Karwan"],
+    "Khairatabad": ["Khairitabads"],
+    "Malakpet": ["Malakpet"],
+    "Musheerabad": ["Musheerabad"],
+    "Nampally": ["Nampally"],
+    "Sanathnagar": ["Ameerpet"],
+    "Secunderabad": ["Secunderabad"],
+    "Secunderabad Cantonment": ["Tirumalagiri", "Marredpally"],
+    "Yakutpura": ["Yakutpura"],
+
+    // SURYAPET District
+    "Huzurnagar": ["Huzurnagar", "Neredcherla", "Garidepally", "Mattampally", "Mellachervu", "Chinthalapalem", "Palakeedu"],
+    "Kodad": ["Kodad", "Mothey", "Nadigudem", "Munagala", "Chilkur", "Ananthagiri"],
+    "Suryapet": ["Suryapet", "Atmakur (S)", "Chivvemla", "Penpahad"],
+    "Thungathurthi": ["Thungathurthi", "Thirumalagiri", "Nuthankal", "Jaji Reddi Gudem", "Mothkur", "Maddirala", "Noothankal", "Nagaram", "Shali Gouraram", "Arvapally"],
 
     // Default Fallback / Empty for others to prevent crashes
     // User can populate more here

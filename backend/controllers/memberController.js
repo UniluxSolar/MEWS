@@ -284,36 +284,34 @@ const registerMember = asyncHandler(async (req, res) => {
             for (const fm of memberData.familyMembers) {
                 try {
                     // Generate Unique MEWS ID for Dependent
-                    // Add slight random delay or suffix to ensure uniqueness if needed, but Math.random is usually fine
                     const depMewsId = `MEW${new Date().getFullYear()}${Math.floor(10000 + Math.random() * 90000)}`;
 
                     const dependentData = {
-                        // 1. Inherited Fields
-                        surname: fm.surname || member.surname, // Fallback to head's surname? Usually same.
+                        // 1. Inherited Fields (Use memberData for clean POJO copy)
+                        surname: fm.surname || memberData.surname,
                         name: fm.name,
                         fatherName: fm.fatherName,
                         dob: fm.dob,
                         age: fm.age,
                         gender: fm.gender,
                         occupation: fm.occupation,
-                        mobileNumber: fm.mobileNumber, // Might be empty
-                        aadhaarNumber: fm.aadhaarNumber, // VALIDATE UNIQUE in logic if needed, Schema handles sparse unique
+                        mobileNumber: fm.mobileNumber,
+                        aadhaarNumber: fm.aadhaarNumber,
 
                         // Address (Inherit from Head)
-                        address: member.address,
-                        permanentAddress: member.permanentAddress,
+                        address: memberData.address,
+                        permanentAddress: memberData.permanentAddress,
 
-                        // Caste (Inherit from Head unless Intercaste? - Logic: Usually same for family)
-                        casteDetails: member.casteDetails,
+                        // Caste (Inherit from Head)
+                        casteDetails: memberData.casteDetails,
 
                         // Family Links
-                        headOfFamily: member._id,
+                        headOfFamily: member._id, // Use the Created ID
                         relationToHead: fm.relation,
 
-                        // Files from specific family member object
+                        // Files
                         photoUrl: fm.photo,
                         aadhaarCardUrl: fm.aadhaarFront,
-                        // Note: We map fm.aadhaarFront to the root aadhaarCardUrl for the individual member record
 
                         voterId: {
                             epicNumber: fm.epicNumber,
@@ -324,10 +322,9 @@ const registerMember = asyncHandler(async (req, res) => {
 
                         // System Fields
                         mewsId: depMewsId,
-                        verificationStatus: member.verificationStatus, // Auto-approve if head is approved? Or keep pending?
-                        // If Head is APPROVED_VILLAGE, Dep should probably be too.
+                        verificationStatus: member.verificationStatus,
 
-                        // Empty Family Array for Dependent
+                        // Empty Family Array for Dependent to prevent recursion
                         familyMembers: []
                     };
 
@@ -336,8 +333,6 @@ const registerMember = asyncHandler(async (req, res) => {
 
                 } catch (depError) {
                     console.error(`[REG] Failed to create dependent ${fm.name}:`, depError.message);
-                    // Continue even if one fails? Or fail all? 
-                    // Better to log and continue to avoid blocking main reg.
                 }
             }
         }
@@ -357,6 +352,11 @@ const registerMember = asyncHandler(async (req, res) => {
 // @access  Private (Admin)
 const getMembers = asyncHandler(async (req, res) => {
     let query = {};
+
+    // Allow filtering by Head of Family (for fetching dependents)
+    if (req.query.headOfFamily) {
+        query['headOfFamily'] = req.query.headOfFamily;
+    }
 
     // Filter by assigned location if user has an assigned location
     if (req.user && req.user.assignedLocation) {
