@@ -119,25 +119,6 @@ const VillageDashboard = () => {
                             />
                         </div>
 
-                        {/* Quick Actions & Monitor */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                            <ActionCard
-                                title="Register New Member"
-                                desc="Add a new resident to the village registry with complete profile details."
-                                icon={FaUserPlus}
-                                to="/admin/members/new"
-                                gradient="bg-[#1e2a4a]"
-                            />
-                            <ActionCard
-                                title="Register Institution"
-                                desc="Onboard a new school, hospital, or community center."
-                                icon={FaBuilding}
-                                to="/admin/institutions/new"
-                                gradient="bg-[#0f172a]"
-                            />
-                        </div>
-
-
                         {/* Demographics Overview */}
                         <div className="mb-8">
                             <div className="flex items-center gap-3 mb-6 ml-1">

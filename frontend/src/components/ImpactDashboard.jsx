@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaGraduationCap, FaHeartbeat, FaBalanceScale, FaBriefcase, FaChartLine, FaLayerGroup } from 'react-icons/fa';
 
-const StatCard = ({ icon: Icon, title, color, stats, linkText, borderColor }) => (
+const StatCard = ({ icon: Icon, title, color, stats, borderColor }) => (
     <div className={`bg-white rounded-xl shadow-sm border-t-4 ${borderColor} p-6 h-full flex flex-col`}>
         <div className="flex items-center gap-3 mb-6">
             <div className={`w-10 h-10 rounded-full ${color} text-white flex items-center justify-center`}>
@@ -20,11 +20,6 @@ const StatCard = ({ icon: Icon, title, color, stats, linkText, borderColor }) =>
             ))}
         </div>
 
-        <div className="mt-8 pt-6 border-t border-gray-100">
-            <button className={`w-full py-2 text-xs font-bold uppercase tracking-wider rounded border ${borderColor.replace('border-', 'text-').replace('border-t-', 'border-')} hover:bg-gray-50 transition`}>
-                {linkText}
-            </button>
-        </div>
     </div>
 );
 
@@ -83,40 +78,40 @@ const ImpactDashboard = () => {
                         color="bg-blue-500"
                         borderColor="border-t-blue-500"
                         stats={educationStats}
-                        linkText="View All Education Programs"
                     />
+
                     <StatCard
                         icon={FaHeartbeat}
                         title="Health"
                         color="bg-red-500"
                         borderColor="border-t-red-500"
                         stats={healthStats}
-                        linkText="View All Health Programs"
                     />
+
                     <StatCard
                         icon={FaBalanceScale}
                         title="Legal Aid"
                         color="bg-green-600"
                         borderColor="border-t-green-600"
                         stats={legalStats}
-                        linkText="View All Legal Aid Programs"
                     />
+
                     <StatCard
                         icon={FaBriefcase}
                         title="Employment"
                         color="bg-yellow-500"
                         borderColor="border-t-yellow-500"
                         stats={jobStats}
-                        linkText="View All Employment Programs"
                     />
+
                     <StatCard
                         icon={FaLayerGroup}
                         title="Welfare"
                         color="bg-purple-600"
                         borderColor="border-t-purple-600"
                         stats={welfareStats}
-                        linkText="View All Welfare Programs"
                     />
+
                 </div>
             </div>
         </section>

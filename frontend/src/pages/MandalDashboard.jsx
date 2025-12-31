@@ -1,15 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api';
 import { useNavigate } from 'react-router-dom';
+import { renderToStaticMarkup } from 'react-dom/server';
 import {
     FaUsers, FaBuilding, FaExclamationTriangle, FaFileAlt,
-    FaMapMarkerAlt, FaClock
+    FaMapMarkerAlt, FaClock, FaTable, FaThLarge, FaMapMarkedAlt
 } from 'react-icons/fa';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import StatCard from '../components/common/StatCard';
 import ActionCard from '../components/common/ActionCard';
 import DashboardHeader from '../components/common/DashboardHeader';
+// Map Imports
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+
+// Fix for default marker icons in React Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+});
 
 const VillagePerformanceCard = ({ name, members, institutions, status }) => (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition relative overflow-hidden group">
@@ -45,6 +57,7 @@ const MandalDashboard = () => {
         villages: []
     });
     const [loading, setLoading] = useState(true);
+    const [viewMode, setViewMode] = useState('cards'); // 'table', 'cards', 'map' (cards default here)
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -66,6 +79,16 @@ const MandalDashboard = () => {
         fetchStats();
     }, []);
 
+    // Helper for Map Coordinates
+    const getCoordinates = (inputString) => {
+        if (!inputString) return [17.0500, 79.2667];
+        let hash = 0;
+        for (let i = 0; i < inputString.length; i++) hash = inputString.charCodeAt(i) + ((hash << 5) - hash);
+        const latOffset = (hash % 1000) / 2500;
+        const lngOffset = ((hash >> 5) % 1000) / 2500;
+        return [17.0500 + latOffset, 79.2667 + lngOffset];
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
             <AdminHeader />
@@ -75,7 +98,18 @@ const MandalDashboard = () => {
                 <main className="flex-1 overflow-y-auto">
                     <DashboardHeader
                         title={`${stats.locationName} Mandal Dashboard`}
-                        subtitle={`Manage mandal operations and monitor village activities. Last updated: Today`}
+                        subtitle={
+                            <div>
+                                <div className="text-blue-100 opacity-80 mb-2">Manage mandal operations and monitor village activities. Last updated: Today</div>
+                                {/* View Toggle */}
+                                <div className="flex items-center gap-2 mt-2 bg-white/10 p-1 rounded-lg w-fit backdrop-blur-sm border border-white/20">
+                                    <span className="text-xs font-bold text-white px-2">View:</span>
+                                    <button onClick={() => setViewMode('table')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'table' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaTable /> Table</button>
+                                    <button onClick={() => setViewMode('cards')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'cards' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaThLarge /> Cards</button>
+                                    <button onClick={() => setViewMode('map')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'map' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaMapMarkedAlt /> Map</button>
+                                </div>
+                            </div>
+                        }
                     />
 
                     <div className="px-4 md:px-8 -mt-10 pb-8 w-full">
@@ -102,12 +136,10 @@ const MandalDashboard = () => {
                                 icon={FaClock}
                                 color="bg-orange-500"
                             />
-
                         </div>
 
                         {/* Quick Actions Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-
                             <ActionCard
                                 title="Village Map View"
                                 desc="View mandal-wide villages"
@@ -142,24 +174,86 @@ const MandalDashboard = () => {
 
                             {loading ? (
                                 <div className="p-12 text-center text-gray-500 bg-white rounded-2xl shadow-sm border border-slate-100">Loading villages...</div>
+                            ) : stats.villages.length === 0 ? (
+                                <div className="col-span-full text-center py-10 bg-white rounded-2xl border border-dashed border-gray-300">
+                                    No villages found.
+                                </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {stats.villages.length > 0 ? (
-                                        stats.villages.map((village, idx) => (
-                                            <VillagePerformanceCard
-                                                key={idx}
-                                                name={village.name}
-                                                members={village.members}
-                                                institutions={village.institutions}
-                                                status={village.status}
-                                            />
-                                        ))
-                                    ) : (
-                                        <div className="col-span-full text-center py-10 bg-white rounded-2xl border border-dashed border-gray-300">
-                                            No villages found.
+                                <>
+                                    {/* TABLE VIEW */}
+                                    {viewMode === 'table' && (
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left border-collapse">
+                                                    <thead>
+                                                        <tr className="bg-slate-50 border-b border-gray-100 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                            <th className="px-6 py-4">Village Name</th>
+                                                            <th className="px-6 py-4">Members</th>
+                                                            <th className="px-6 py-4">Institutions</th>
+                                                            <th className="px-6 py-4">Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-50">
+                                                        {stats.villages.map((village, idx) => (
+                                                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                                                <td className="px-6 py-4 font-bold text-slate-800">{village.name}</td>
+                                                                <td className="px-6 py-4 text-sm text-slate-600">{village.members.toLocaleString()}</td>
+                                                                <td className="px-6 py-4 text-sm text-slate-600">{village.institutions}</td>
+                                                                <td className="px-6 py-4">
+                                                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wide ${village.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                                                        {village.status}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     )}
-                                </div>
+
+                                    {/* CARDS VIEW */}
+                                    {viewMode === 'cards' && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {stats.villages.map((village, idx) => (
+                                                <VillagePerformanceCard
+                                                    key={idx}
+                                                    name={village.name}
+                                                    members={village.members}
+                                                    institutions={village.institutions}
+                                                    status={village.status}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* MAP VIEW */}
+                                    {viewMode === 'map' && (
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 h-[600px] overflow-hidden relative">
+                                            <MapContainer center={[17.0500, 79.2667]} zoom={11} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
+                                                <TileLayer
+                                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                />
+                                                {stats.villages.map((village, idx) => {
+                                                    const coords = getCoordinates(village.name);
+                                                    return (
+                                                        <Marker key={idx} position={coords}>
+                                                            <Popup>
+                                                                <div className="p-1">
+                                                                    <h3 className="font-bold text-sm mb-1">{village.name}</h3>
+                                                                    <p className="text-xs text-slate-600">Members: <b>{village.members}</b></p>
+                                                                    <p className="text-xs text-slate-600">Institutions: <b>{village.institutions}</b></p>
+                                                                    <p className={`text-xs font-bold mt-1 ${village.status === 'Active' ? 'text-green-600' : 'text-red-500'}`}>{village.status}</p>
+                                                                </div>
+                                                            </Popup>
+                                                        </Marker>
+                                                    );
+                                                })}
+                                            </MapContainer>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>

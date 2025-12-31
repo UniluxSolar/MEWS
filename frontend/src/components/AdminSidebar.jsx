@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-    FaThLarge, FaUsers, FaBuilding,
+    FaThLarge, FaUsers, FaBuilding, FaUserPlus,
     FaHandHoldingUsd, FaSignOutAlt, FaChartLine, FaCog, FaQuestionCircle, FaBullhorn, FaUserShield
 } from 'react-icons/fa';
 
@@ -44,6 +44,10 @@ const AdminSidebar = ({ activePage }) => {
                     <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Welcome</h2>
                     <p className="text-lg font-bold text-[#1e2a4a] truncate">{adminName}</p>
                 </div>
+
+                {/* Registration Actions (Top Priority) */}
+                <SidebarItem to="/admin/members/new" icon={FaUserPlus} label="Register Member" active={activePage === 'register-member'} />
+                <SidebarItem to="/admin/institutions/new" icon={FaBuilding} label="Register Institution" active={activePage === 'register-institution'} />
 
                 <SidebarItem to="/admin/dashboard" icon={FaThLarge} label={roleLabel} active={activePage === 'dashboard'} />
                 {userRole !== 'VILLAGE_ADMIN' && (

@@ -24,7 +24,16 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 
             if (req.user.role === 'VILLAGE_ADMIN') {
                 // STRICT: Use ID match for members to prevent CastError
-                memberQuery = { 'address.village': location._id };
+                // Handle duplicate location entries (e.g. multiple "Annaram" IDs)
+                // Use robust regex to match name with potential whitespace in DB
+                const escapedName = location.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const relatedLocations = await Location.find({
+                    name: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
+                    type: location.type // Ensure type matches (VILLAGE)
+                });
+                const locIds = relatedLocations.map(l => l._id);
+
+                memberQuery = { 'address.village': { $in: locIds } };
 
                 // Use Regex for Institution (fullAddress is String)
                 institutionQuery = { fullAddress: locationRegex };
@@ -130,7 +139,15 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
         if (locationDoc) locationName = locationDoc.name;
 
         if (req.user.role === 'VILLAGE_ADMIN') {
-            memberQuery = { 'address.village': locationId };
+            // STRICT: Use ID match for members to prevent CastError
+            // Handle duplicate location entries (Resolve by Name) - ROBUST FIX
+            const escapedName = locationDoc.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const relatedLocations = await Location.find({
+                name: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
+                type: 'VILLAGE'
+            });
+            const locIds = relatedLocations.map(l => l._id);
+            memberQuery = { 'address.village': { $in: locIds } };
         } else if (req.user.role === 'MANDAL_ADMIN') {
             memberQuery = { 'address.mandal': locationId };
         } else if (req.user.role === 'DISTRICT_ADMIN') {
@@ -198,9 +215,24 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
     ]);
 
     // 5. Demographics - Marital Status
+    // 5. Demographics - Marital Status
     const maritalStats = await Member.aggregate([
         { $match: memberQuery },
-        { $group: { _id: "$maritalStatus", count: { $sum: 1 } } }
+        {
+            $project: {
+                status: {
+                    $switch: {
+                        branches: [
+                            { case: { $eq: ["$maritalStatus", "Married"] }, then: "Married" },
+                            { case: { $eq: ["$maritalStatus", "Widowed"] }, then: "Widowed" },
+                            { case: { $eq: ["$maritalStatus", "Divorced"] }, then: "Divorced" }
+                        ],
+                        default: "Unmarried" // Covers "Unmarried", null, undefined, ""
+                    }
+                }
+            }
+        },
+        { $group: { _id: "$status", count: { $sum: 1 } } }
     ]);
 
     // 6. Demographics - Age Groups

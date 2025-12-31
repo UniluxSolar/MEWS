@@ -221,8 +221,15 @@ const registerMember = asyncHandler(async (req, res) => {
                             return undefined;
                         };
 
+                        const relation = clean(fm.relation);
+                        let fMaritalStatus = clean(fm.maritalStatus);
+                        if (relation === 'Father' || relation === 'Mother') {
+                            fMaritalStatus = 'Married';
+                        }
+
                         return {
-                            relation: clean(fm.relation),
+                            relation: relation,
+                            maritalStatus: fMaritalStatus,
                             surname: clean(fm.surname),
                             name: clean(fm.name),
                             fatherName: clean(fm.fatherName),
@@ -307,7 +314,9 @@ const registerMember = asyncHandler(async (req, res) => {
 
                         // Family Links
                         headOfFamily: member._id, // Use the Created ID
+                        headOfFamily: member._id, // Use the Created ID
                         relationToHead: fm.relation,
+                        maritalStatus: fm.maritalStatus,
 
                         // Files
                         photoUrl: fm.photo,
@@ -366,7 +375,19 @@ const getMembers = asyncHandler(async (req, res) => {
 
         if (req.user.role === 'VILLAGE_ADMIN') {
             // STRICT: Must match the assigned Village ID
-            query['address.village'] = locationId;
+            // Handle duplicate location entries (Resolve by Name)
+            const assignedLoc = await Location.findById(locationId);
+            if (assignedLoc) {
+                const escapedName = assignedLoc.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const relatedLocations = await Location.find({
+                    name: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
+                    type: 'VILLAGE'
+                });
+                const locIds = relatedLocations.map(l => l._id);
+                query['address.village'] = { $in: locIds };
+            } else {
+                query['address.village'] = locationId; // Fallback
+            }
         }
         else if (req.user.role === 'MANDAL_ADMIN') {
             // STRICT: Must match the assigned Mandal ID
@@ -629,8 +650,15 @@ const updateMember = asyncHandler(async (req, res) => {
                         // But since we are replacing the list, the 'fm' object from frontend *should* have the URL if it wasn't changed.
                         // Let's trust frontend sends the URL if not changed.
 
+                        const relation = clean(fm.relation);
+                        let fMaritalStatus = clean(fm.maritalStatus);
+                        if (relation === 'Father' || relation === 'Mother') {
+                            fMaritalStatus = 'Married';
+                        }
+
                         return {
-                            relation: clean(fm.relation),
+                            relation: relation,
+                            maritalStatus: fMaritalStatus,
                             surname: clean(fm.surname),
                             name: clean(fm.name),
                             fatherName: clean(fm.fatherName),
@@ -663,6 +691,95 @@ const updateMember = asyncHandler(async (req, res) => {
         }
 
         const updatedMember = await member.save();
+
+        // --- CHECKPOINT: SYNC DEPENDENT MEMBERS (Create/Update) ---
+        // Fetch existing dependent documents for this head
+        const existingDependents = await Member.find({ headOfFamily: member._id });
+
+        if (updatedMember.familyMembers && updatedMember.familyMembers.length > 0) {
+            console.log(`[UPDATE] Syncing ${updatedMember.familyMembers.length} family members...`);
+
+            for (const fm of updatedMember.familyMembers) {
+                try {
+                    // 1. Try to find existing dependent document
+                    // Heuristic: Name + Relation (since we don't have a direct ID link)
+                    let dependentDoc = existingDependents.find(d =>
+                        d.name === fm.name && d.relationToHead === fm.relation
+                    );
+
+                    // If not found by name/relation, maybe try Aadhaar if available?
+                    if (!dependentDoc && fm.aadhaarNumber) {
+                        dependentDoc = existingDependents.find(d => d.aadhaarNumber === fm.aadhaarNumber);
+                    }
+
+                    if (dependentDoc) {
+                        // UPDATE Existing Dependent
+                        console.log(`[UPDATE] Updating Dependent: ${dependentDoc.mewsId} (${fm.name})`);
+                        dependentDoc.maritalStatus = fm.maritalStatus; // Sync Critical Field
+
+                        // Sync other fields that should match the current state
+                        dependentDoc.age = fm.age;
+                        dependentDoc.occupation = fm.occupation;
+                        dependentDoc.mobileNumber = fm.mobileNumber;
+                        if (fm.dob) dependentDoc.dob = fm.dob;
+
+                        // Sync Address from Head
+                        dependentDoc.address = updatedMember.address;
+                        dependentDoc.permanentAddress = updatedMember.permanentAddress;
+
+                        await dependentDoc.save();
+
+                    } else {
+                        // CREATE New Dependent
+                        // Generate Unique MEWS ID for Dependent
+                        const depMewsId = `MEW${new Date().getFullYear()}${Math.floor(10000 + Math.random() * 90000)}`;
+
+                        const dependentData = {
+                            surname: fm.surname || updatedMember.surname,
+                            name: fm.name,
+                            fatherName: fm.fatherName,
+                            dob: fm.dob,
+                            age: fm.age,
+                            gender: fm.gender,
+                            occupation: fm.occupation,
+                            mobileNumber: fm.mobileNumber,
+                            aadhaarNumber: fm.aadhaarNumber,
+
+                            // Address (Inherit)
+                            address: updatedMember.address,
+                            permanentAddress: updatedMember.permanentAddress,
+
+                            // Caste (Inherit)
+                            casteDetails: updatedMember.casteDetails,
+
+                            // Family Links
+                            headOfFamily: updatedMember._id,
+                            relationToHead: fm.relation,
+                            maritalStatus: fm.maritalStatus, // This comes from the mapped fm ensuring logic is applied
+
+                            // Files (from fm object in array - paths should be there)
+                            photoUrl: fm.photo,
+                            aadhaarCardUrl: fm.aadhaarFront,
+                            voterId: {
+                                epicNumber: fm.epicNumber,
+                                nameOnCard: fm.voterName,
+                                pollingBooth: fm.pollingBooth,
+                                fileUrl: fm.voterIdFront
+                            },
+
+                            mewsId: depMewsId,
+                            verificationStatus: updatedMember.verificationStatus,
+                            familyMembers: []
+                        };
+
+                        await Member.create(dependentData);
+                        console.log(`[UPDATE] Created New Dependent: ${depMewsId} (${fm.name})`);
+                    }
+                } catch (err) {
+                    console.error(`[UPDATE] Error syncing dependent ${fm.name}:`, err.message);
+                }
+            }
+        }
 
         // Populate for frontend (ID Card / Application Form)
         await updatedMember.populate([

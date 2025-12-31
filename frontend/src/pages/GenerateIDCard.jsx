@@ -81,37 +81,65 @@ const GenerateIDCard = () => {
 
                     const fullAddress = addrParts.join(', ');
 
+                    const validUntil = getValidUntil();
+                    const rel = member.relationToHead || member.relation || 'Family';
+
                     return {
-                        name: member.name || 'Unknown',
-                        surname: member.surname || '',
-                        id: generatedId,
+                        name: member.name,
+                        surname: member.surname,
+                        id: member.mewsId || 'PENDING',
                         mobile: member.mobileNumber || '+91 XXXXX XXXXX',
-                        photo: member.photoUrl ? (member.photoUrl.startsWith('http') ? member.photoUrl : `${import.meta.env.VITE_API_BASE_URL || ''}/${member.photoUrl.replace(/\\/g, '/')}`) : member2,
+                        photo: member.photoUrl ? (member.photoUrl.startsWith('http') ? member.photoUrl : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/${member.photoUrl.replace(/\\/g, '/').replace(/^uploads\//, 'uploads/')}`) : (member.photo || member2), // Embedded uses photo, API uses photoUrl
                         bloodGroup: member.bloodGroup || '-',
                         village: vName || 'Unknown',
                         mandal: mName || '',
                         district: dName || '',
                         fullAddress: fullAddress,
                         dob: member.dob ? new Date(member.dob).toISOString().split('T')[0] : '',
-                        fatherName: member.fatherName || '',
+                        fatherName: member.fatherName,
                         gender: member.gender,
                         maritalStatus: member.maritalStatus,
-                        validUntil: getValidUntil(),
-                        relation: isDependent ? (member.relationToHead || 'Family') : 'Member'
+                        validUntil: validUntil,
+                        relation: isDependent ? rel : 'Member',
+                        houseNo,
+                        street,
+                        pincode,
+                        state: 'Telangana'
                     };
                 }
 
                 const mainMemberCard = processMember(newMember);
                 const cards = [mainMemberCard];
 
-                // Fetch Dependents
+                // Fetch Dependents (or use embedded if available)
+                const processedIds = new Set();
+                processedIds.add(newMember._id);
+
+                // 1. Process Embedded Family Members (Immediate Data)
+                if (newMember.familyMembers && Array.isArray(newMember.familyMembers)) {
+                    console.log("Processing embedded family members:", newMember.familyMembers.length);
+                    for (const fm of newMember.familyMembers) {
+                        cards.push(processMember(fm, true));
+                    }
+                }
+
+                // 2. Fetch Dependents
                 try {
                     console.log("Fetching dependents for HEAD:", newMember._id);
-                    // Use the newly added filter
                     const { data: dependents } = await API.get(`/members?headOfFamily=${newMember._id}`);
 
-                    if (dependents && Array.isArray(dependents)) {
-                        console.log("Found dependents:", dependents.length);
+                    if (dependents && Array.isArray(dependents) && dependents.length > 0) {
+                        console.log("Found dependents via API:", dependents.length);
+
+                        // STRICT DEDUPLICATION:
+                        // If API returns dependents, these are the "Single Source of Truth".
+                        // We should REMOVE the temporary embedded cards we added above (except the main member).
+                        // Why? Because API data has the real MewsIDs and is cleaner.
+                        // And fixing 'deduplication' by matching names is risky (typos).
+
+                        // Reset cards to just the Main Member
+                        cards.length = 1;
+
                         for (const dep of dependents) {
                             cards.push(processMember(dep, true));
                         }
@@ -237,7 +265,7 @@ const GenerateIDCard = () => {
                                                                 {member.name} {member.surname}
                                                                 {member.fatherName && (
                                                                     <div className="text-[10px] font-bold text-black mt-0.5">
-                                                                        {member.gender === 'Male' ? 'S/o ' : ((member.maritalStatus === 'Married' || member.relation === 'Spouse' || member.relation === 'Wife') ? 'W/o ' : 'D/o ')}
+                                                                        {member.gender === 'Male' ? 'S/o ' : ((member.maritalStatus === 'Married' || member.relation === 'Spouse' || member.relation === 'Wife' || member.relation === 'Mother') ? 'W/o ' : 'D/o ')}
                                                                         {member.fatherName}
                                                                     </div>
                                                                 )}
@@ -245,8 +273,9 @@ const GenerateIDCard = () => {
                                                             {/* Relation removed as per request */}
 
                                                             <div className="text-gray-700 text-[10px] font-semibold uppercase leading-tight mb-3 mt-1">
-                                                                {member.village} VILLAGE <br />
-                                                                {member.mandal} (M), {member.district} (D)
+                                                                {member.houseNo && `H.No: ${member.houseNo}, `} {member.street && `${member.street},`} <br />
+                                                                {member.village} (V), {member.mandal} (M) <br />
+                                                                {member.district} (D), {member.state} - {member.pincode}
                                                             </div>
                                                             <div className="mt-auto w-full flex justify-between items-end">
                                                                 <div>

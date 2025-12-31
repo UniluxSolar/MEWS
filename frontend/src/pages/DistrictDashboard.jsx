@@ -2,13 +2,25 @@ import React, { useState, useEffect } from 'react';
 import API from '../api';
 import {
     FaUsers, FaBuilding, FaExclamationTriangle, FaFileAlt,
-    FaHandHoldingUsd, FaChartLine, FaMapMarkedAlt, FaCheckCircle
+    FaHandHoldingUsd, FaChartLine, FaMapMarkedAlt, FaCheckCircle,
+    FaTable, FaThLarge
 } from 'react-icons/fa';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import StatCard from '../components/common/StatCard';
 import ActionCard from '../components/common/ActionCard';
 import DashboardHeader from '../components/common/DashboardHeader';
+// Map Imports
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+
+// Fix for default marker icons in React Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+});
 
 const SimpleBarChart = () => {
     // Mock Data for "New Registrations (Last 7 Days)"
@@ -53,6 +65,7 @@ const DistrictDashboard = () => {
         sos: 0,
         mandals: []
     });
+    const [viewMode, setViewMode] = useState('table'); // 'table', 'cards', 'map'
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -73,6 +86,16 @@ const DistrictDashboard = () => {
         fetchStats();
     }, []);
 
+    // Helper for Map Coordinates
+    const getCoordinates = (inputString) => {
+        if (!inputString) return [17.0500, 79.2667];
+        let hash = 0;
+        for (let i = 0; i < inputString.length; i++) hash = inputString.charCodeAt(i) + ((hash << 5) - hash);
+        const latOffset = (hash % 1000) / 2500;
+        const lngOffset = ((hash >> 5) % 1000) / 2500;
+        return [17.0500 + latOffset, 79.2667 + lngOffset];
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
             <AdminHeader />
@@ -82,7 +105,18 @@ const DistrictDashboard = () => {
                 <main className="flex-1 overflow-y-auto">
                     <DashboardHeader
                         title={`${stats.locationName} District Dashboard`}
-                        subtitle={`Manage district operations and monitor activities. Last updated: Today`}
+                        subtitle={
+                            <div>
+                                <div className="text-blue-100 opacity-80 mb-2">Manage district operations and monitor activities. Last updated: Today</div>
+                                {/* View Toggle */}
+                                <div className="flex items-center gap-2 mt-2 bg-white/10 p-1 rounded-lg w-fit backdrop-blur-sm border border-white/20">
+                                    <span className="text-xs font-bold text-white px-2">View:</span>
+                                    <button onClick={() => setViewMode('table')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'table' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaTable /> Table</button>
+                                    <button onClick={() => setViewMode('cards')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'cards' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaThLarge /> Cards</button>
+                                    <button onClick={() => setViewMode('map')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'map' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaMapMarkedAlt /> Map</button>
+                                </div>
+                            </div>
+                        }
                     />
 
                     <div className="px-4 md:px-8 -mt-10 pb-8 w-full">
@@ -153,32 +187,83 @@ const DistrictDashboard = () => {
                                     <h3 className="text-xl font-bold text-slate-800">District Overview (Mandal Wise)</h3>
                                 </div>
 
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr className="bg-slate-50 border-b border-gray-100">
-                                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Mandal Name</th>
-                                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Total Members</th>
-                                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Institutions</th>
-                                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {stats.mandals.map((mandal) => (
-                                                <tr key={mandal.id} className="border-b border-gray-50 hover:bg-slate-50 transition-colors">
-                                                    <td className="px-6 py-5 font-bold text-slate-800">{mandal.name}</td>
-                                                    <td className="px-6 py-5 text-sm text-slate-600 font-medium">{mandal.members}</td>
-                                                    <td className="px-6 py-5 text-sm text-slate-600">{mandal.institutions}</td>
-                                                    <td className="px-6 py-5">
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${mandal.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                                            {mandal.status}
-                                                        </span>
-                                                    </td>
+                                {viewMode === 'table' && (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="bg-slate-50 border-b border-gray-100">
+                                                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Mandal Name</th>
+                                                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Total Members</th>
+                                                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Institutions</th>
+                                                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                            </thead>
+                                            <tbody>
+                                                {stats.mandals.map((mandal) => (
+                                                    <tr key={mandal.id} className="border-b border-gray-50 hover:bg-slate-50 transition-colors">
+                                                        <td className="px-6 py-5 font-bold text-slate-800">{mandal.name}</td>
+                                                        <td className="px-6 py-5 text-sm text-slate-600 font-medium">{mandal.members}</td>
+                                                        <td className="px-6 py-5 text-sm text-slate-600">{mandal.institutions}</td>
+                                                        <td className="px-6 py-5">
+                                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${mandal.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                                                {mandal.status}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+
+                                {viewMode === 'cards' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {stats.mandals.map((mandal) => (
+                                            <div key={mandal.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition relative overflow-hidden group">
+                                                <div className={`absolute left-0 top-0 bottom-0 w-1 ${mandal.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <h3 className="font-bold text-gray-900 text-lg">{mandal.name}</h3>
+                                                    <div className={`w-2 h-2 rounded-full ${mandal.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between text-sm">
+                                                        <span className="text-gray-500">Members</span>
+                                                        <span className="font-bold text-gray-900">{mandal.members}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-sm">
+                                                        <span className="text-gray-500">Institutions</span>
+                                                        <span className="font-bold text-gray-900">{mandal.institutions}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {viewMode === 'map' && (
+                                    <div className="h-[500px] w-full rounded-xl overflow-hidden border border-gray-200">
+                                        <MapContainer center={[17.0500, 79.2667]} zoom={10} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
+                                            <TileLayer
+                                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                            />
+                                            {stats.mandals.map((mandal, idx) => {
+                                                const coords = getCoordinates(mandal.name);
+                                                return (
+                                                    <Marker key={idx} position={coords}>
+                                                        <Popup>
+                                                            <div className="p-1">
+                                                                <h3 className="font-bold text-sm mb-1">{mandal.name}</h3>
+                                                                <p className="text-xs text-slate-600">Members: <b>{mandal.members}</b></p>
+                                                                <p className="text-xs text-slate-600">Institutions: <b>{mandal.institutions}</b></p>
+                                                            </div>
+                                                        </Popup>
+                                                    </Marker>
+                                                );
+                                            })}
+                                        </MapContainer>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

@@ -232,7 +232,7 @@ const InstitutionRegistration = () => {
             <AdminHeader />
 
             <div className="flex flex-1 overflow-hidden">
-                <AdminSidebar activePage="institutions" />
+                <AdminSidebar activePage="register-institution" />
 
                 <main className="flex-1 overflow-y-auto">
                     <DashboardHeader
