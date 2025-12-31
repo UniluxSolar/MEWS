@@ -11,8 +11,8 @@ connectDB();
 
 // Middleware
 app.use(cors());
-app.use(express.json()); // Body parser
-app.use(express.urlencoded({ extended: true })); // Form data parser
+app.use(express.json({ limit: '50mb' })); // Body parser
+app.use(express.urlencoded({ extended: true, limit: '50mb' })); // Form data parser
 app.use('/uploads', express.static('uploads')); // Enabled for local files
 
 // Basic Route
