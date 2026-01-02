@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import API from '../api';
 import axios from 'axios'; // Direct import for file upload to bypass interceptor issues
@@ -14,7 +14,7 @@ import {
     // Admin Layout Icons
     FaThLarge, FaBuilding, FaExclamationTriangle, FaFileAlt,
     FaHandHoldingUsd, FaChartLine, FaCog, FaQuestionCircle, FaBullhorn,
-    FaSignOutAlt, FaSearch, FaBell, FaChevronDown, FaChevronUp, FaDownload, FaPlus, FaEdit, FaUser
+    FaSignOutAlt, FaSearch, FaBell, FaChevronDown, FaChevronUp, FaDownload, FaPlus, FaEdit, FaUser, FaPrint
 } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -23,6 +23,7 @@ import { districtConstituencies, allConstituencies, constituencyMandals } from '
 import subCastes from '../utils/subCastes.json';
 import partnerCastes from '../utils/partnerCastes.json';
 import casteSubCastes from '../utils/casteSubCastes.json';
+import { MemberDocument } from './MemberDocument';
 
 
 
@@ -1351,6 +1352,9 @@ const MemberRegistration = () => {
                     mewsId: data.mewsId
                 };
 
+                // Store raw data for Document View
+                setCreatedMemberData(data);
+
                 setFormData(mappedData);
 
                 // Populate files state with existing document URLs (for display/preview)
@@ -1570,7 +1574,7 @@ const MemberRegistration = () => {
 
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
+        <div className="min-h-screen bg-slate-50 font-sans flex flex-col print:hidden">
             <AdminHeader />
             {showPreview && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -1983,10 +1987,12 @@ const MemberRegistration = () => {
 
             <div className="flex flex-1 overflow-hidden">
                 {/* Sidebar */}
-                <AdminSidebar activePage={isEditMode || isViewMode ? "members" : "register-member"} />
+                <div className="print:hidden">
+                    <AdminSidebar activePage={isEditMode || isViewMode ? "members" : "register-member"} />
+                </div>
 
                 {/* Main Content */}
-                <main className="flex-1 overflow-y-auto">
+                {!isViewMode && <main className="flex-1 overflow-y-auto">
                     {/* Dashboard Header */}
                     <DashboardHeader
                         title={isEditMode ? 'Edit Member Profile' : isViewMode ? 'Member Details' : 'New Member Registration'}
@@ -2042,7 +2048,7 @@ const MemberRegistration = () => {
                                             name="fatherName"
                                             value={formData.fatherName || ''}
                                             onChange={handleChange}
-                                            placeholder="Enter father's name"
+                                            placeholder="Enter S/o, W/o, D/o Name"
                                             required
                                             error={errors.fatherName}
                                         />
@@ -2448,7 +2454,7 @@ const MemberRegistration = () => {
 
                                 {/* Marriage Info - Conditional */}
                                 <CollapsibleSection
-                                    title="Marriage & Partner Information"
+                                    title="Marriage Information"
                                     icon={FaRing}
                                     sectionNumber={4}
                                     isOpen={openSections[5]}
@@ -2644,7 +2650,7 @@ const MemberRegistration = () => {
                                         </div>
                                         <div className="col-span-1 md:col-span-3 text-center">
                                             <p className="text-xs text-amber-600 font-bold bg-amber-50 inline-block px-3 py-1 rounded-full border border-amber-100">
-                                                ⚠️ Alert: Max file size for all uploads is 5 MB
+                                                âš ï¸ Alert: Max file size for all uploads is 5 MB
                                             </p>
                                         </div>
                                     </div>
@@ -2860,16 +2866,50 @@ const MemberRegistration = () => {
 
                                 {isViewMode && (
                                     <div className="flex justify-start pt-6 border-t border-gray-100 mt-8">
-                                        <button type="button" onClick={() => navigate(-1)} className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition shadow-sm flex items-center gap-2">
-                                            <FaArrowLeft /> Back to List
-                                        </button>
+                                        {/* This section will be replaced by the document view above, or hidden if we render document view outside the form */}
                                     </div>
-                                )}
-
+                                )}{/* End Actions */
+                                }
                             </fieldset>
                         </form>
                     </div>
-                </main >
+                </main>}
+
+
+                {/* Document View Logic for IsViewMode */}
+                {isViewMode && (
+                    <div className="flex-1 overflow-y-auto bg-slate-50 pb-12">
+                        <div className="max-w-4xl mx-auto pt-8 px-4">
+                            <div className="flex justify-between items-center mb-6 no-print">
+                                <button onClick={() => navigate(-1)} className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 flex items-center gap-2 shadow-sm transition">
+                                    <FaArrowLeft /> Back
+                                </button>
+                                <div className="flex gap-3">
+                                    <button onClick={() => window.print()} className="px-5 py-2.5 bg-blue-100 text-blue-700 font-bold rounded-xl hover:bg-blue-200 flex items-center gap-2 shadow-sm transition">
+                                        <FaPrint /> Print
+                                    </button>
+                                    <button onClick={() => navigate(`/admin/members/edit/${id}`)} className="px-5 py-2.5 bg-[#1e2a4a] text-white font-bold rounded-xl hover:bg-[#2a3b66] flex items-center gap-2 shadow-md transition">
+                                        <FaEdit /> Edit Profile
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="bg-white shadow-xl rounded-xl overflow-hidden p-0 print:shadow-none">
+                                {/* Pass createdMemberData (if fresh) OR construct data from formData if loading existing member */}
+                                {/* Pass createdMemberData (if fresh) OR construct data from formData if loading existing member */}
+                                <MemberDocument
+                                    data={createdMemberData}
+                                    lookups={{
+                                        districts: districts,
+                                        mandals: allMandals,
+                                        villages: villages,
+                                        permMandals: allPermMandals,
+                                        permVillages: permVillages
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div >
             {/* Success Modal */}
             {
@@ -2940,399 +2980,26 @@ const MemberRegistration = () => {
                 )
             }
 
-            {/* Portal-based Print Section for Robust Pagination */}
-            {createdMemberData && (
-                <PrintPortal>
-                    <div id="print-mount" className="bg-white text-black font-sans leading-relaxed">
-                        <style>
-                            {`
-                                    @page { size: A4; margin: 0; }
-                                    
-                                    @media print {
-                                        /* 1. HIDE EVERYTHING ELSE */
-                                        body > *:not(#print-mount-root) {
-                                            display: none !important;
-                                        }
-
-                                        /* 2. SHOW PRINT CONTAINER */
-                                        /* The portal root */
-                                        #print-mount-root { 
-                                            display: block !important; 
-                                            position: absolute !important;
-                                            top: 0;
-                                            left: 0;
-                                            width: 100% !important;
-                                        }
-
-                                        /* The content container */
-                                        #print-mount {
-                                            display: block !important;
-                                            width: 100% !important;
-                                            /* FORCE CSS FLOW to respect page breaks */
-                                            position: static !important; 
-                                            overflow: visible !important;
-                                            height: auto !important;
-                                        }
-
-                                        /* 3. RESET HTML/BODY */
-                                        html, body {
-                                            height: auto !important;
-                                            overflow: visible !important;
-                                            margin: 0 !important;
-                                            padding: 0 !important;
-                                            background: white !important;
-                                        }
-
-                                        .print-page { 
-                                            width: 100%; 
-                                            padding: 15mm; 
-                                            display: block;
-                                        }
-
-                                        #application-form-print * {
-                                            visibility: visible;
-                                        }
-
-                                        .print-page { 
-                                            width: 100%; 
-                                            padding: 15mm; /* Reduced to optimize space */
-                                            display: block;
-                                        }
-
-                                        .section-header {
-                                            page-break-after: avoid;
-                                            break-after: avoid;
-                                        }
-
-                                        /* Small info tables - try to keep together */
-                                        .print-table { 
-                                            width: 100%; 
-                                            border-collapse: collapse; 
-                                            font-size: 11px;
-                                            margin-bottom: 10px;
-                                            border: 1px solid #e5e7eb; 
-                                            border-radius: 4px; 
-                                            break-inside: avoid;
-                                            page-break-inside: avoid;
-                                        }
-
-                                        /* Large tables (Family Members) - ALLOW breaking */
-                                        table.allow-break {
-                                            break-inside: auto !important;
-                                            page-break-inside: auto !important;
-                                        }
-                                        
-                                        tr { page-break-inside: avoid; }
-                                        thead { display: table-header-group; }
-                                    }
-
-                                    /* Styles shared by screen (preview?) and print */
-                                    .print-table tr { border-bottom: 1px solid #f3f4f6; }
-                                    .print-table tr:last-child { border-bottom: none; }
-                                    
-                                    .print-label { 
-                                        padding: 4px 8px;
-                                        font-weight: 500; 
-                                        color: #374151; 
-                                        background-color: #f9fafb; 
-                                        width: 35%; 
-                                        vertical-align: top;
-                                    }
-                                    .print-value { 
-                                        padding: 4px 8px;
-                                        font-weight: 600; 
-                                        color: #111827; 
-                                        vertical-align: top;
-                                    }
-                                    
-                                    .section-header { 
-                                        font-size: 14px;
-                                        font-weight: 700; 
-                                        color: #1e40af; 
-                                        border-bottom: 1px solid #e5e7eb; 
-                                        padding-bottom: 4px; 
-                                        margin-bottom: 8px;
-                                        display: flex;
-                                        align-items: center;
-                                        gap: 8px;
-                                        text-transform: none;
-                                    }
-                                    .doc-image-container {
-                                        break-inside: avoid;
-                                        page-break-inside: avoid;
-                                        display: flex;
-                                        flex-direction: column;
-                                        align-items: center;
-                                        margin-bottom: 16px;
-                                        border: 1px solid #e5e7eb;
-                                        padding: 8px;
-                                        border-radius: 4px;
-                                        text-align: center;
-                                    }
-                                    .doc-caption {
-                                        margin-top: 4px;
-                                        font-size: 10px;
-                                        font-weight: 700;
-                                        text-transform: uppercase;
-                                        color: #374151;
-                                        background: #f3f4f6;
-                                        padding: 2px 8px;
-                                        border-radius: 8px;
-                                        display: inline-block;
-                                    }
-                                }
-                            `}
-                        </style>
-
-                        {/* --- PAGE 1: Personal, Address --- */}
-                        <div className="print-page">
-                            {/* Header */}
-                            <div className="text-center mb-4 border-b-2 border-gray-800 pb-2">
-                                <h1 className="text-xl font-black uppercase tracking-widest text-[#1e2a4a] mb-0.5">Mala Educational Welfare Society</h1>
-                                <div className="text-[9px] font-bold tracking-[0.4em] text-gray-500 uppercase mb-2">Membership Registration Application</div>
-                                <div className="flex justify-between items-end mt-2">
-                                    <div className="text-left">
-                                        <div className="text-[8px] font-bold text-gray-400 uppercase">Application Reference</div>
-                                        <div className="text-base font-mono font-black text-black">{createdMemberData.mewsId || 'PENDING'}</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-[8px] font-bold text-gray-400 uppercase">Date of Application</div>
-                                        <div className="text-xs font-bold text-black">{new Date().toLocaleDateString('en-GB')}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Photo & Basic Info */}
-                            <div className="flex gap-6 mb-6">
-                                {/* Photo Area (Fixed) */}
-                                <div className="w-[35mm] shrink-0 pt-8">
-                                    <div className="w-[35mm] h-[45mm] border-2 border-dashed border-gray-300 flex flex-col items-center justify-center p-1 bg-gray-50">
-                                        {createdMemberData.photoUrl ? (
-                                            <img
-                                                src={createdMemberData.photoUrl.startsWith('http') ? createdMemberData.photoUrl : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/${createdMemberData.photoUrl.replace(/\\/g, '/').replace(/^uploads\//, 'uploads/')}`}
-                                                alt="Photo"
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : (
-                                            <span className="text-[9px] text-center text-gray-400 font-bold uppercase">Passport Size<br />Photo</span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Table: Basic Info */}
-                                <div className="flex-1">
-                                    <div className="section-header">Basic Information</div>
-                                    <table className="print-table">
-                                        <tbody>
-                                            <tr>
-                                                <td className="print-label">Full Name</td>
-                                                <td className="print-value uppercase">{createdMemberData.surname} {createdMemberData.name}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="print-label">Parent / Spouse Name</td>
-                                                <td className="print-value uppercase">{createdMemberData.fatherName}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="print-label">Date of Birth / Age</td>
-                                                <td className="print-value">{new Date(createdMemberData.dob).toLocaleDateString('en-GB')} ({createdMemberData.age} Years)</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="print-label">Gender / Blood Group</td>
-                                                <td className="print-value">{createdMemberData.gender} / {createdMemberData.bloodGroup || '-'}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="print-label">Occupation</td>
-                                                <td className="print-value">{createdMemberData.occupation}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="print-label">Mobile Number</td>
-                                                <td className="print-value font-mono">{createdMemberData.mobileNumber}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {/* Addresses - Grid Layout for Compactness */}
-                            <div className="grid grid-cols-2 gap-4 mb-2">
-                                {/* Present Address */}
-                                <div>
-                                    <div className="section-header">Present Address</div>
-                                    <table className="print-table">
-                                        <tbody>
-                                            <tr>
-                                                <td className="print-label">Address Line</td>
-                                                <td className="print-value">{createdMemberData.address.houseNumber}, {createdMemberData.address.street}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="print-label">Village / Mandal</td>
-                                                <td className="print-value">{createdMemberData.address.village?.name || createdMemberData.address.village}, {createdMemberData.address.mandal?.name || createdMemberData.address.mandal}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="print-label">District / State</td>
-                                                <td className="print-value">{createdMemberData.address.district?.name || createdMemberData.address.district}, Telangana</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="print-label">Constituency / Pin</td>
-                                                <td className="print-value">{createdMemberData.address.constituency} - {createdMemberData.address.pinCode}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="print-label">Residence Type</td>
-                                                <td className="print-value">{createdMemberData.address.residencyType || '-'}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* Permanent Address */}
-                                <div>
-                                    <div className="section-header">Permanent Address</div>
-                                    <table className="print-table">
-                                        <tbody>
-                                            <tr>
-                                                <td className="print-label">Address Line</td>
-                                                <td className="print-value">{createdMemberData.permanentAddress.houseNumber}, {createdMemberData.permanentAddress.street}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="print-label">Village / Mandal</td>
-                                                <td className="print-value">{createdMemberData.permanentAddress.village?.name || createdMemberData.permanentAddress.village}, {createdMemberData.permanentAddress.mandal?.name || createdMemberData.permanentAddress.mandal}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="print-label">District / State</td>
-                                                <td className="print-value">{createdMemberData.permanentAddress.district?.name || createdMemberData.permanentAddress.district}, Telangana</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="print-label">Constituency / Pin</td>
-                                                <td className="print-value">{createdMemberData.permanentAddress.constituency} - {createdMemberData.permanentAddress.pinCode}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {/* --- CONTINUOUS PAGE: Social, Family, Declaration --- */}
-                            {/* Consolidated into single page flow as per request */}
-
-                            <div className="grid grid-cols-2 gap-4 mb-2"> {/* Reduced gap from 6 to 4 */}
-                                {/* Caste & Community */}
-                                <div>
-                                    <div className="section-header">Caste & Community</div>
-                                    <table className="print-table">
-                                        <tbody>
-                                            <tr>
-                                                <td className="print-label">Caste / Sub-Caste</td>
-                                                <td className="print-value uppercase">{createdMemberData.casteDetails?.caste} {createdMemberData.casteDetails?.subCaste ? `/ ${createdMemberData.casteDetails?.subCaste}` : ''}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="print-label">Cert No.</td>
-                                                <td className="print-value">{createdMemberData.casteDetails?.communityCertNumber || '-'}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* Marriage Info */}
-                                <div>
-                                    <div className="section-header">Marriage Information</div>
-                                    <table className="print-table">
-                                        <tbody>
-                                            <tr>
-                                                <td className="print-label">Status</td>
-                                                <td className="print-value">{createdMemberData.maritalStatus}</td>
-                                            </tr>
-                                            {createdMemberData.maritalStatus === 'Married' && (
-                                                <tr>
-                                                    <td className="print-label">Partner</td>
-                                                    <td className="print-value">{createdMemberData.partnerDetails?.name || '-'}</td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {/* Family & Economic */}
-                            <div className="mb-2">
-                                <div className="section-header">Family & Economic</div>
-                                <table className="print-table">
-                                    <tbody>
-                                        <tr>
-                                            <td className="print-label">Annual Income</td>
-                                            <td className="print-value">{createdMemberData.familyDetails?.annualIncome || '-'}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="print-label">Ration Card</td>
-                                            <td className="print-value">{createdMemberData.rationCard?.number || '-'} ({createdMemberData.rationCard?.type || '-'})</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="print-label">Voter ID</td>
-                                            <td className="print-value">{createdMemberData.voterId?.epicNumber || '-'}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="print-label">Aadhaar No.</td>
-                                            <td className="print-value font-mono tracking-wider">{createdMemberData.aadhaarNumber}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Family Members Table */}
-                            <div className="mb-4"> {/* Reduced from mb-8 */}
-                                <div className="section-header">Family Members</div>
-                                {createdMemberData.familyMembers && createdMemberData.familyMembers.length > 0 ? (
-                                    <table className="w-full text-[10px] border-collapse border border-gray-300 mb-2 allow-break">
-                                        <thead>
-                                            <tr className="bg-gray-100 border-b border-gray-300">
-                                                <th className="py-1 px-2 text-left w-6 border-r border-gray-200">#</th>
-                                                <th className="py-1 px-2 text-left border-r border-gray-200">Name & Relation</th>
-                                                <th className="py-1 px-2 text-left w-20 border-r border-gray-200">Age / Gen</th>
-                                                <th className="py-1 px-2 text-left w-24 border-r border-gray-200">Occupation</th>
-                                                <th className="py-1 px-2 text-left w-24">Aadhaar</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-200">
-                                            {createdMemberData.familyMembers.map((fm, idx) => (
-                                                <tr key={idx}>
-                                                    <td className="py-1 px-2 border-r border-gray-200 text-center text-gray-500">{idx + 1}</td>
-                                                    <td className="py-1 px-2 border-r border-gray-200 font-bold uppercase text-gray-800">
-                                                        {fm.surname} {fm.name} <span className="text-[9px] text-gray-500 font-normal">({fm.relation})</span>
-                                                    </td>
-                                                    <td className="py-1 px-2 border-r border-gray-200">{fm.age} / {fm.gender.charAt(0)}</td>
-                                                    <td className="py-1 px-2 border-r border-gray-200">{fm.occupation}</td>
-                                                    <td className="py-1 px-2 font-mono">{fm.aadhaarNumber || '-'}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                ) : (
-                                    <div className="text-xs italic text-gray-500 border p-2 text-center rounded bg-gray-50 mb-2">No Family Members Registered</div>
-                                )}
-                            </div>
-
-                            {/* Declaration */}
-                            <div className="mt-8 border-t-2 border-gray-800 pt-4 break-inside-avoid page-break-inside-avoid">
-                                <div className="section-header">Declaration</div>
-                                <p className="text-[10px] text-justify leading-4 text-gray-700 mb-8">
-                                    I, <span className="font-bold uppercase">{createdMemberData.name} {createdMemberData.surname}</span>, hereby declare that all the information furnished in this application is true, complete, and correct to the best of my knowledge and belief. I understand that my membership is subject to the rules and regulations of the <strong>Mala Educational Welfare Society</strong>. I accept that any misrepresentation may lead to cancellation of my membership.
-                                </p>
-                                <div className="flex justify-between items-end px-4">
-                                    <div className="text-center">
-                                        <div className="text-xs font-bold mb-6 uppercase text-gray-800">{createdMemberData.address.village?.name || 'Place'}</div>
-                                        <div className="border-t border-gray-800 w-32 pt-1 text-[9px] uppercase font-bold text-gray-500">Place</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="h-6 mb-2"></div>
-                                        <div className="border-t border-gray-800 w-48 pt-1 text-[9px] uppercase font-bold text-gray-500">Signature of Applicant</div>
-                                    </div>
-                                </div>
-                            </div>
-
-
-
+            {/* Portal-based Print Section for Robust Pagination - Only render if NOT in view mode (to avoid duplication) */}
+            {
+                createdMemberData && (
+                    <PrintPortal>
+                        <div id="print-mount" className="hidden print:block">
+                            <MemberDocument
+                                data={createdMemberData}
+                                lookups={{
+                                    districts: districts,
+                                    mandals: allMandals,
+                                    villages: villages,
+                                    permMandals: allPermMandals,
+                                    permVillages: permVillages
+                                }}
+                            />
                         </div>
-                    </div>
-                </PrintPortal>
-            )}
+                    </PrintPortal>
+                )
+            }
+
 
             {/* Family Member Modal */}
             {

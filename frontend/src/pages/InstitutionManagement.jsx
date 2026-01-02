@@ -102,13 +102,13 @@ const InstitutionManagement = () => {
     const pageCount = Math.ceil(filteredInstitutions.length / itemsPerPage);
     const displayedInstitutions = filteredInstitutions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-    const applyFilters = () => {
+    useEffect(() => {
         const newFilters = [];
         if (selectedType) newFilters.push(`Type: ${selectedType.charAt(0).toUpperCase() + selectedType.slice(1)}`);
         if (selectedStatus) newFilters.push(`Status: ${selectedStatus}`);
         setActiveFilters(newFilters);
         setCurrentPage(1);
-    };
+    }, [selectedType, selectedStatus]);
 
     const clearFilters = () => {
         setSearchTerm('');
@@ -216,9 +216,7 @@ const InstitutionManagement = () => {
                         breadcrumb="Dashboard > Institutions"
                     >
                         <div className="flex items-center gap-3">
-                            <span className="text-blue-100/80 font-bold text-sm mr-4 hidden md:inline-block">
-                                Total: <span className="text-white">{institutions.length}</span> institutions
-                            </span>
+
                             <button onClick={exportToExcel} className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-md text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 border border-white/20 transition">
                                 <FaFileDownload /> Export Data
                             </button>
@@ -232,7 +230,12 @@ const InstitutionManagement = () => {
 
                         {/* Search & Filter Card */}
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-                            <h3 className="text-slate-800 font-bold mb-4">Search & Filter</h3>
+                            <div className="flex justify-start items-center gap-4 mb-4">
+                                <h3 className="text-slate-800 font-bold">Search & Filter</h3>
+                                <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-sm font-bold shadow-sm border border-blue-100">
+                                    Total: {filteredInstitutions.length} Institutions
+                                </div>
+                            </div>
 
                             <div className="mb-6">
                                 <div className="relative">
@@ -280,9 +283,6 @@ const InstitutionManagement = () => {
                                 </div>
 
                                 <div className="flex items-center gap-3 w-full md:w-auto">
-                                    <button onClick={applyFilters} className="bg-[#1e2a4a] text-white px-5 py-2.5 rounded-lg text-xs font-bold hover:bg-[#2a3b66] transition shadow-sm">
-                                        Apply Filters
-                                    </button>
                                     <button onClick={clearFilters} className="bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-lg text-xs font-bold hover:bg-slate-50 transition">
                                         Clear
                                     </button>

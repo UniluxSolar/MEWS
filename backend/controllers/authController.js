@@ -40,12 +40,21 @@ const loginUser = asyncHandler(async (req, res) => {
                 throw new Error(`Unauthorized: You are not a ${role.replace('_', ' ')}`);
             }
 
+            // Fetch Location Name
+            let locationName = '';
+            if (user.assignedLocation) {
+                const Location = require('../models/Location');
+                const loc = await Location.findById(user.assignedLocation);
+                if (loc) locationName = loc.name;
+            }
+
             res.json({
                 _id: user.id,
                 name: user.username,
                 email: user.email,
                 role: user.role,
                 assignedLocation: user.assignedLocation,
+                locationName, // Include in response
                 institutionId: user.institutionId,
                 token: generateToken(user._id)
             });

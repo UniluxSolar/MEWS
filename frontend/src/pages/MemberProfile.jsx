@@ -166,7 +166,7 @@ const MemberProfile = () => {
                                 <div className="p-6">
                                     <DetailRow label="Member ID" value={member.id} />
                                     <DetailRow label="Full Name" value={`${member.surname} ${member.name}`} />
-                                    <DetailRow label="Father's Name" value={member.fatherName} />
+                                    <DetailRow label="S/o, W/o, D/o" value={member.fatherName} />
                                     <DetailRow label="Date of Birth" value={member.dob} />
                                     <DetailRow label="Age" value={`${member.age} Years`} />
                                     <DetailRow label="Gender" value={member.gender} />

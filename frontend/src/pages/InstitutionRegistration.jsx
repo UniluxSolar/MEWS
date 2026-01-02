@@ -64,8 +64,11 @@ const InstitutionRegistration = () => {
         pincode: '',
         houseNo: '',
         street: '',
-        landmark: ''
+        landmark: '',
+        googleMapsLink: ''
     });
+
+
 
     // Location State
     const [districts, setDistricts] = useState([]);
@@ -154,9 +157,17 @@ const InstitutionRegistration = () => {
         try {
             if (!selectedType || !formData.name) return alert('Please key in all required fields');
 
+            // Resolve location names for full address
+            const distName = districts.find(d => d._id === formData.district)?.name || '';
+            const mandName = mandals.find(m => m._id === formData.mandal)?.name || '';
+            const villName = villages.find(v => v._id === formData.village)?.name || '';
+
+            const fullAddress = `${formData.houseNo}, ${formData.street}, ${formData.landmark}, ${villName}, ${mandName}, ${distName} - ${formData.pincode}`;
+
             const payload = {
                 ...formData,
                 type: selectedType,
+                fullAddress: fullAddress,
                 // servicesOffered: [] // map services checkboxes later
             };
 
@@ -370,6 +381,8 @@ const InstitutionRegistration = () => {
                                         <div className="relative">
                                             <input
                                                 type="text"
+                                                value={formData.googleMapsLink || ''}
+                                                onChange={(e) => setFormData({ ...formData, googleMapsLink: e.target.value })}
                                                 placeholder="Paste Google Maps link or search location"
                                                 className="w-full pl-4 pr-12 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white font-medium text-slate-700"
                                             />

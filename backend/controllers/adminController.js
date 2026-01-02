@@ -103,6 +103,32 @@ const getDashboardStats = asyncHandler(async (req, res) => {
         }
     }
 
+    // Aggregate Families (Unique Households)
+    const familyStats = await Member.aggregate([
+        { $match: memberQuery },
+        {
+            $group: {
+                _id: {
+                    $cond: {
+                        if: { $and: [{ $ne: ["$rationCard.number", null] }, { $ne: ["$rationCard.number", ""] }] },
+                        then: "$rationCard.number",
+                        else: {
+                            $concat: [
+                                { $ifNull: ["$address.houseNumber", "UNK"] },
+                                "_",
+                                { $toString: "$address.village" }
+                            ]
+                        }
+                    }
+                },
+                count: { $sum: 1 }
+            }
+        },
+        { $count: "totalFamilies" }
+    ]);
+
+    const totalFamilies = familyStats.length > 0 ? familyStats[0].totalFamilies : 0;
+
     const totalMembers = await Member.countDocuments(memberQuery);
     const pendingMembers = await Member.countDocuments({ ...memberQuery, verificationStatus: 'PENDING' });
     const totalInstitutions = await Institution.countDocuments(institutionQuery);
@@ -114,7 +140,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
         villages: villagesData, // Send breakdown for Mandal Admin
         mandals: req.mandalsData, // Send breakdown for District Admin
         members: totalMembers,
-        families: totalMembers, // Explicitly sending families count (same as members/docs)
+        families: totalFamilies, // Corrected family count based on households
         pendingMembers,
         institutions: totalInstitutions,
         sosAlerts: 0,
@@ -208,10 +234,10 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
         { $limit: 10 } // Top 10 occupations
     ]);
 
-    // 4. Demographics - Caste
+    // 4. Demographics - Caste (Now Subcaste/Community)
     const casteStats = await Member.aggregate([
         { $match: memberQuery },
-        { $group: { _id: "$casteDetails.caste", count: { $sum: 1 } } }
+        { $group: { _id: "$casteDetails.subCaste", count: { $sum: 1 } } }
     ]);
 
     // 5. Demographics - Marital Status
@@ -243,12 +269,13 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
                 ageGroup: {
                     $switch: {
                         branches: [
-                            { case: { $lte: ["$age", 18] }, then: "0-18" },
-                            { case: { $lte: ["$age", 30] }, then: "19-30" },
-                            { case: { $lte: ["$age", 50] }, then: "31-50" },
-                            { case: { $lte: ["$age", 70] }, then: "51-70" },
+                            { case: { $lte: ["$age", 10] }, then: "1-10" },
+                            { case: { $lte: ["$age", 20] }, then: "11-20" },
+                            { case: { $lte: ["$age", 30] }, then: "21-30" },
+                            { case: { $lte: ["$age", 40] }, then: "31-40" },
+                            { case: { $lte: ["$age", 50] }, then: "41-50" },
                         ],
-                        default: "70+"
+                        default: "50+"
                     }
                 }
             }
@@ -256,6 +283,22 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
         { $group: { _id: "$ageGroup", count: { $sum: 1 } } },
         { $sort: { _id: 1 } } // Sort by age group label (lexicographically works ok for these: 0, 1, 3, 5, 7)
     ]);
+
+    // 7. Demographics - Blood Group
+    const bloodGroupStats = await Member.aggregate([
+        { $match: memberQuery },
+        {
+            $project: {
+                blood: { $ifNull: ["$bloodGroup", "Unknown"] }
+            }
+        },
+        { $group: { _id: "$blood", count: { $sum: 1 } } }
+    ]);
+
+    // Fallback: If no blood group stats (e.g. all empty), show as Unknown
+    if (bloodGroupStats.length === 0 && totalMembers > 0) {
+        bloodGroupStats.push({ _id: 'Unknown', count: totalMembers });
+    }
 
     // 4. Funds (Global sum for now, can be refined to location based if needed)
     const fundsAgg = await Donation.aggregate([
@@ -283,7 +326,8 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
             occupation: occupationStats,
             caste: casteStats,
             marital: maritalStats,
-            age: ageStats
+            age: ageStats,
+            bloodGroup: bloodGroupStats
         }
     });
 });

@@ -104,7 +104,10 @@ const GenerateIDCard = () => {
                         houseNo,
                         street,
                         pincode,
-                        state: 'Telangana'
+                        pincode,
+                        state: 'Telangana',
+                        // Map designation from possible sources
+                        designation: member.designation || (member.role === 'VILLAGE_ADMIN' ? 'Village Admin' : (member.role === 'MANDAL_ADMIN' ? 'Mandal Admin' : (member.role === 'DISTRICT_ADMIN' ? 'District Admin' : 'Member')))
                     };
                 }
 
@@ -230,9 +233,9 @@ const GenerateIDCard = () => {
                                                             Mala Educational Welfare Society
                                                         </div>
                                                     </div>
-                                                    <div className="h-[30px] bg-[#1e2a4a] flex items-center justify-center pl-[60px]">
+                                                    <div className="h-[30px] bg-[#1e2a4a] flex items-center justify-center">
                                                         <h2 className="text-white font-bold text-[11px] tracking-[0.2em] uppercase drop-shadow-sm">
-                                                            EMPOWERING COMMUNITIES
+                                                            {member.designation || 'MEMBER'}
                                                         </h2>
                                                     </div>
                                                     <div className="absolute top-1 left-2 w-[55px] h-[65px] bg-white rounded-b-lg shadow-md p-0.5 border-t-0 border-x border-b border-gray-200 z-30">

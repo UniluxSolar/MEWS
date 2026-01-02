@@ -46,8 +46,8 @@ const AdminSidebar = ({ activePage }) => {
                 </div>
 
                 {/* Registration Actions (Top Priority) */}
-                <SidebarItem to="/admin/members/new" icon={FaUserPlus} label="Register Member" active={activePage === 'register-member'} />
-                <SidebarItem to="/admin/institutions/new" icon={FaBuilding} label="Register Institution" active={activePage === 'register-institution'} />
+                <SidebarItem to="/admin/members/new" icon={FaUserPlus} label="Add Member" active={activePage === 'register-member'} />
+                <SidebarItem to="/admin/institutions/new" icon={FaBuilding} label="Add Institution" active={activePage === 'register-institution'} />
 
                 <SidebarItem to="/admin/dashboard" icon={FaThLarge} label={roleLabel} active={activePage === 'dashboard'} />
                 {userRole !== 'VILLAGE_ADMIN' && (

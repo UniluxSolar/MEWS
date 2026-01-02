@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { FaShieldAlt, FaSearch, FaExclamationTriangle, FaBell, FaChevronDown } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
+import API from '../api';
 
 import mewsLogo from '../assets/mews_main_logo_new.png';
 
-const AdminHeader = ({ title }) => { // title optional, can auto-derive
+const AdminHeader = (props) => { // props now contains locationName
     // Force HMR Update
     const [adminName, setAdminName] = useState('Admin');
     const [roleText, setRoleText] = useState('Administrator');
@@ -34,9 +35,30 @@ const AdminHeader = ({ title }) => { // title optional, can auto-derive
                 setProfileLogo(mewsLogo); // Fallback to district/general logo
             }
 
-            setLocationName(parsed.locationName || '');
+            const locName = parsed.locationName || '';
+            setLocationName(locName);
+
+            // If locationName is missing but we have a token, fetch it
+            if (!locName && parsed.token) {
+                API.get('/admin/settings').then(res => {
+                    const { villageName, mandal, district } = res.data;
+                    let fetchedName = '';
+                    if (parsed.role === 'VILLAGE_ADMIN') fetchedName = villageName;
+                    else if (parsed.role === 'MANDAL_ADMIN') fetchedName = mandal;
+                    else if (parsed.role === 'DISTRICT_ADMIN') fetchedName = district;
+
+                    if (fetchedName) {
+                        setLocationName(fetchedName);
+                        // Update localStorage to avoid re-fetching
+                        const newInfo = { ...parsed, locationName: fetchedName };
+                        localStorage.setItem('adminInfo', JSON.stringify(newInfo));
+                    }
+                }).catch(err => console.error("Failed to fetch location info", err));
+            }
         }
     }, []);
+
+    const displayLocation = props.locationName || locationName;
 
     return (
         <header className="bg-[#0f172a] text-white h-16 flex items-center justify-between px-6 sticky top-0 z-50 shadow-md flex-shrink-0">
@@ -55,6 +77,20 @@ const AdminHeader = ({ title }) => { // title optional, can auto-derive
                         </div>
                     </div>
                 </div>
+                {/* Location Name Display */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:block text-center">
+                    {displayLocation && (
+                        <div className="flex flex-col items-center">
+                            <h1 className="text-xl font-bold text-white tracking-wide uppercase shadow-sm leading-none">
+                                {displayLocation}
+                            </h1>
+                            <span className="text-[10px] text-blue-200 font-bold uppercase tracking-[0.2em] mt-1">
+                                {roleText.replace(' Admin Portal', '')}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
                 {/* Search Bar - Optional, can be kept generic */}
                 <div className="relative hidden lg:block w-96">
                     <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
