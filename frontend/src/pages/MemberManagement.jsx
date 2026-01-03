@@ -4,9 +4,9 @@ import API from '../api';
 import { Link, useLocation } from 'react-router-dom';
 import * as XLSX from 'xlsx-js-style';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { renderToStaticMarkup } from 'react-dom/server';
 import {
-    FaSearch, FaFilter, FaPlus, FaEllipsisV, FaFileDownload, FaMapMarkedAlt,
+    FaSearch, FaFilter, FaPlus, FaEllipsisV, FaFileDownload, FaMapMarkedAlt, FaMapMarkerAlt,
     FaTable, FaThLarge, FaEye, FaEdit, FaTrash, FaPhoneAlt, FaIdCard,
     FaCheckSquare, FaSort, FaSortUp, FaSortDown, FaChevronLeft, FaChevronRight,
     FaFileExcel, FaFilePdf
