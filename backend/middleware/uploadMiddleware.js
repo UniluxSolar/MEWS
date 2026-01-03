@@ -8,7 +8,20 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Local Disk Storage
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+// Cloudinary Config
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+    cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET
+    });
+    console.log('[UPLOAD] Cloudinary Configured.');
+}
+
+// Local Disk Storage (Fallback)
 const diskStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'uploads/');
@@ -19,12 +32,27 @@ const diskStorage = multer.diskStorage({
     }
 });
 
-const storage = diskStorage;
+// Cloudinary Storage
+let cloudStorage = null;
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+    cloudStorage = new CloudinaryStorage({
+        cloudinary: cloudinary,
+        params: {
+            folder: 'mews-uploads', // Folder in Cloudinary
+            allowed_formats: ['jpg', 'png', 'jpeg', 'pdf'],
+            public_id: (req, file) => {
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                return file.fieldname + '-' + uniqueSuffix;
+            }
+        },
+    });
+}
 
-// File filter (optional but good)
+const storage = process.env.CLOUDINARY_CLOUD_NAME ? cloudStorage : diskStorage;
+
 // File filter
 const fileFilter = (req, file, cb) => {
-    console.log(`[UPLOAD DEBUG] Processing file: ${file.originalname}, Type: ${file.mimetype}`);
+    // console.log(`[UPLOAD DEBUG] Processing file: ${file.originalname}, Type: ${file.mimetype}`);
     cb(null, true);
 };
 
