@@ -28,7 +28,30 @@ app.use('/api/institutions', require('./routes/institutionRoutes'));
 
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/announcements', require('./routes/announcementRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+
+// Proxy Endpoint for Images (Fixes CORS for html2canvas)
+const axios = require('axios');
+app.get('/api/proxy-image', async (req, res) => {
+    const { url } = req.query;
+    if (!url) return res.status(400).send('URL is required');
+
+    try {
+        const response = await axios({
+            url,
+            method: 'GET',
+            responseType: 'stream'
+        });
+
+        res.set('Content-Type', response.headers['content-type']);
+        response.data.pipe(res);
+    } catch (error) {
+        console.error('Proxy Error:', error.message);
+        res.status(500).send('Failed to fetch image');
+    }
+});
 
 const PORT = process.env.PORT || 8080;
 

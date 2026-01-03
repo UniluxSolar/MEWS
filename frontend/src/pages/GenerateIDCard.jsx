@@ -284,7 +284,9 @@ const GenerateIDCard = () => {
                                                 <div className="w-[90px] mr-4 flex flex-col gap-2">
                                                     <div className="w-[90px] h-[110px] bg-gray-100 border border-gray-300 shadow-sm p-0.5">
                                                         <img
-                                                            src={member.photo}
+                                                            src={member.photo.startsWith('http')
+                                                                ? `${import.meta.env.VITE_API_URL || ''}/api/proxy-image?url=${encodeURIComponent(member.photo)}`
+                                                                : (member.photo.startsWith('/') ? member.photo : `/${member.photo.replace(/\\/g, '/').replace(/^\//, '')}`)}
                                                             alt="Member"
                                                             className="w-full h-full object-cover"
                                                             crossOrigin="anonymous"
