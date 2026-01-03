@@ -563,58 +563,22 @@ const MemberRegistration = () => {
 
     // Occupation Handling
     // Government Job Categories Data
-    const GOVT_JOB_CATEGORIES = {
-        "Administrative & Civil Services": [
-            "IAS / All India Services", "TSPSC Group I", "TSPSC Group II", "TSPSC Group III",
-            "Secretariat Services", "Revenue Services"
-        ],
-        "Police, Home & Public Safety": [
-            "Police Department", "Traffic Police", "Special Police Units", "Fire Services",
-            "Prisons Department", "Home Guards"
-        ],
-        "Education & Teaching Services": [
-            "School Education (Primary / Secondary)", "Junior Colleges", "Degree Colleges",
-            "Universities", "Technical Education"
-        ],
-        "Medical & Health Services": [
-            "Doctors", "Nursing Staff", "Paramedical Staff", "Public Health Administration", "AYUSH Doctors"
-        ],
-        "Engineering & Technical Services": [
-            "Civil Engineering", "Electrical Engineering", "Mechanical Engineering",
-            "Electronics & IT", "Public Works Department (PWD)"
-        ],
-        "Revenue, Finance & Accounts": [
-            "Revenue Department", "Commercial Taxes", "Treasury & Accounts", "Audit & Accounts", "Excise Department"
-        ],
-        "Local Government & Panchayat Raj": [
-            "Municipal Administration", "Panchayat Raj Department", "Urban Development Authorities", "Rural Development Department"
-        ],
-        "Transport & Infrastructure": [
-            "Road Transport Department", "State Transport Corporation", "Ports & Airports", "Urban Transport Services"
-        ],
-        "Welfare & Social Development": [
-            "Social Welfare Department", "Tribal Welfare Department", "Minority Welfare Department",
-            "Women & Child Welfare", "Backward Classes Welfare"
-        ],
-        "Judiciary & Legal Services": [
-            "Judicial Officers", "Public Prosecutors", "Court Administration Staff", "Legal Services Authorities"
-        ],
-        "Agriculture & Allied Departments": [
-            "Agriculture Department", "Horticulture", "Animal Husbandry", "Fisheries", "Sericulture"
-        ],
-        "Forest, Environment & Disaster Management": [
-            "Forest Department", "Wildlife Department", "Environment Protection", "Disaster Management Authority"
-        ],
-        "Public Sector Undertakings (PSUs)": [
-            "State PSUs", "Central PSUs", "Power & Energy Corporations", "Water Boards", "Housing Boards"
-        ],
-        "Defence & Paramilitary": [
-            "Indian Army", "Indian Navy", "Indian Air Force", "Central Armed Police Forces"
-        ],
-        "Clerical & Support Services": [
-            "Junior Assistant", "Senior Assistant", "Office Superintendent", "Attender / Office Subordinate", "Data Entry Operator"
-        ]
-    };
+    // Government Departments Data
+    const GOVT_DEPARTMENTS = [
+        "Agriculture", "Arogyasri", "Asst Commissioner (State Taxes) Commercial Taxes", "Banks", "BC Welfare",
+        "Chief Planning Officer", "Civil Supplies", "Dist Audit Officer", "Dist Co-Operative Society",
+        "Dist Ground Water", "Dist Industries Center", "Dist Labour Dept", "Dist Manager (CS)",
+        "Dist Marketing Officer", "Dist Town & Country Planning", "Dist Welfare Officer, WCD & SC Dept",
+        "Dist Youth & Sports", "Dist. Handlooms & Textiles", "Dy, EE, TSEWIDC", "Education",
+        "Electrical", "Employment", "Endowment", "Excise", "Fire", "Fisheries", "Food Safety",
+        "Forest", "Horticulture", "Hospital", "Irrigation & Development Corporation", "irrigation",
+        "Lead Dist Manager", "Legal Metrology", "Medical", "Mines & Geology", "Minority Welfare",
+        "Mission Bhagiratha (RWS & S)", "Muncipal", "Municipale", "Panchayathraj",
+        "Panchayth Raj Engineering Dept", "Police", "Print Media", "Registration", "Revenue",
+        "Road & Buldings (R&B)", "SC Corporation", "Transport", "Treasury", "TS Pollution Control Board",
+        "TSDDCF Ltd, Vijaya Dairy", "TSRTC Yadagirigutta", "TSSPDCL Electricity Dept",
+        "Vaidhya Vidana Parishath", "Veterinary", "Veternary & Animal Husbandary"
+    ].sort();
 
     // Occupation Handling
     const memberOccupations = [
@@ -2131,30 +2095,11 @@ const MemberRegistration = () => {
                                                 {formData.occupation === 'Government Employee' && (
                                                     <>
                                                         <FormSelect
-                                                            label="Job Category"
-                                                            name="jobCategory"
-                                                            value={formData.jobCategory}
-                                                            onChange={handleJobCategoryChange}
-                                                            options={Object.keys(GOVT_JOB_CATEGORIES)}
-                                                            required
-                                                            error={errors.jobCategory}
-                                                        />
-                                                        <FormSelect
-                                                            label="Job Sub-Category"
-                                                            name="jobSubCategory"
-                                                            value={formData.jobSubCategory}
-                                                            onChange={handleChange}
-                                                            options={formData.jobCategory ? GOVT_JOB_CATEGORIES[formData.jobCategory] : []}
-                                                            required
-                                                            disabled={!formData.jobCategory}
-                                                            error={errors.jobSubCategory}
-                                                        />
-                                                        <FormInput
-                                                            label="Department / Organization"
+                                                            label="Department"
                                                             name="jobOrganization"
                                                             value={formData.jobOrganization}
                                                             onChange={handleChange}
-                                                            placeholder="Enter department name"
+                                                            options={GOVT_DEPARTMENTS}
                                                             required
                                                             error={errors.jobOrganization}
                                                         />

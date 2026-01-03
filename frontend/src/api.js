@@ -2,13 +2,9 @@ import axios from 'axios';
 
 // Ensure the base URL includes /api
 // Ensure the base URL includes /api
-let baseURL = import.meta.env.VITE_API_URL;
+let baseURL = import.meta.env.VITE_API_URL || '/api';
 
-if (!baseURL) {
-    // Dynamic fallback: use current hostname with port 8080
-    // This allows it to work on localhost and GCP IP automatically
-    baseURL = `http://${window.location.hostname}:8080/api`;
-} else if (!baseURL.endsWith('/api')) {
+if (baseURL && !baseURL.endsWith('/api')) {
     baseURL += '/api';
 }
 

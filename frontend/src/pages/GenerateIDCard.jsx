@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import API from '../api';
 import {
     FaSearch, FaShieldAlt, FaBell, FaChevronDown, FaThLarge, FaUsers, FaBuilding,
     FaExclamationTriangle, FaFileAlt, FaHandHoldingUsd, FaChartLine, FaCog,
     FaQuestionCircle, FaBullhorn, FaSignOutAlt, FaPrint, FaDownload,
-    FaWhatsapp, FaEnvelope, FaCheckCircle
+    FaWhatsapp, FaEnvelope, FaCheckCircle, FaArrowLeft
 } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -19,6 +19,7 @@ import AdminHeader from '../components/AdminHeader';
 
 const GenerateIDCard = () => {
     const location = useLocation();
+    const navigate = useNavigate();
 
     // Default valid until date (1 year from now)
     const getValidUntil = () => {
@@ -89,7 +90,7 @@ const GenerateIDCard = () => {
                         surname: member.surname,
                         id: member.mewsId || 'PENDING',
                         mobile: member.mobileNumber || '+91 XXXXX XXXXX',
-                        photo: member.photoUrl ? (member.photoUrl.startsWith('http') ? member.photoUrl : `${import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:8080`}/${member.photoUrl.replace(/\\/g, '/').replace(/^uploads\//, 'uploads/')}`) : (member.photo || member2), // Embedded uses photo, API uses photoUrl
+                        photo: member.photoUrl ? (member.photoUrl.startsWith('http') ? member.photoUrl : `${import.meta.env.VITE_API_BASE_URL || ''}/${member.photoUrl.replace(/\\/g, '/').replace(/^uploads\//, 'uploads/')}`) : (member.photo || member2), // Embedded uses photo, API uses photoUrl
                         bloodGroup: member.bloodGroup || '-',
                         village: vName || 'Unknown',
                         mandal: mName || '',
@@ -216,10 +217,15 @@ const GenerateIDCard = () => {
             <div className="flex flex-1 overflow-hidden">
                 <AdminSidebar activePage="members" />
                 <main className="flex-1 overflow-y-auto p-8">
-                    <div className="mb-6 flex justify-between items-end">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Generated ID Cards</h1>
-                            <p className="text-gray-500 text-sm mt-1">Review and download ID cards for the registered family.</p>
+                    <div className="mb-6 flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => navigate(-1)} className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition shadow-sm">
+                                <FaArrowLeft /> Back
+                            </button>
+                            <div>
+                                <h1 className="text-2xl font-bold text-gray-900">Generated ID Cards</h1>
+                                <p className="text-gray-500 text-sm mt-1">Review and download ID cards for the registered family.</p>
+                            </div>
                         </div>
                         <button onClick={handleDownloadAllPDF} className="bg-[#1e2a4a] hover:bg-[#2a3b66] text-white px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 transition shadow-md">
                             <FaDownload /> Download All as PDF
@@ -244,8 +250,8 @@ const GenerateIDCard = () => {
                                         {/* FRONT SIDE */}
                                         <div id={`id-card-front-${idx}`} className="w-[400px] h-[252px] bg-white rounded-xl shadow-lg border border-gray-300 overflow-hidden relative flex flex-col shrink-0">
                                             {/* Watermark */}
-                                            <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none z-0">
-                                                <FaShieldAlt size={180} />
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-[0.08] pointer-events-none z-0">
+                                                <img src={mewsLogo} alt="Watermark" className="h-[180px] w-auto object-contain grayscale mix-blend-multiply" />
                                             </div>
 
                                             {/* Header */}
@@ -255,10 +261,13 @@ const GenerateIDCard = () => {
                                                         Mala Educational Welfare Society
                                                     </div>
                                                 </div>
-                                                <div className="h-[30px] bg-[#1e2a4a] flex items-center justify-center">
-                                                    <h2 className="text-white font-bold text-[11px] tracking-[0.2em] uppercase drop-shadow-sm">
+                                                <div className="h-[30px] bg-[#1e2a4a] flex items-center justify-between px-4 pl-[70px]">
+                                                    <h2 className="text-white font-bold text-[10px] tracking-[0.15em] uppercase drop-shadow-sm">
                                                         {member.designation || 'MEMBER'}
                                                     </h2>
+                                                    <div className="text-[10px] font-bold text-white tracking-wide bg-white/10 px-2 py-0.5 rounded">
+                                                        ID: <span className="font-mono">{member.mewsId || member.id}</span>
+                                                    </div>
                                                 </div>
                                                 <div className="absolute top-1 left-2 w-[55px] h-[65px] bg-white rounded-b-lg shadow-md p-0.5 border-t-0 border-x border-b border-gray-200 z-30">
                                                     <div className="w-full h-full rounded-b overflow-hidden bg-white flex items-center justify-center">
@@ -267,15 +276,10 @@ const GenerateIDCard = () => {
                                                 </div>
                                             </div>
 
-                                            {/* ID Number */}
-                                            <div className="absolute top-[78px] right-4 z-20">
-                                                <div className="text-[11px] font-bold text-gray-800 tracking-wide">
-                                                    ID NO. <span className="text-black text-[12px]">{member.id}</span>
-                                                </div>
-                                            </div>
+                                            {/* ID Number Removed from Absolute Position */}
 
                                             {/* Content */}
-                                            <div className="flex-1 flex px-4 pt-6 pb-3 relative z-10 w-full">
+                                            <div className="flex-1 flex px-4 pt-4 pb-3 relative z-10 w-full">
                                                 {/* Photo */}
                                                 <div className="w-[90px] mr-4 flex flex-col gap-2">
                                                     <div className="w-[90px] h-[110px] bg-gray-100 border border-gray-300 shadow-sm p-0.5">
@@ -290,7 +294,7 @@ const GenerateIDCard = () => {
 
                                                 {/* Details */}
                                                 <div className="flex-1 flex flex-col pt-1">
-                                                    <div className="text-[#1e2a4a] text-[15px] font-extrabold uppercase leading-snug tracking-wide mb-1 truncate">
+                                                    <div className="text-[#1e2a4a] text-[15px] font-extrabold uppercase leading-tight tracking-wide mb-1 break-words">
                                                         {member.name} {member.surname}
                                                     </div>
 
@@ -330,8 +334,8 @@ const GenerateIDCard = () => {
                                         {/* BACK SIDE */}
                                         <div id={`id-card-back-${idx}`} className="w-[400px] h-[252px] bg-white rounded-xl shadow-lg border border-gray-300 overflow-hidden relative flex flex-col shrink-0">
                                             {/* Watermark */}
-                                            <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none z-0">
-                                                <FaShieldAlt size={180} />
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-[0.08] pointer-events-none z-0">
+                                                <img src={mewsLogo} alt="Watermark" className="h-[180px] w-auto object-contain grayscale mix-blend-multiply" />
                                             </div>
 
                                             <div className="relative z-20 flex-1 p-4 flex flex-col h-full">
