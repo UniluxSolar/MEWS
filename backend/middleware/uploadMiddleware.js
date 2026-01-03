@@ -1,27 +1,62 @@
-const multer = require('multer');
+const { Storage } = require('@google-cloud/storage');
 const path = require('path');
 const fs = require('fs');
 
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+// GCS Configuration from Utils (Shared logic)
+const bucketName = process.env.GCS_BUCKET_NAME || 'mews-uploads';
+const storageClient = new Storage({
+    projectId: process.env.GCS_PROJECT_ID,
+    keyFilename: process.env.GCS_KEYFILE_PATH // Optional if running in GCP environment
+});
+const bucket = storageClient.bucket(bucketName);
+
+// Custom Multer Storage Engine for GCS
+class GoogleCloudStorageEngine {
+    constructor(opts) {
+        this.getDestination = (req, file, cb) => {
+            cb(null, 'uploads/'); // Default prefix
+        }
+    }
+
+    _handleFile = (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const filename = file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname);
+        const blob = bucket.file(filename);
+
+        const blobStream = blob.createWriteStream({
+            resumable: false,
+            metadata: {
+                contentType: file.mimetype,
+            },
+        });
+
+        blobStream.on('error', (err) => {
+            cb(err);
+        });
+
+        blobStream.on('finish', () => {
+            // The public URL can be constructed if the object is public, 
+            // OR we just save the GCS URI/filename and sign it on retrieval (as gcsSigner.js suggests).
+            // format: https://storage.googleapis.com/BUCKET_NAME/FILENAME
+            const publicUrl = `https://storage.googleapis.com/${bucketName}/${filename}`;
+
+            cb(null, {
+                path: publicUrl, // Save URL to 'path' property to match diskStorage API
+                filename: filename,
+                size: blobStream.bytesWritten
+            });
+        });
+
+        file.stream.pipe(blobStream);
+    }
+
+    _removeFile = (req, file, cb) => {
+        bucket.file(file.filename).delete();
+        cb(null);
+    }
 }
 
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-
-// Cloudinary Config
-if (process.env.CLOUDINARY_CLOUD_NAME) {
-    cloudinary.config({
-        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-        api_key: process.env.CLOUDINARY_API_KEY,
-        api_secret: process.env.CLOUDINARY_API_SECRET
-    });
-    console.log('[UPLOAD] Cloudinary Configured.');
-}
-
-// Local Disk Storage (Fallback)
+// Local Disk Storage
 const diskStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'uploads/');
@@ -32,23 +67,15 @@ const diskStorage = multer.diskStorage({
     }
 });
 
-// Cloudinary Storage
-let cloudStorage = null;
-if (process.env.CLOUDINARY_CLOUD_NAME) {
-    cloudStorage = new CloudinaryStorage({
-        cloudinary: cloudinary,
-        params: {
-            folder: 'mews-uploads', // Folder in Cloudinary
-            allowed_formats: ['jpg', 'png', 'jpeg', 'pdf'],
-            public_id: (req, file) => {
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-                return file.fieldname + '-' + uniqueSuffix;
-            }
-        },
-    });
-}
+// Select Storage: GCS if credentials exist, else Local
+// Check for GCS_PROJECT_ID as a signal to use GCS
+const storage = process.env.GCS_PROJECT_ID ? new GoogleCloudStorageEngine() : diskStorage;
 
-const storage = process.env.CLOUDINARY_CLOUD_NAME ? cloudStorage : diskStorage;
+if (process.env.GCS_PROJECT_ID) {
+    console.log('[UPLOAD] Using Google Cloud Storage');
+} else {
+    console.log('[UPLOAD] Using Local Disk Storage');
+}
 
 // File filter
 const fileFilter = (req, file, cb) => {
