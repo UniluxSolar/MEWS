@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import AdminHeader from '../components/AdminHeader';
 import AdminSidebar from '../components/AdminSidebar';
 import DashboardHeader from '../components/common/DashboardHeader';
@@ -28,6 +29,13 @@ const AdminHelpSupport = () => {
                     <DashboardHeader
                         title="Help & Support"
                         subtitle="Search our help center or contact support."
+                        breadcrumb={
+                            <>
+                                <Link to="/admin/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+                                <span className="opacity-70">&gt;</span>
+                                <span>Help & Support</span>
+                            </>
+                        }
                     />
 
                     <div className="px-4 md:px-8 -mt-10 pb-12 w-full max-w-6xl mx-auto">

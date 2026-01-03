@@ -28,13 +28,16 @@ const MemberDocument = ({ data, lookups }) => {
     );
 
     const SectionHeader = ({ title }) => (
-        <div className="text-[#E08E35] font-bold text-sm uppercase tracking-wide mb-2 mt-6">
+        <div
+            className="text-[#E08E35] font-bold text-sm uppercase tracking-wide mb-2 mt-3"
+            style={{ textShadow: '1px 1px 0px #b06d26, 2px 2px 0px rgba(0,0,0,0.1)' }}
+        >
             {title}
         </div>
     );
 
     const Separator = () => (
-        <div className="border-t-2 border-[#E08E35] opacity-80 my-4"></div>
+        <div className="border-t-2 border-[#E08E35] opacity-80 my-3"></div>
     );
 
     // Photo URL
@@ -71,7 +74,12 @@ const MemberDocument = ({ data, lookups }) => {
                 <div className="flex items-center gap-4 mb-2">
                     <img src={mewsLogo} alt="MEWS Logo" className="h-16 w-auto mix-blend-multiply" />
                     <div>
-                        <h1 className="text-[#E08E35] text-2xl font-black uppercase tracking-wider mb-1">Mala Educational Welfare Society</h1>
+                        <h1
+                            className="text-[#E08E35] text-2xl font-black uppercase tracking-wider mb-1"
+                            style={{ textShadow: '1px 1px 0px #b06d26, 2px 2px 0px #b06d26, 3px 3px 0px rgba(0,0,0,0.15)' }}
+                        >
+                            Mala Educational Welfare Society
+                        </h1>
                         <div className="text-xs font-bold tracking-[0.4em] text-gray-500 uppercase text-center">Membership Registration Application</div>
                     </div>
                 </div>
@@ -133,8 +141,8 @@ const MemberDocument = ({ data, lookups }) => {
                                 <InfoRow label="Address Line" value={`${data.address?.houseNumber}, ${data.address?.street}`} />
                                 <InfoRow label="Village / Mandal" value={`${resolve(data.address?.village, 'village')}, ${resolve(data.address?.mandal, 'mandal')}`} />
                                 <InfoRow label="District / State" value={`${resolve(data.address?.district, 'district')}, Telangana`} />
-                                <InfoRow label="Constituency / Pin" value={`${data.address?.constituency || '-'} - ${data.address?.pincode}`} />
-                                <InfoRow label="Residence Type" value={data.address?.residenceType} />
+                                <InfoRow label="Constituency / Pin" value={`${data.address?.constituency || '-'} - ${data.address?.pinCode}`} />
+                                <InfoRow label="Residence Type" value={data.address?.residencyType} />
                             </tbody>
                         </table>
                     </div>
@@ -149,7 +157,7 @@ const MemberDocument = ({ data, lookups }) => {
                                 <InfoRow label="Address Line" value={`${data.address?.permHouseNumber || data.address?.houseNumber}, ${data.address?.permStreet || data.address?.street}`} />
                                 <InfoRow label="Village / Mandal" value={`${resolve(data.address?.permVillage || data.address?.village, 'village')}, ${resolve(data.address?.permMandal || data.address?.mandal, 'mandal')}`} />
                                 <InfoRow label="District / State" value={`${resolve(data.address?.permDistrict || data.address?.district, 'district')}, Telangana`} />
-                                <InfoRow label="Constituency / Pin" value={`${data.address?.permConstituency || data.address?.constituency || '-'} - ${data.address?.permPincode || data.address?.pincode}`} />
+                                <InfoRow label="Constituency / Pin" value={`${data.address?.permConstituency || data.address?.constituency || '-'} - ${data.address?.permPinCode || data.address?.pinCode}`} />
                             </tbody>
                         </table>
                     </div>
@@ -193,8 +201,8 @@ const MemberDocument = ({ data, lookups }) => {
                 <table className="w-full">
                     <tbody>
                         <InfoRow label="Annual Income" value={data.familyDetails?.annualIncome} />
-                        <InfoRow label="Ration Card" value={`${data.rationCard?.number || '-'} (${data.rationCard?.type || '-'})`} />
-                        <InfoRow label="Voter ID" value={data.voterId?.number} />
+                        <InfoRow label="Ration Card" value={`${data.rationCard?.number || '-'} (${data.familyDetails?.rationCardType || '-'})`} />
+                        <InfoRow label="Voter ID" value={data.voterId?.epicNumber} />
                         <InfoRow label="Aadhaar No." value={data.aadhaarNumber} />
                     </tbody>
                 </table>

@@ -95,166 +95,168 @@ const MandalDashboard = () => {
             <div className="flex flex-1 overflow-hidden">
                 <AdminSidebar activePage="dashboard" />
 
-                <main className="flex-1 overflow-y-auto">
-                    <DashboardHeader
-                        title={`${stats.locationName} Mandal Dashboard`}
-                        subtitle={
+                <main id="admin-dashboard-content" className="flex-1 overflow-y-auto">
+                    <div id="location-card-scroll-target">
+                        <DashboardHeader
+                            title={`${stats.locationName} Mandal Dashboard`}
+                            subtitle={
+                                <div>
+                                    <div className="text-blue-100 opacity-80 mb-2">Manage mandal operations and monitor village activities. Last updated: Today</div>
+                                    {/* View Toggle */}
+                                    <div className="flex items-center gap-2 mt-2 bg-white/10 p-1 rounded-lg w-fit backdrop-blur-sm border border-white/20">
+                                        <span className="text-xs font-bold text-white px-2">View:</span>
+                                        <button onClick={() => setViewMode('table')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'table' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaTable /> Table</button>
+                                        <button onClick={() => setViewMode('cards')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'cards' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaThLarge /> Cards</button>
+                                        <button onClick={() => setViewMode('map')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'map' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaMapMarkedAlt /> Map</button>
+                                    </div>
+                                </div>
+                            }
+                        />
+
+                        <div className="px-4 md:px-8 -mt-10 pb-8 w-full">
+                            {/* Stats Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                                <StatCard
+                                    title="Total Registered Members"
+                                    value={stats.members.toLocaleString()}
+                                    subtext="+18 today"
+                                    icon={FaUsers}
+                                    color="bg-emerald-500"
+                                />
+                                <StatCard
+                                    title="Total Institutions"
+                                    value={stats.institutions.toLocaleString()}
+                                    subtext="Verified"
+                                    icon={FaBuilding}
+                                    color="bg-blue-500"
+                                />
+                                <StatCard
+                                    title="Pending Verifications"
+                                    value={stats.villages.reduce((acc, v) => acc + (v.pending || 0), 0).toLocaleString()}
+                                    subtext="Needs review"
+                                    icon={FaClock}
+                                    color="bg-orange-500"
+                                />
+                            </div>
+
+                            {/* Quick Actions Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                                <ActionCard
+                                    title="Village Map View"
+                                    desc="View mandal-wide villages"
+                                    icon={FaMapMarkerAlt}
+                                    to="/admin/map"
+                                    gradient="bg-gradient-to-br from-blue-600 to-indigo-700"
+                                />
+                                <ActionCard
+                                    title="Bulk Registration"
+                                    desc="Register multiple members"
+                                    icon={FaUsers}
+                                    to="/admin/members/bulk"
+                                    gradient="bg-gradient-to-br from-emerald-500 to-teal-700"
+                                />
+                                <ActionCard
+                                    title="Generate Report"
+                                    desc="Create mandal activity report"
+                                    icon={FaFileAlt}
+                                    to="/admin/reports/new"
+                                    gradient="bg-gradient-to-br from-slate-600 to-slate-800"
+                                />
+                            </div>
+
+                            {/* Village Performance Overview */}
                             <div>
-                                <div className="text-blue-100 opacity-80 mb-2">Manage mandal operations and monitor village activities. Last updated: Today</div>
-                                {/* View Toggle */}
-                                <div className="flex items-center gap-2 mt-2 bg-white/10 p-1 rounded-lg w-fit backdrop-blur-sm border border-white/20">
-                                    <span className="text-xs font-bold text-white px-2">View:</span>
-                                    <button onClick={() => setViewMode('table')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'table' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaTable /> Table</button>
-                                    <button onClick={() => setViewMode('cards')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'cards' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaThLarge /> Cards</button>
-                                    <button onClick={() => setViewMode('map')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'map' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaMapMarkedAlt /> Map</button>
+                                <div className="flex items-center gap-3 mb-6 ml-1">
+                                    <div className="p-2 bg-blue-100 text-blue-700 rounded-lg">
+                                        <FaBuilding size={20} />
+                                    </div>
+                                    <h2 className="text-xl font-bold text-slate-800">Village Performance Overview</h2>
                                 </div>
-                            </div>
-                        }
-                    />
 
-                    <div className="px-4 md:px-8 -mt-10 pb-8 w-full">
-                        {/* Stats Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                            <StatCard
-                                title="Total Registered Members"
-                                value={stats.members.toLocaleString()}
-                                subtext="+18 today"
-                                icon={FaUsers}
-                                color="bg-emerald-500"
-                            />
-                            <StatCard
-                                title="Total Institutions"
-                                value={stats.institutions.toLocaleString()}
-                                subtext="Verified"
-                                icon={FaBuilding}
-                                color="bg-blue-500"
-                            />
-                            <StatCard
-                                title="Pending Verifications"
-                                value={stats.villages.reduce((acc, v) => acc + (v.pending || 0), 0).toLocaleString()}
-                                subtext="Needs review"
-                                icon={FaClock}
-                                color="bg-orange-500"
-                            />
-                        </div>
-
-                        {/* Quick Actions Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                            <ActionCard
-                                title="Village Map View"
-                                desc="View mandal-wide villages"
-                                icon={FaMapMarkerAlt}
-                                to="/admin/map"
-                                gradient="bg-gradient-to-br from-blue-600 to-indigo-700"
-                            />
-                            <ActionCard
-                                title="Bulk Registration"
-                                desc="Register multiple members"
-                                icon={FaUsers}
-                                to="/admin/members/bulk"
-                                gradient="bg-gradient-to-br from-emerald-500 to-teal-700"
-                            />
-                            <ActionCard
-                                title="Generate Report"
-                                desc="Create mandal activity report"
-                                icon={FaFileAlt}
-                                to="/admin/reports/new"
-                                gradient="bg-gradient-to-br from-slate-600 to-slate-800"
-                            />
-                        </div>
-
-                        {/* Village Performance Overview */}
-                        <div>
-                            <div className="flex items-center gap-3 mb-6 ml-1">
-                                <div className="p-2 bg-blue-100 text-blue-700 rounded-lg">
-                                    <FaBuilding size={20} />
-                                </div>
-                                <h2 className="text-xl font-bold text-slate-800">Village Performance Overview</h2>
-                            </div>
-
-                            {loading ? (
-                                <div className="p-12 text-center text-gray-500 bg-white rounded-2xl shadow-sm border border-slate-100">Loading villages...</div>
-                            ) : stats.villages.length === 0 ? (
-                                <div className="col-span-full text-center py-10 bg-white rounded-2xl border border-dashed border-gray-300">
-                                    No villages found.
-                                </div>
-                            ) : (
-                                <>
-                                    {/* TABLE VIEW */}
-                                    {viewMode === 'table' && (
-                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-left border-collapse">
-                                                    <thead>
-                                                        <tr className="bg-slate-50 border-b border-gray-100 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                                            <th className="px-6 py-4">Village Name</th>
-                                                            <th className="px-6 py-4">Members</th>
-                                                            <th className="px-6 py-4">Institutions</th>
-                                                            <th className="px-6 py-4">Status</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-slate-50">
-                                                        {stats.villages.map((village, idx) => (
-                                                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                                                <td className="px-6 py-4 font-bold text-slate-800">{village.name}</td>
-                                                                <td className="px-6 py-4 text-sm text-slate-600">{village.members.toLocaleString()}</td>
-                                                                <td className="px-6 py-4 text-sm text-slate-600">{village.institutions}</td>
-                                                                <td className="px-6 py-4">
-                                                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wide ${village.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                                                                        {village.status}
-                                                                    </span>
-                                                                </td>
+                                {loading ? (
+                                    <div className="p-12 text-center text-gray-500 bg-white rounded-2xl shadow-sm border border-slate-100">Loading villages...</div>
+                                ) : stats.villages.length === 0 ? (
+                                    <div className="col-span-full text-center py-10 bg-white rounded-2xl border border-dashed border-gray-300">
+                                        No villages found.
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* TABLE VIEW */}
+                                        {viewMode === 'table' && (
+                                            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-left border-collapse">
+                                                        <thead>
+                                                            <tr className="bg-slate-50 border-b border-gray-100 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                                <th className="px-6 py-4">Village Name</th>
+                                                                <th className="px-6 py-4">Members</th>
+                                                                <th className="px-6 py-4">Institutions</th>
+                                                                <th className="px-6 py-4">Status</th>
                                                             </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-50">
+                                                            {stats.villages.map((village, idx) => (
+                                                                <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                                                    <td className="px-6 py-4 font-bold text-slate-800">{village.name}</td>
+                                                                    <td className="px-6 py-4 text-sm text-slate-600">{village.members.toLocaleString()}</td>
+                                                                    <td className="px-6 py-4 text-sm text-slate-600">{village.institutions}</td>
+                                                                    <td className="px-6 py-4">
+                                                                        <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wide ${village.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                                                            {village.status}
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {/* CARDS VIEW */}
-                                    {viewMode === 'cards' && (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {stats.villages.map((village, idx) => (
-                                                <VillagePerformanceCard
-                                                    key={idx}
-                                                    name={village.name}
-                                                    members={village.members}
-                                                    institutions={village.institutions}
-                                                    status={village.status}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
+                                        {/* CARDS VIEW */}
+                                        {viewMode === 'cards' && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                {stats.villages.map((village, idx) => (
+                                                    <VillagePerformanceCard
+                                                        key={idx}
+                                                        name={village.name}
+                                                        members={village.members}
+                                                        institutions={village.institutions}
+                                                        status={village.status}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
 
-                                    {/* MAP VIEW */}
-                                    {viewMode === 'map' && (
-                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 h-[600px] overflow-hidden relative">
-                                            <MapContainer center={[17.0500, 79.2667]} zoom={11} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
-                                                <TileLayer
-                                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                />
-                                                {stats.villages.map((village, idx) => {
-                                                    const coords = getCoordinates(village.name);
-                                                    return (
-                                                        <Marker key={idx} position={coords}>
-                                                            <Popup>
-                                                                <div className="p-1">
-                                                                    <h3 className="font-bold text-sm mb-1">{village.name}</h3>
-                                                                    <p className="text-xs text-slate-600">Members: <b>{village.members}</b></p>
-                                                                    <p className="text-xs text-slate-600">Institutions: <b>{village.institutions}</b></p>
-                                                                    <p className={`text-xs font-bold mt-1 ${village.status === 'Active' ? 'text-green-600' : 'text-red-500'}`}>{village.status}</p>
-                                                                </div>
-                                                            </Popup>
-                                                        </Marker>
-                                                    );
-                                                })}
-                                            </MapContainer>
-                                        </div>
-                                    )}
-                                </>
-                            )}
+                                        {/* MAP VIEW */}
+                                        {viewMode === 'map' && (
+                                            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 h-[600px] overflow-hidden relative">
+                                                <MapContainer center={[17.0500, 79.2667]} zoom={11} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
+                                                    <TileLayer
+                                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                    />
+                                                    {stats.villages.map((village, idx) => {
+                                                        const coords = getCoordinates(village.name);
+                                                        return (
+                                                            <Marker key={idx} position={coords}>
+                                                                <Popup>
+                                                                    <div className="p-1">
+                                                                        <h3 className="font-bold text-sm mb-1">{village.name}</h3>
+                                                                        <p className="text-xs text-slate-600">Members: <b>{village.members}</b></p>
+                                                                        <p className="text-xs text-slate-600">Institutions: <b>{village.institutions}</b></p>
+                                                                        <p className={`text-xs font-bold mt-1 ${village.status === 'Active' ? 'text-green-600' : 'text-red-500'}`}>{village.status}</p>
+                                                                    </div>
+                                                                </Popup>
+                                                            </Marker>
+                                                        );
+                                                    })}
+                                                </MapContainer>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </main>

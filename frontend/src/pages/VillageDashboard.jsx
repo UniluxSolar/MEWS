@@ -123,12 +123,14 @@ const VillageDashboard = () => {
                 <AdminSidebar activePage="dashboard" />
 
                 {/* Main Content */}
-                <main className="flex-1 overflow-y-auto">
+                <main id="admin-dashboard-content" className="flex-1 overflow-y-auto">
                     {/* Welcome Header with Gradient */}
-                    <DashboardHeader
-                        title="Good Afternoon, Admin"
-                        subtitle={`Here's what's happening in ${stats.locationName} today. You have ${stats.pendingMembers} new registrations to review.`}
-                    />
+                    <div id="location-card-scroll-target">
+                        <DashboardHeader
+                            title={`${stats.locationName} Dashboard`}
+                            subtitle={`Here's what's happening in ${stats.locationName} today. You have ${stats.pendingMembers} new registrations to review.`}
+                        />
+                    </div>
 
                     <div className="px-4 md:px-8 -mt-10 pb-8 w-full">
                         {/* Stats Row */}
@@ -344,7 +346,7 @@ const VillageDashboard = () => {
                             </div>
                         </div>
                     </div>
-                </main>
+                </main >
             </div >
         </div >
     );

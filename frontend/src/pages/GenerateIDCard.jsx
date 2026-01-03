@@ -169,10 +169,11 @@ const GenerateIDCard = () => {
         });
 
         for (let i = 0; i < allMembers.length; i++) {
-            const element = document.getElementById(`id-card-${i}`);
-            if (element) {
+            // FRONT Side
+            const frontElement = document.getElementById(`id-card-front-${i}`);
+            if (frontElement) {
                 try {
-                    const canvas = await html2canvas(element, {
+                    const canvas = await html2canvas(frontElement, {
                         scale: 3,
                         useCORS: true,
                         logging: false,
@@ -180,10 +181,29 @@ const GenerateIDCard = () => {
                     });
                     const imgData = canvas.toDataURL('image/png');
 
-                    if (i > 0) pdF.addPage();
+                    if (i > 0) pdF.addPage([85.6, 54], 'landscape'); // Add new page for next member
                     pdF.addImage(imgData, 'PNG', 0, 0, 85.6, 54);
                 } catch (e) {
-                    console.error("Error capturing card", i, e);
+                    console.error("Error capturing front card", i, e);
+                }
+            }
+
+            // BACK Side
+            const backElement = document.getElementById(`id-card-back-${i}`);
+            if (backElement) {
+                try {
+                    const canvas = await html2canvas(backElement, {
+                        scale: 3,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff'
+                    });
+                    const imgData = canvas.toDataURL('image/png');
+
+                    pdF.addPage([85.6, 54], 'landscape'); // Add new page for back side
+                    pdF.addImage(imgData, 'PNG', 0, 0, 85.6, 54);
+                } catch (e) {
+                    console.error("Error capturing back card", i, e);
                 }
             }
         }
@@ -211,89 +231,148 @@ const GenerateIDCard = () => {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                             {allMembers.map((member, idx) => (
-                                <div key={idx} className="flex flex-col gap-4">
-                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-xs font-bold uppercase bg-blue-100 text-blue-800 px-2 py-1 rounded">{member.surname} {member.name}</span>
-                                            <span className="text-[10px] text-gray-500">{member.relation}</span>
+                                <div key={idx} className="flex flex-col gap-6 items-center bg-white p-6 rounded-xl border border-gray-200">
+                                    <div className="w-full flex justify-between items-center mb-2 border-b border-gray-100 pb-2">
+                                        <div>
+                                            <span className="text-sm font-bold uppercase bg-blue-50 text-blue-900 px-3 py-1 rounded-md">{member.surname} {member.name}</span>
+                                            <span className="text-xs text-slate-500 ml-2">({member.relation})</span>
+                                        </div>
+                                        <div className="text-xs font-mono text-slate-400">Card View</div>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-8 justify-center">
+                                        {/* FRONT SIDE */}
+                                        <div id={`id-card-front-${idx}`} className="w-[400px] h-[252px] bg-white rounded-xl shadow-lg border border-gray-300 overflow-hidden relative flex flex-col shrink-0">
+                                            {/* Watermark */}
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none z-0">
+                                                <FaShieldAlt size={180} />
+                                            </div>
+
+                                            {/* Header */}
+                                            <div className="relative z-20">
+                                                <div className="h-[45px] bg-[#0f172a] flex items-center justify-center pl-[60px]">
+                                                    <div className="text-white font-bold text-[13px] tracking-wide uppercase text-center leading-tight drop-shadow-sm">
+                                                        Mala Educational Welfare Society
+                                                    </div>
+                                                </div>
+                                                <div className="h-[30px] bg-[#1e2a4a] flex items-center justify-center">
+                                                    <h2 className="text-white font-bold text-[11px] tracking-[0.2em] uppercase drop-shadow-sm">
+                                                        {member.designation || 'MEMBER'}
+                                                    </h2>
+                                                </div>
+                                                <div className="absolute top-1 left-2 w-[55px] h-[65px] bg-white rounded-b-lg shadow-md p-0.5 border-t-0 border-x border-b border-gray-200 z-30">
+                                                    <div className="w-full h-full rounded-b overflow-hidden bg-white flex items-center justify-center">
+                                                        <img src={mewsLogo} alt="Logo" className="w-full h-full object-contain" />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* ID Number */}
+                                            <div className="absolute top-[78px] right-4 z-20">
+                                                <div className="text-[11px] font-bold text-gray-800 tracking-wide">
+                                                    ID NO. <span className="text-black text-[12px]">{member.id}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Content */}
+                                            <div className="flex-1 flex px-4 pt-6 pb-3 relative z-10 w-full">
+                                                {/* Photo */}
+                                                <div className="w-[90px] mr-4 flex flex-col gap-2">
+                                                    <div className="w-[90px] h-[110px] bg-gray-100 border border-gray-300 shadow-sm p-0.5">
+                                                        <img
+                                                            src={member.photo}
+                                                            alt="Member"
+                                                            className="w-full h-full object-cover"
+                                                            crossOrigin="anonymous"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Details */}
+                                                <div className="flex-1 flex flex-col pt-1">
+                                                    <div className="text-[#1e2a4a] text-[15px] font-extrabold uppercase leading-snug tracking-wide mb-1 truncate">
+                                                        {member.name} {member.surname}
+                                                    </div>
+
+                                                    {member.fatherName && (
+                                                        <div className="text-[11px] font-bold text-gray-900 uppercase mb-2">
+                                                            {member.gender === 'Male' ? 'S/o ' : ((member.maritalStatus === 'Married' || (member.relation && ['Spouse', 'Wife', 'Mother'].includes(member.relation))) ? 'W/o ' : 'D/o ')}
+                                                            {member.fatherName}
+                                                        </div>
+                                                    )}
+
+                                                    <div className="text-gray-700 text-[10px] font-semibold uppercase leading-tight mt-1 max-w-[220px]">
+                                                        {member.houseNo && `H.No: ${member.houseNo}, `} {member.street && `${member.street},`} <br />
+                                                        {member.village && `${member.village} (V),`} {member.mandal && `${member.mandal} (M)`} <br />
+                                                        {member.district && `${member.district} (D),`} {member.state} - {member.pincode}
+                                                    </div>
+
+                                                    {/* Digital Signature Block */}
+                                                    <div className="mt-auto w-full flex justify-end items-end">
+                                                        <div className="relative bottom-1 right-1">
+                                                            <div className="flex items-start gap-1 p-1 pr-2 bg-white/95 backdrop-blur-sm rounded border border-green-600/30 shadow-sm">
+                                                                <div className="relative pt-0.5">
+                                                                    <FaCheckCircle className="text-green-600 text-[20px]" />
+                                                                </div>
+                                                                <div className="flex flex-col leading-none">
+                                                                    <span className="text-[10px] font-bold text-green-700">Signature valid</span>
+                                                                    <span className="text-[5px] text-gray-500 font-medium mt-0.5">Digitally signed by</span>
+                                                                    <span className="text-[6px] font-bold text-gray-800 uppercase">General Secretary</span>
+                                                                    <span className="text-[5px] text-gray-400 mt-0.5">Date: {new Date().toLocaleDateString()}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        <div className="flex justify-center bg-gray-50 py-4 rounded-lg border border-dashed border-gray-300 overflow-hidden">
-                                            {/* ID Card Element */}
-                                            <div id={`id-card-${idx}`} className="w-[400px] h-[252px] bg-white rounded-xl shadow-md border border-gray-300 overflow-hidden relative flex flex-col shrink-0 transform scale-[0.8] origin-center">
-                                                {/* Watermark */}
-                                                <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none z-0">
-                                                    <FaShieldAlt size={180} />
-                                                </div>
+                                        {/* BACK SIDE */}
+                                        <div id={`id-card-back-${idx}`} className="w-[400px] h-[252px] bg-white rounded-xl shadow-lg border border-gray-300 overflow-hidden relative flex flex-col shrink-0">
+                                            {/* Watermark */}
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none z-0">
+                                                <FaShieldAlt size={180} />
+                                            </div>
 
-                                                {/* Header Section */}
-                                                <div className="flex flex-col relative z-20">
-                                                    <div className="h-[45px] bg-[#0f172a] flex items-center justify-center pl-[60px]">
-                                                        <div className="text-white font-bold text-[13px] tracking-wide uppercase text-center leading-tight drop-shadow-sm">
-                                                            Mala Educational Welfare Society
-                                                        </div>
+                                            <div className="relative z-20 flex-1 p-4 flex flex-col h-full">
+                                                {/* Top Info Grid */}
+                                                <div className="grid grid-cols-2 gap-x-2 gap-y-3 mb-3 border-b border-gray-200 pb-3">
+                                                    <div>
+                                                        <div className="text-[8px] text-gray-500 uppercase tracking-wider font-bold mb-0.5">Date of Issue</div>
+                                                        <div className="text-xs font-bold text-slate-800">{new Date().toLocaleDateString('en-GB')}</div>
                                                     </div>
-                                                    <div className="h-[30px] bg-[#1e2a4a] flex items-center justify-center">
-                                                        <h2 className="text-white font-bold text-[11px] tracking-[0.2em] uppercase drop-shadow-sm">
-                                                            {member.designation || 'MEMBER'}
-                                                        </h2>
+                                                    <div>
+                                                        <div className="text-[8px] text-gray-500 uppercase tracking-wider font-bold mb-0.5">Valid Until</div>
+                                                        <div className="text-xs font-bold text-slate-800">{member.validUntil}</div>
                                                     </div>
-                                                    <div className="absolute top-1 left-2 w-[55px] h-[65px] bg-white rounded-b-lg shadow-md p-0.5 border-t-0 border-x border-b border-gray-200 z-30">
-                                                        <div className="w-full h-full rounded-b overflow-hidden bg-white flex items-center justify-center">
-                                                            <img src={mewsLogo} alt="Logo" className="w-full h-full object-contain" />
-                                                        </div>
+                                                    <div>
+                                                        <div className="text-[8px] text-gray-500 uppercase tracking-wider font-bold mb-0.5">Blood Group</div>
+                                                        <div className="text-xs font-bold text-slate-800 text-red-600">{member.bloodGroup || 'N/A'}</div>
                                                     </div>
-                                                </div>
-
-                                                <div className="absolute top-[80px] right-4 z-20">
-                                                    <div className="text-[11px] font-bold text-gray-800 tracking-wide">
-                                                        ID NO. <span className="text-black text-[12px]">{member.id}</span>
+                                                    <div>
+                                                        <div className="text-[8px] text-gray-500 uppercase tracking-wider font-bold mb-0.5">Emergency</div>
+                                                        <div className="text-xs font-bold text-slate-800">+91 98765 43210</div>
                                                     </div>
                                                 </div>
 
-                                                <div className="flex-1 flex px-4 pt-8 pb-2 relative z-10">
-                                                    <div className="flex items-start gap-4 w-full mt-1">
-                                                        <div className="flex flex-col gap-2">
-                                                            <div className="w-[90px] h-[110px] bg-gray-100 border border-gray-300 shadow-sm p-0.5">
-                                                                <img
-                                                                    src={member.photo}
-                                                                    alt="Member"
-                                                                    className="w-full h-full object-cover"
-                                                                    crossOrigin="anonymous"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex-1 flex flex-col pt-1">
-                                                            <div className="text-[#1e2a4a] text-[13px] font-extrabold uppercase leading-snug tracking-wide mb-1">
-                                                                {member.name} {member.surname}
-                                                                {member.fatherName && (
-                                                                    <div className="text-[10px] font-bold text-black mt-0.5">
-                                                                        {member.gender === 'Male' ? 'S/o ' : ((member.maritalStatus === 'Married' || member.relation === 'Spouse' || member.relation === 'Wife' || member.relation === 'Mother') ? 'W/o ' : 'D/o ')}
-                                                                        {member.fatherName}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            {/* Relation removed as per request */}
+                                                {/* Privacy & Returns */}
+                                                <div className="flex-1 min-h-0">
+                                                    <h4 className="text-[9px] font-bold text-[#1e2a4a] uppercase mb-1.5">Directives & Returns</h4>
+                                                    <ul className="text-[8px] text-slate-600 space-y-1 list-disc pl-3 leading-tight">
+                                                        <li>This card is the property of <b>Mala Educational Welfare Society</b>.</li>
+                                                        <li>It must be returned to the issuing authority upon termination of membership.</li>
+                                                        <li>If found, please return to the Registered Office address below.</li>
+                                                        <li>Misuse of this card is a punishable offense.</li>
+                                                    </ul>
+                                                </div>
 
-                                                            <div className="text-gray-700 text-[10px] font-semibold uppercase leading-tight mb-3 mt-1">
-                                                                {member.houseNo && `H.No: ${member.houseNo}, `} {member.street && `${member.street},`} <br />
-                                                                {member.village} (V), {member.mandal} (M) <br />
-                                                                {member.district} (D), {member.state} - {member.pincode}
-                                                            </div>
-                                                            <div className="mt-auto w-full flex justify-between items-end">
-                                                                <div>
-                                                                    <div className="text-[8px] text-gray-500 font-bold uppercase mb-0.5">Valid Until</div>
-                                                                    <div className="text-[10px] text-[#1e2a4a] font-bold">{member.validUntil}</div>
-                                                                </div>
-                                                                <div className="flex flex-col items-center">
-                                                                    <div className="text-[14px] font-signature text-[#1e2a4a] mb-0 leading-none">Auth Sign</div>
-                                                                    <div className="text-[8px] font-bold text-gray-800 capitalize px-1 pt-0.5">
-                                                                        General Secretary
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                {/* Bottom Footer Address */}
+                                                <div className="mt-auto pt-2 border-t border-gray-200 text-center">
+                                                    <div className="text-[9px] font-bold text-[#1e2a4a] uppercase">Registered Office</div>
+                                                    <p className="text-[8px] text-slate-500 leading-tight mt-0.5">
+                                                        H.No: 1-123, SC Colony, Amanagal Village,<br />
+                                                        Vemulapalle Mandal, Nalgonda Dist, Telangana - 508001
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>

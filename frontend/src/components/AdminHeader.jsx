@@ -78,9 +78,9 @@ const AdminHeader = (props) => { // props now contains locationName
                     </div>
                 </div>
                 {/* Location Name Display */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:block text-center">
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:block text-center w-[500px] overflow-hidden mask-linear-gradient z-50">
                     {displayLocation && (
-                        <div className="flex flex-col items-center">
+                        <div className="animate-marquee flex flex-col items-center whitespace-nowrap">
                             <h1 className="text-xl font-bold text-white tracking-wide uppercase shadow-sm leading-none">
                                 {displayLocation}
                             </h1>
@@ -91,13 +91,31 @@ const AdminHeader = (props) => { // props now contains locationName
                     )}
                 </div>
 
-                {/* Search Bar - Optional, can be kept generic */}
+                <style>{`
+                    .mask-linear-gradient {
+                        mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+                        -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+                    }
+                    @keyframes marquee {
+                        0% { transform: translateX(250px); } /* Start from right edge of 500px container */
+                        100% { transform: translateX(-250px); } /* Move to left edge */
+                    }
+                    .animate-marquee {
+                        animation: marquee 10s linear infinite;
+                    }
+                    /* Pause on hover */
+                    .animate-marquee:hover {
+                        animation-play-state: paused;
+                    }
+                `}</style>
+
+                {/* Search Bar */}
                 <div className="relative hidden lg:block w-96">
-                    <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
+                    <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
                     <input
                         type="text"
                         placeholder="Search..."
-                        className="w-full bg-slate-800/50 border border-slate-700 rounded-lg py-2 pl-10 pr-4 text-sm text-gray-200 focus:outline-none focus:border-blue-500 focus:bg-slate-800 transition-all placeholder-gray-500"
+                        className="w-full bg-white border border-slate-200 rounded-lg py-2 pl-10 pr-4 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-slate-400 shadow-sm"
                     />
                 </div>
             </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import AdminHeader from '../components/AdminHeader';
 import AdminSidebar from '../components/AdminSidebar';
 import DashboardHeader from '../components/common/DashboardHeader';
@@ -250,7 +251,14 @@ const AdminAnnouncements = () => {
                 <main className="flex-1 overflow-y-auto">
                     <DashboardHeader
                         title="Announcements & Reports"
-                        subtitle="Dashboard > Announcements & Reports"
+                        subtitle="Manage announcements and system reports."
+                        breadcrumb={
+                            <>
+                                <Link to="/admin/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+                                <span className="opacity-70">&gt;</span>
+                                <span>Announcements</span>
+                            </>
+                        }
                     >
                         <button className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-md text-white p-2 rounded-lg text-xs font-bold flex items-center gap-2 border border-white/20 transition">
                             <FaHistory /> History

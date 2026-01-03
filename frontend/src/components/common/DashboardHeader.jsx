@@ -11,9 +11,9 @@ const DashboardHeader = ({ title, subtitle, stats, breadcrumb, children }) => {
                         {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
                     {breadcrumb && (
-                        <p className="text-blue-200 text-sm font-medium mb-2">
+                        <div className="text-blue-200 text-sm font-medium mb-2 flex items-center gap-1">
                             {breadcrumb}
-                        </p>
+                        </div>
                     )}
                     <h1 className="text-3xl font-bold text-white">
                         {title}

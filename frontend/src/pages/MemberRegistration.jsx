@@ -1997,6 +1997,15 @@ const MemberRegistration = () => {
                     <DashboardHeader
                         title={isEditMode ? 'Edit Member Profile' : isViewMode ? 'Member Details' : 'New Member Registration'}
                         subtitle={isViewMode ? 'View full member profile and details' : (isEditMode ? 'Update existing member details' : 'Enter details to register a new member')}
+                        breadcrumb={
+                            <>
+                                <Link to="/admin/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+                                <span className="opacity-70">&gt;</span>
+                                <Link to="/admin/members" className="hover:text-white transition-colors">Members</Link>
+                                <span className="opacity-70">&gt;</span>
+                                <span>{isEditMode ? 'Edit' : isViewMode ? 'Details' : 'Register'}</span>
+                            </>
+                        }
                     >
                         {isViewMode && (
                             <button

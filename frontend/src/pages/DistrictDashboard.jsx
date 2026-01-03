@@ -102,22 +102,24 @@ const DistrictDashboard = () => {
             <div className="flex flex-1 overflow-hidden">
                 <AdminSidebar activePage="dashboard" />
 
-                <main className="flex-1 overflow-y-auto">
-                    <DashboardHeader
-                        title={`${stats.locationName} District Dashboard`}
-                        subtitle={
-                            <div>
-                                <div className="text-blue-100 opacity-80 mb-2">Manage district operations and monitor activities. Last updated: Today</div>
-                                {/* View Toggle */}
-                                <div className="flex items-center gap-2 mt-2 bg-white/10 p-1 rounded-lg w-fit backdrop-blur-sm border border-white/20">
-                                    <span className="text-xs font-bold text-white px-2">View:</span>
-                                    <button onClick={() => setViewMode('table')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'table' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaTable /> Table</button>
-                                    <button onClick={() => setViewMode('cards')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'cards' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaThLarge /> Cards</button>
-                                    <button onClick={() => setViewMode('map')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'map' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaMapMarkedAlt /> Map</button>
+                <main id="admin-dashboard-content" className="flex-1 overflow-y-auto">
+                    <div id="location-card-scroll-target">
+                        <DashboardHeader
+                            title={`${stats.locationName} District Dashboard`}
+                            subtitle={
+                                <div>
+                                    <div className="text-blue-100 opacity-80 mb-2">Manage district operations and monitor activities. Last updated: Today</div>
+                                    {/* View Toggle */}
+                                    <div className="flex items-center gap-2 mt-2 bg-white/10 p-1 rounded-lg w-fit backdrop-blur-sm border border-white/20">
+                                        <span className="text-xs font-bold text-white px-2">View:</span>
+                                        <button onClick={() => setViewMode('table')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'table' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaTable /> Table</button>
+                                        <button onClick={() => setViewMode('cards')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'cards' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaThLarge /> Cards</button>
+                                        <button onClick={() => setViewMode('map')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'map' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaMapMarkedAlt /> Map</button>
+                                    </div>
                                 </div>
-                            </div>
-                        }
-                    />
+                            }
+                        />
+                    </div>
 
                     <div className="px-4 md:px-8 -mt-10 pb-8 w-full">
                         {/* Stats Grid */}

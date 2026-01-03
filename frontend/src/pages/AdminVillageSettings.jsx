@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import AdminHeader from '../components/AdminHeader';
 import AdminSidebar from '../components/AdminSidebar';
 import { FaSave, FaBuilding, FaBell, FaLock, FaPalette } from 'react-icons/fa';
@@ -102,7 +103,13 @@ const AdminVillageSettings = () => {
                     <DashboardHeader
                         title="Village Settings"
                         subtitle="Manage configuration and preferences for your village."
-                        breadcrumb="Dashboard > Settings"
+                        breadcrumb={
+                            <>
+                                <Link to="/admin/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+                                <span className="opacity-70">&gt;</span>
+                                <span>Settings</span>
+                            </>
+                        }
                     />
                     <div className="px-4 md:px-8 -mt-10 pb-12 w-full">
 

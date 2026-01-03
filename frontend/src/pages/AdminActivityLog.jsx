@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import AdminHeader from '../components/AdminHeader';
 import AdminSidebar from '../components/AdminSidebar';
 import DashboardHeader from '../components/common/DashboardHeader';
@@ -36,6 +37,13 @@ const AdminActivityLog = () => {
                     <DashboardHeader
                         title="Activity Logs"
                         subtitle="Track all administrative actions and system events."
+                        breadcrumb={
+                            <>
+                                <Link to="/admin/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+                                <span className="opacity-70">&gt;</span>
+                                <span>Activity Logs</span>
+                            </>
+                        }
                     >
                         <button className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-md text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all border border-white/20">
                             <FaDownload /> Export Log

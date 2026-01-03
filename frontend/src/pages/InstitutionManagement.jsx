@@ -188,7 +188,6 @@ const InstitutionManagement = () => {
                         title="Institutions Management"
                         subtitle={
                             <div>
-                                <div className="text-blue-100">Dashboard &gt; Institutions</div>
                                 {/* View Toggle */}
                                 <div className="flex items-center gap-2 mt-4 bg-white/10 p-1 rounded-lg w-fit backdrop-blur-sm border border-white/20">
                                     <span className="text-xs font-bold text-white px-2">View:</span>
@@ -213,7 +212,13 @@ const InstitutionManagement = () => {
                                 </div>
                             </div>
                         }
-                        breadcrumb="Dashboard > Institutions"
+                        breadcrumb={
+                            <>
+                                <Link to="/admin/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+                                <span className="opacity-70">&gt;</span>
+                                <span>Institutions</span>
+                            </>
+                        }
                     >
                         <div className="flex items-center gap-3">
 

@@ -1,18 +1,21 @@
+
 import React, { useState, useEffect } from 'react';
 import API from '../api';
 import { Link, useLocation } from 'react-router-dom';
-import { renderToStaticMarkup } from 'react-dom/server';
+import * as XLSX from 'xlsx-js-style';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
-    FaChevronLeft, FaChevronRight, FaEllipsisV, FaCheckSquare, FaTrash, FaIdCard,
-    FaThLarge, FaTable, FaMapMarkedAlt, FaUser, FaUserTie, FaMapMarkerAlt, FaPlus,
-    FaSort, FaSortUp, FaSortDown,
-    FaSearch, FaEye, FaEdit, FaPhoneAlt, FaFileDownload
+    FaSearch, FaFilter, FaPlus, FaEllipsisV, FaFileDownload, FaMapMarkedAlt,
+    FaTable, FaThLarge, FaEye, FaEdit, FaTrash, FaPhoneAlt, FaIdCard,
+    FaCheckSquare, FaSort, FaSortUp, FaSortDown, FaChevronLeft, FaChevronRight,
+    FaFileExcel, FaFilePdf
 } from 'react-icons/fa';
-import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import DashboardHeader from '../components/common/DashboardHeader';
+import MultiSelect from '../components/common/MultiSelect';
 // Map Imports
 import { MapContainer, TileLayer, Marker, Tooltip, useMap, CircleMarker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -88,8 +91,7 @@ const MemberManagement = () => {
         'Munugode': [17.0667, 79.0833],
         'Chityal': [17.2244, 79.1378],
         'Kattangur': [17.1833, 79.3667],
-        'Amangal': [16.8494, 78.5303],
-        'Amanagal': [16.8494, 78.5303] // Handle typo/variation
+        'Amanagal': [17.0620, 79.5760] // Corrected to residential area (avoiding water body)
     };
 
     const [fetchedCoordinates, setFetchedCoordinates] = useState(() => {
@@ -171,14 +173,14 @@ const MemberManagement = () => {
         localStorage.setItem('memberViewMode', viewMode);
     }, [viewMode]);
 
-    // Filter States
+    // Filter States - Multi-Select (Arrays)
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedVillage, setSelectedVillage] = useState('');
-    const [selectedAgeRange, setSelectedAgeRange] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedVillages, setSelectedVillages] = useState([]);
+    const [selectedAgeRanges, setSelectedAgeRanges] = useState([]);
+    const [selectedCategories, setSelectedCategories] = useState([]);
     const [selectedGenders, setSelectedGenders] = useState({ All: true, Male: false, Female: false, Other: false });
-    const [selectedMaritalStatus, setSelectedMaritalStatus] = useState('');
-    const [selectedBloodGroup, setSelectedBloodGroup] = useState('');
+    const [selectedMaritalStatuses, setSelectedMaritalStatuses] = useState([]);
+    const [selectedBloodGroups, setSelectedBloodGroups] = useState([]);
     const [selectedSubCaste, setSelectedSubCaste] = useState('');
 
     const location = useLocation();
@@ -192,6 +194,7 @@ const MemberManagement = () => {
         const subCaste = params.get('subCaste');
         const ageRange = params.get('ageRange');
         const occupation = params.get('occupation');
+        const villages = params.get('villages');
 
         if (gender) {
             setSelectedGenders({
@@ -201,11 +204,12 @@ const MemberManagement = () => {
                 Other: gender === 'Other'
             });
         }
-        if (marital) setSelectedMaritalStatus(marital);
-        if (blood) setSelectedBloodGroup(blood);
+        if (marital) setSelectedMaritalStatuses(marital.split(',').filter(Boolean));
+        if (blood) setSelectedBloodGroups(blood.split(',').filter(Boolean));
         if (subCaste) setSelectedSubCaste(subCaste);
-        if (ageRange) setSelectedAgeRange(ageRange);
-        if (occupation) setSelectedCategory(occupation);
+        if (ageRange) setSelectedAgeRanges(ageRange.split(',').filter(Boolean));
+        if (occupation) setSelectedCategories(occupation.split(',').filter(Boolean));
+        if (villages) setSelectedVillages(villages.split(',').filter(Boolean));
 
     }, [location.search]);
 
@@ -258,16 +262,41 @@ const MemberManagement = () => {
             const text = `${member.name} ${member.surname} ${member.mobileNumber} ${safeVillage}`.toLowerCase();
             if (!text.includes(term)) return false;
         }
-        if (selectedVillage && getLocationName(member.address?.village) !== selectedVillage) return false;
-        if (selectedAgeRange) {
+
+        // Multi-Select Filters
+        if (selectedVillages.length > 0) {
+            const villageName = getLocationName(member.address?.village);
+            if (!selectedVillages.includes(villageName)) return false;
+        }
+
+        if (selectedAgeRanges.length > 0) {
+            // Check if member matches ANY of the selected age ranges
             const age = parseInt(member.age) || 0;
-            const [min, max] = selectedAgeRange.split('-').map(Number);
-            if (max && (age < min || age > max)) return false;
+            const matchesAnyRange = selectedAgeRanges.some(range => {
+                if (range.includes('+')) {
+                    const min = parseInt(range);
+                    return age >= min;
+                }
+                const [min, max] = range.split('-').map(Number);
+                return age >= min && age <= max;
+            });
+            if (!matchesAnyRange) return false;
         }
-        if (selectedCategory) {
+
+        if (selectedCategories.length > 0) {
             const job = (member.occupation || '').toLowerCase();
-            if (!job.includes(selectedCategory.toLowerCase())) return false;
+            // Check if member matches ANY selected category (case-insensitive check)
+            const matchesAnyCategory = selectedCategories.some(cat =>
+                job.includes(cat.toLowerCase()) || (cat === 'Private Job' && job.includes('private'))
+            );
+            if (!matchesAnyCategory) return false;
         }
+
+        if (selectedBloodGroups.length > 0) {
+            const memberBlood = (member.bloodGroup || 'Unknown');
+            if (!selectedBloodGroups.includes(memberBlood)) return false;
+        }
+
         if (!selectedGenders.All) {
             const gender = (member.gender || '').toLowerCase();
             if (selectedGenders.Male && gender === 'male') return true;
@@ -275,17 +304,16 @@ const MemberManagement = () => {
             if (selectedGenders.Other && gender !== 'male' && gender !== 'female') return true;
             return false;
         }
-        if (selectedMaritalStatus) {
-            if ((member.maritalStatus || 'Unmarried').toLowerCase() !== selectedMaritalStatus.toLowerCase()) return false;
+
+        if (selectedMaritalStatuses.length > 0) {
+            const marital = (member.maritalStatus || 'Unmarried');
+            // Simple loose match if necessary, or strict
+            if (!selectedMaritalStatuses.some(s => s.toLowerCase() === marital.toLowerCase())) return false;
         }
-        if (selectedBloodGroup) {
-            const memberBlood = (member.bloodGroup || 'Unknown').toLowerCase();
-            if (memberBlood !== selectedBloodGroup.toLowerCase()) return false;
-        }
+
         if (selectedSubCaste) {
             const sub = (member.casteDetails?.subCaste || '').toLowerCase();
             const caste = (member.casteDetails?.caste || '').toLowerCase();
-            // Check both or specific? Usually subcaste chart passes subcaste name.
             if (!sub.includes(selectedSubCaste.toLowerCase()) && !caste.includes(selectedSubCaste.toLowerCase())) return false;
         }
         return true;
@@ -293,6 +321,7 @@ const MemberManagement = () => {
 
 
 
+    // Trigger geocoding when switching to map view or filtering
     // Trigger geocoding when switching to map view or filtering
     useEffect(() => {
         if (viewMode === 'map' && members.length > 0) {
@@ -304,7 +333,7 @@ const MemberManagement = () => {
                 }, index * 1200); // 1.2 second delay between requests
             });
         }
-    }, [viewMode, members, searchTerm, selectedVillage, selectedAgeRange, selectedCategory, selectedGenders]);
+    }, [viewMode, members, searchTerm, selectedVillages, selectedAgeRanges, selectedCategories, selectedGenders]);
 
     // Sorting Logic
     const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
@@ -409,35 +438,150 @@ const MemberManagement = () => {
 
     useEffect(() => {
         const newFilters = [];
-        if (selectedAgeRange) newFilters.push(`Age: ${selectedAgeRange}`);
-        if (selectedVillage) newFilters.push(`Village: ${selectedVillage}`);
-        if (selectedCategory) newFilters.push(`Category: ${selectedCategory}`);
-        if (selectedBloodGroup) newFilters.push(`Blood: ${selectedBloodGroup}`);
+        if (selectedAgeRanges.length > 0) newFilters.push(`Age: ${selectedAgeRanges.length} selected`);
+        if (selectedVillages.length > 0) newFilters.push(`Villages: ${selectedVillages.length} selected`);
+        if (selectedCategories.length > 0) newFilters.push(`Occupation: ${selectedCategories.length} selected`);
+        if (selectedBloodGroups.length > 0) newFilters.push(`Blood: ${selectedBloodGroups.length} selected`);
         setActiveFilters(newFilters);
         setCurrentPage(1);
-    }, [selectedVillage, selectedAgeRange, selectedCategory, selectedGenders, selectedBloodGroup]);
+    }, [selectedVillages, selectedAgeRanges, selectedCategories, selectedGenders, selectedBloodGroups]);
 
     const clearFilters = () => {
         setSearchTerm('');
-        setSelectedVillage('');
-        setSelectedAgeRange('');
-        setSelectedCategory('');
-        setSelectedBloodGroup('');
+        setSelectedVillages([]);
+        setSelectedAgeRanges([]);
+        setSelectedCategories([]);
+        setSelectedBloodGroups([]);
         setSelectedGenders({ All: true, Male: false, Female: false, Other: false });
         setActiveFilters([]);
         setCurrentPage(1);
     };
 
 
+    const [showExportMenu, setShowExportMenu] = useState(false);
+
     const exportToExcel = () => {
         const data = filteredMembers.map(m => ({
-            "ID": m.mewsId || m._id, "Name": `${m.name} ${m.surname}`, "Mobile": m.mobileNumber, "Village": getLocationName(m.address?.village), "Age": m.age, "Gender": m.gender, "Occupation": m.occupation
+            "ID": m.mewsId || m._id.substring(0, 6),
+            "First Name": m.name,
+            "Surname": m.surname,
+            "Mobile": m.mobileNumber,
+            "Village": getLocationName(m.address?.village),
+            "Age": m.age,
+            "Gender": m.gender,
+            "Occupation": m.occupation,
+            "Date Joined": new Date(m.createdAt).toLocaleDateString()
         }));
+
         const worksheet = XLSX.utils.json_to_sheet(data);
+
+        // Styling
+        const range = XLSX.utils.decode_range(worksheet['!ref']);
+        const headerStyle = {
+            fill: { fgColor: { rgb: "1E2A4A" } },
+            font: { name: "Arial", sz: 12, bold: true, color: { rgb: "FFFFFF" } },
+            alignment: { horizontal: "center", vertical: "center" }
+        };
+        const cellStyle = {
+            font: { name: "Arial", sz: 10 },
+            alignment: { vertical: "center" },
+            border: {
+                top: { style: "thin", color: { rgb: "E2E8F0" } },
+                bottom: { style: "thin", color: { rgb: "E2E8F0" } },
+                left: { style: "thin", color: { rgb: "E2E8F0" } },
+                right: { style: "thin", color: { rgb: "E2E8F0" } }
+            }
+        };
+
+        // Apply column widths
+        worksheet['!cols'] = [
+            { wch: 10 }, // ID
+            { wch: 15 }, // Name
+            { wch: 15 }, // Surname
+            { wch: 12 }, // Mobile
+            { wch: 15 }, // Village
+            { wch: 6 },  // Age
+            { wch: 8 },  // Gender
+            { wch: 15 }, // Occupation
+            { wch: 12 }  // Joined
+        ];
+
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_address = { c: C, r: R };
+                const cell_ref = XLSX.utils.encode_cell(cell_address);
+                if (!worksheet[cell_ref]) continue;
+
+                if (R === 0) {
+                    worksheet[cell_ref].s = headerStyle;
+                } else {
+                    worksheet[cell_ref].s = cellStyle;
+                }
+            }
+        }
+
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Members");
-        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        saveAs(new Blob([excelBuffer], { type: 'application/octet-stream' }), 'members.xlsx');
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Members Filtered");
+        XLSX.writeFile(workbook, `Members_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+        setShowExportMenu(false);
+    };
+
+    const exportToPDF = () => {
+        const doc = new jsPDF();
+
+        // Title
+        doc.setFontSize(18);
+        doc.setTextColor(30, 42, 74); // Dark Blue
+        doc.text("Member List Report", 14, 20);
+
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 28);
+        doc.text(`Total Records: ${filteredMembers.length}`, 14, 33);
+
+        const tableColumn = ["ID", "Name", "Mobile", "Village", "Age", "Gender", "Occupation"];
+        const tableRows = filteredMembers.map(m => [
+            m.mewsId || m._id.substring(0, 6),
+            `${m.name} ${m.surname}`,
+            m.mobileNumber,
+            getLocationName(m.address?.village),
+            m.age,
+            m.gender,
+            m.occupation,
+        ]);
+
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: 40,
+            theme: 'grid',
+            headStyles: {
+                fillColor: [30, 42, 74], // Dark Blue
+                textColor: [255, 255, 255], // White
+                fontStyle: 'bold',
+                halign: 'center'
+            },
+            styles: {
+                fontSize: 9,
+                cellPadding: 3,
+                valign: 'middle'
+            },
+            alternateRowStyles: {
+                fillColor: [241, 245, 249] // Slate-50
+            },
+            columnStyles: {
+                0: { cellWidth: 20 },
+                1: { cellWidth: 40, fontStyle: 'bold' },
+                2: { cellWidth: 25 },
+                3: { cellWidth: 25 },
+                4: { cellWidth: 10, halign: 'center' },
+                5: { cellWidth: 15 },
+                6: { cellWidth: 30 },
+            }
+        });
+
+        doc.save(`Members_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        setShowExportMenu(false);
     };
 
     const villages = [...new Set(members.map(m => getLocationName(m.address?.village)).filter(Boolean))];
@@ -499,7 +643,13 @@ const MemberManagement = () => {
                     <DashboardHeader
                         title="Member Management"
                         subtitle={null}
-                        breadcrumb="Dashboard > Members"
+                        breadcrumb={
+                            <>
+                                <Link to="/admin/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+                                <span className="opacity-70">&gt;</span>
+                                <span>Members</span>
+                            </>
+                        }
                     >
                         <div className="flex flex-col items-end gap-3">
                             {/* View Toggle */}
@@ -515,7 +665,22 @@ const MemberManagement = () => {
                                 <Link to="/admin/members/new" className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg transition transform hover:scale-105">
                                     <FaPlus /> Add Member
                                 </Link>
-                                <button onClick={exportToExcel} className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-md text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 border border-white/20 transition"><FaFileDownload /> Export Data</button>
+                                <div className="relative">
+                                    <button onClick={() => setShowExportMenu(!showExportMenu)} className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-md text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 border border-white/20 transition">
+                                        <FaFileDownload /> Export Data
+                                    </button>
+                                    {showExportMenu && (
+                                        <div className="absolute right-0 top-10 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in duration-200">
+                                            <div className="px-4 py-2 border-b border-slate-50 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Format</div>
+                                            <button onClick={exportToExcel} className="w-full text-left px-4 py-3 text-sm font-bold text-slate-700 hover:bg-green-50 hover:text-green-700 flex items-center gap-3 transition">
+                                                <FaFileExcel className="text-green-600" /> Excel (.xlsx)
+                                            </button>
+                                            <button onClick={exportToPDF} className="w-full text-left px-4 py-3 text-sm font-bold text-slate-700 hover:bg-red-50 hover:text-red-700 flex items-center gap-3 transition">
+                                                <FaFilePdf className="text-red-600" /> PDF Report
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </DashboardHeader>
@@ -533,10 +698,42 @@ const MemberManagement = () => {
                                 <div className="relative"><FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" /><input type="text" placeholder="Search by name, phone, village..." className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                                <div><label className="block text-xs font-bold text-slate-600 mb-1.5">Villages</label><select className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-blue-500 text-slate-700" value={selectedVillage} onChange={(e) => setSelectedVillage(e.target.value)}><option value="">Select Village</option>{villages.map(v => <option key={v} value={v}>{v}</option>)}</select></div>
-                                <div><label className="block text-xs font-bold text-slate-600 mb-1.5">Age Range</label><select className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-blue-500 text-slate-700" value={selectedAgeRange} onChange={(e) => setSelectedAgeRange(e.target.value)}><option value="">Select Range</option><option value="18-25">18 - 25</option><option value="26-40">26 - 40</option><option value="41-60">41 - 60</option><option value="60-150">60+</option></select></div>
-                                <div><label className="block text-xs font-bold text-slate-600 mb-1.5">Occupation</label><select className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-blue-500 text-slate-700" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}><option value="">Select Occupation</option><option value="Farmer">Farmer</option><option value="Student">Student</option><option value="Business">Business</option><option value="Private Job">Private Job</option></select></div>
-                                <div><label className="block text-xs font-bold text-slate-600 mb-1.5">Blood Group</label><select className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm focus:outline-none focus:border-blue-500 text-slate-700" value={selectedBloodGroup} onChange={(e) => setSelectedBloodGroup(e.target.value)}><option value="">Select Group</option><option value="A+">A+</option><option value="A-">A-</option><option value="B+">B+</option><option value="B-">B-</option><option value="AB+">AB+</option><option value="AB-">AB-</option><option value="O+">O+</option><option value="O-">O-</option></select></div>
+                                <div>
+                                    <MultiSelect
+                                        label="Villages"
+                                        options={villages}
+                                        selected={selectedVillages}
+                                        onChange={setSelectedVillages}
+                                        placeholder="Select Villages"
+                                    />
+                                </div>
+                                <div>
+                                    <MultiSelect
+                                        label="Age Range"
+                                        options={['18-25', '26-40', '41-60', '60+']}
+                                        selected={selectedAgeRanges}
+                                        onChange={setSelectedAgeRanges}
+                                        placeholder="Select Age Ranges"
+                                    />
+                                </div>
+                                <div>
+                                    <MultiSelect
+                                        label="Occupation"
+                                        options={['Farmer', 'Student', 'Business', 'Private Job']}
+                                        selected={selectedCategories}
+                                        onChange={setSelectedCategories}
+                                        placeholder="Select Occupations"
+                                    />
+                                </div>
+                                <div>
+                                    <MultiSelect
+                                        label="Blood Group"
+                                        options={['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']}
+                                        selected={selectedBloodGroups}
+                                        onChange={setSelectedBloodGroups}
+                                        placeholder="Select Blood Groups"
+                                    />
+                                </div>
                             </div>
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                 <div className="flex flex-col gap-2"><span className="text-xs font-bold text-slate-600">Gender</span><div className="flex items-center gap-4">{['All', 'Male', 'Female', 'Other'].map(type => (<label key={type} className="flex items-center gap-2 cursor-pointer select-none"><div className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedGenders[type] ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 bg-white'}`} onClick={() => handleGenderChange(type)}>{selectedGenders[type] && <FaCheckSquare size={10} />}</div><span className="text-sm text-slate-600">{type}</span></label>))}</div></div>
@@ -557,10 +754,10 @@ const MemberManagement = () => {
                                                 <div className="flex items-center gap-2 text-xs text-slate-500">Sort by: <select className="bg-transparent font-bold focus:outline-none cursor-pointer"><option>Name</option><option>Date Joined</option></select></div>
                                             </div>
                                             <div className="overflow-auto max-h-[calc(100vh-320px)] border-t border-slate-100">
-                                                <table className="w-full text-left border-collapse relative">
-                                                    <thead className="sticky top-0 z-20 shadow-sm">
-                                                        <tr className="bg-slate-50 border-b border-slate-200 text-sm font-bold text-slate-400 uppercase tracking-wider">
-                                                            <th className="px-6 py-4 w-10">
+                                                <table className="w-full text-left border-collapse relative table-fixed">
+                                                    <thead className="sticky top-0 z-20 shadow-sm bg-slate-50">
+                                                        <tr className="border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                            <th className="px-4 py-3 w-12 text-center">
                                                                 <input
                                                                     type="checkbox"
                                                                     className="rounded border-slate-300 w-4 h-4 cursor-pointer"
@@ -568,37 +765,37 @@ const MemberManagement = () => {
                                                                     onChange={handleSelectAll}
                                                                 />
                                                             </th>
-                                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('name')}>
+                                                            <th className="px-4 py-3 w-[22%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('name')}>
                                                                 <div className="flex items-center gap-1">Name {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('village')}>
+                                                            <th className="px-4 py-3 w-[12%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('village')}>
                                                                 <div className="flex items-center gap-1">Village {sortConfig.key === 'village' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('mobileNumber')}>
+                                                            <th className="px-4 py-3 w-[12%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('mobileNumber')}>
                                                                 <div className="flex items-center gap-1">Phone {sortConfig.key === 'mobileNumber' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('age')}>
+                                                            <th className="px-4 py-3 w-[6%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('age')}>
                                                                 <div className="flex items-center gap-1">Age {sortConfig.key === 'age' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('gender')}>
+                                                            <th className="px-4 py-3 w-[8%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('gender')}>
                                                                 <div className="flex items-center gap-1">Gender {sortConfig.key === 'gender' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('occupation')}>
+                                                            <th className="px-4 py-3 w-[12%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('occupation')}>
                                                                 <div className="flex items-center gap-1">Occupation {sortConfig.key === 'occupation' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-6 py-4 text-center cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('family')}>
+                                                            <th className="px-4 py-3 w-[8%] text-center cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('family')}>
                                                                 <div className="flex items-center justify-center gap-1">Family {sortConfig.key === 'family' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('createdAt')}>
+                                                            <th className="px-4 py-3 w-[10%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('createdAt')}>
                                                                 <div className="flex items-center gap-1">Joined {sortConfig.key === 'createdAt' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-6 py-4 text-center">Actions</th>
+                                                            <th className="px-4 py-3 w-[8%] text-center">Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-50">
                                                         {displayedMembers.map(member => (
                                                             <tr key={member._id} className={`transition-colors group ${selectedMemberIds.includes(member._id) ? 'bg-blue-50/50' : 'hover:bg-slate-50/80'}`}>
-                                                                <td className="px-6 py-4">
+                                                                <td className="px-4 py-3 text-center">
                                                                     <input
                                                                         type="checkbox"
                                                                         className="rounded border-slate-200 w-4 h-4 cursor-pointer"
@@ -606,15 +803,20 @@ const MemberManagement = () => {
                                                                         onChange={() => handleSelectMember(member._id)}
                                                                     />
                                                                 </td>
-                                                                <td className="px-6 py-4"><div className="flex flex-col"><Link to={`/admin/members/${member._id}`} className="text-base font-bold text-slate-800 hover:text-blue-600 cursor-pointer">{member.name} {member.surname}</Link><div className="text-xs text-slate-400 font-mono">ID: {member.mewsId || member._id.substring(0, 6)}</div></div></td>
-                                                                <td className="px-6 py-4 text-sm font-semibold text-blue-600">{getLocationName(member.address?.village) || 'N/A'}</td>
-                                                                <td className="px-6 py-4 text-sm text-slate-600 font-mono">{member.mobileNumber}</td>
-                                                                <td className="px-6 py-4 text-sm text-slate-600">{member.age}</td>
-                                                                <td className="px-6 py-4 text-sm text-slate-600">{member.gender}</td>
-                                                                <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wide ${(member.occupation || '').toLowerCase().includes('farmer') ? 'bg-green-50 text-green-600' : (member.occupation || '').toLowerCase().includes('student') ? 'bg-blue-50 text-blue-600' : (member.occupation || '').toLowerCase().includes('business') ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>{member.occupation || 'Member'}</span></td>
-                                                                <td className="px-6 py-4 text-sm text-slate-600 text-center">{member.familyDetails?.memberCount || 0}</td>
-                                                                <td className="px-6 py-4 text-sm text-slate-500">{new Date(member.createdAt).toLocaleDateString()}</td>
-                                                                <td className="px-6 py-4 text-center relative action-menu-container">
+                                                                <td className="px-4 py-3">
+                                                                    <div className="flex flex-col truncate pr-2">
+                                                                        <Link to={`/admin/members/${member._id}`} className="text-sm font-bold text-slate-800 hover:text-blue-600 cursor-pointer truncate" title={`${member.name} ${member.surname}`}>{member.name} {member.surname}</Link>
+                                                                        <div className="text-[10px] text-slate-400 font-mono truncate">ID: {member.mewsId || member._id.substring(0, 6)}</div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-4 py-3 text-xs font-bold text-blue-600 truncate" title={getLocationName(member.address?.village)}>{getLocationName(member.address?.village) || 'N/A'}</td>
+                                                                <td className="px-4 py-3 text-xs text-slate-600 font-mono">{member.mobileNumber}</td>
+                                                                <td className="px-4 py-3 text-xs text-slate-600">{member.age}</td>
+                                                                <td className="px-4 py-3 text-xs text-slate-600">{member.gender}</td>
+                                                                <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide truncate inline-block max-w-full ${(member.occupation || '').toLowerCase().includes('farmer') ? 'bg-green-50 text-green-600' : (member.occupation || '').toLowerCase().includes('student') ? 'bg-blue-50 text-blue-600' : (member.occupation || '').toLowerCase().includes('business') ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>{member.occupation || 'Member'}</span></td>
+                                                                <td className="px-4 py-3 text-xs text-slate-600 text-center">{member.familyDetails?.memberCount || 0}</td>
+                                                                <td className="px-4 py-3 text-xs text-slate-500">{new Date(member.createdAt).toLocaleDateString()}</td>
+                                                                <td className="px-4 py-3 text-center relative action-menu-container">
                                                                     <button onClick={(e) => { e.stopPropagation(); toggleMenu(member._id); }} className="p-2 text-slate-400 hover:text-blue-600 transition rounded-full hover:bg-slate-100"><FaEllipsisV /></button>
                                                                     {activeMenuId === member._id && (
                                                                         <div className="absolute right-8 top-8 w-40 bg-white rounded-lg shadow-xl border border-slate-100 z-10 overflow-hidden animate-in fade-in zoom-in duration-200">

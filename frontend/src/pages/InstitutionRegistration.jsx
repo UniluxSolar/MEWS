@@ -249,6 +249,15 @@ const InstitutionRegistration = () => {
                     <DashboardHeader
                         title="Add New Institution"
                         subtitle="Register a new educational or welfare institution to the network."
+                        breadcrumb={
+                            <>
+                                <Link to="/admin/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+                                <span className="opacity-70">&gt;</span>
+                                <Link to="/admin/institutions" className="hover:text-white transition-colors">Institutions</Link>
+                                <span className="opacity-70">&gt;</span>
+                                <span>Register</span>
+                            </>
+                        }
                     >
                         <Link to="/admin/institutions" className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-md text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all border border-white/20">
                             <FaArrowLeft /> Back to List
@@ -485,10 +494,10 @@ const InstitutionRegistration = () => {
                             </div>
 
                         </div>
-                    </div>
-                </main>
-            </div>
-        </div>
+                    </div >
+                </main >
+            </div >
+        </div >
     );
 };
 
