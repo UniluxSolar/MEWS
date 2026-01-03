@@ -282,14 +282,16 @@ const GenerateIDCard = () => {
                                             <div className="flex-1 flex px-4 pt-4 pb-3 relative z-10 w-full">
                                                 {/* Photo */}
                                                 <div className="w-[90px] mr-4 flex flex-col gap-2">
-                                                    <div className="w-[90px] h-[110px] bg-gray-100 border border-gray-300 shadow-sm p-0.5">
+                                                    <div className="w-[90px] h-[110px] bg-gray-100 border border-gray-300 shadow-sm p-0.5 relative overflow-hidden flex items-center justify-center">
+                                                        <span className="text-3xl font-bold text-gray-300 select-none">{(member.name || '?').charAt(0)}</span>
                                                         <img
                                                             src={member.photo.startsWith('http')
                                                                 ? `${import.meta.env.VITE_API_URL || ''}/api/proxy-image?url=${encodeURIComponent(member.photo)}`
                                                                 : (member.photo.startsWith('/') ? member.photo : `/${member.photo.replace(/\\/g, '/').replace(/^\//, '')}`)}
                                                             alt="Member"
-                                                            className="w-full h-full object-cover"
+                                                            className="w-full h-full object-cover absolute top-0 left-0"
                                                             crossOrigin="anonymous"
+                                                            onError={(e) => { e.target.style.display = 'none'; }}
                                                         />
                                                     </div>
                                                 </div>

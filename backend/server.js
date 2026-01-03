@@ -48,8 +48,12 @@ app.get('/api/proxy-image', async (req, res) => {
         res.set('Content-Type', response.headers['content-type']);
         response.data.pipe(res);
     } catch (error) {
-        console.error('Proxy Error:', error.message);
-        res.status(500).send('Failed to fetch image');
+        console.error(`Proxy Error for ${url}:`, error.message);
+        if (error.response) {
+            res.status(error.response.status).send(error.response.statusText);
+        } else {
+            res.status(500).send('Failed to fetch image');
+        }
     }
 });
 
