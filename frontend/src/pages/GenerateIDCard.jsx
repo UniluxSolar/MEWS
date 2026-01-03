@@ -89,7 +89,7 @@ const GenerateIDCard = () => {
                         surname: member.surname,
                         id: member.mewsId || 'PENDING',
                         mobile: member.mobileNumber || '+91 XXXXX XXXXX',
-                        photo: member.photoUrl ? (member.photoUrl.startsWith('http') ? member.photoUrl : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/${member.photoUrl.replace(/\\/g, '/').replace(/^uploads\//, 'uploads/')}`) : (member.photo || member2), // Embedded uses photo, API uses photoUrl
+                        photo: member.photoUrl ? (member.photoUrl.startsWith('http') ? member.photoUrl : `${import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:8080`}/${member.photoUrl.replace(/\\/g, '/').replace(/^uploads\//, 'uploads/')}`) : (member.photo || member2), // Embedded uses photo, API uses photoUrl
                         bloodGroup: member.bloodGroup || '-',
                         village: vName || 'Unknown',
                         mandal: mName || '',
