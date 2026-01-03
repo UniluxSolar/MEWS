@@ -43,7 +43,10 @@ const MemberDocument = ({ data, lookups }) => {
     // Photo URL
     const getPhotoUrl = (url) => {
         if (!url) return null;
-        if (url.startsWith('http')) return url;
+        if (url.startsWith('http')) {
+            return `${import.meta.env.VITE_API_URL || ''}/api/proxy-image?url=${encodeURIComponent(url)}`;
+        }
+        // Local relative path
         const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
         return `${baseUrl}/${url.replace(/\\/g, '/')}`;
     };
