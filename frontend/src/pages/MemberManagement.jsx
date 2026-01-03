@@ -861,7 +861,7 @@ const MemberManagement = () => {
                                                                 <img
                                                                     src={(member.photoUrl || member.profileImage).startsWith('http')
                                                                         ? (member.photoUrl || member.profileImage)
-                                                                        : `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000'}/${(member.photoUrl || member.profileImage).replace(/\\/g, '/')}`}
+                                                                        : `/${(member.photoUrl || member.profileImage).replace(/\\/g, '/').replace(/^\//, '')}`}
                                                                     alt={member.name}
                                                                     className="w-full h-full object-cover"
                                                                     onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
