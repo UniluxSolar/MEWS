@@ -856,18 +856,17 @@ const MemberManagement = () => {
                                                 {displayedMembers.map(member => (
                                                     <div key={member._id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 hover:shadow-md transition relative group">
                                                         <div className="absolute top-3 right-3"><span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide ${(member.occupation || '').toLowerCase().includes('farmer') ? 'bg-green-50 text-green-600' : (member.occupation || '').toLowerCase().includes('student') ? 'bg-blue-50 text-blue-600' : (member.occupation || '').toLowerCase().includes('business') ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>{member.occupation || 'Member'}</span></div>
-                                                        <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-xl font-bold text-slate-400 mb-3 border-2 border-white shadow-md mx-auto overflow-hidden mt-2">
-                                                            {(member.photoUrl || member.profileImage) ? (
+                                                        <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-xl font-bold text-slate-400 mb-3 border-2 border-white shadow-md mx-auto overflow-hidden mt-2 relative">
+                                                            <span className="absolute inset-0 flex items-center justify-center w-full h-full">{(member.name || '').charAt(0)}</span>
+                                                            {(member.photoUrl || member.profileImage) && (
                                                                 <img
                                                                     src={(member.photoUrl || member.profileImage).startsWith('http')
                                                                         ? (member.photoUrl || member.profileImage)
                                                                         : `/${(member.photoUrl || member.profileImage).replace(/\\/g, '/').replace(/^\//, '')}`}
                                                                     alt={member.name}
-                                                                    className="w-full h-full object-cover"
-                                                                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
+                                                                    className="w-full h-full object-cover relative z-10 bg-slate-100"
+                                                                    onError={(e) => { e.target.style.display = 'none'; }}
                                                                 />
-                                                            ) : (
-                                                                <span>{(member.name || '').charAt(0)}</span>
                                                             )}
                                                         </div>
                                                         <div className="text-center mb-4">
