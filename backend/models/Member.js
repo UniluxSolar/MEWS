@@ -163,6 +163,11 @@ const MemberSchema = new mongoose.Schema({
             landmark: String
         }
     }],
+    // K1. Family Linking End (Already closed in line 165)
+
+    // L. Authentication (OTP)
+    otp: { type: String },
+    otpExpires: { type: Date }
 }, {
     timestamps: true
 });

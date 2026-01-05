@@ -1,122 +1,250 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FaUserCircle, FaLock, FaArrowRight } from 'react-icons/fa';
+import { FaUserCircle, FaLock, FaArrowRight, FaUsers } from 'react-icons/fa';
+import mewsLogo from '../assets/mews_main_logo_new.png';
+import API from '../api';
 
 const LoginPage = () => {
     const navigate = useNavigate();
+
+    // State
+    const [loginMethod, setLoginMethod] = useState('otp'); // 'otp' or 'password'
+    const [mobile, setMobile] = useState('');
+    const [otp, setOtp] = useState('');
+    const [otpSent, setOtpSent] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [credentials, setCredentials] = useState({ userId: '', password: '' });
 
-    const handleChange = (e) => {
+    const handleCredentialsChange = (e) => {
         setCredentials({ ...credentials, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
-        // Mock login - in a real app, validate credentials here
-        navigate('/dashboard', { replace: true });
+        try {
+            setLoading(true);
+            const { data } = await API.post('/auth/login', {
+                username: credentials.userId,
+                password: credentials.password
+            });
+            localStorage.setItem('adminInfo', JSON.stringify(data));
+            navigate('/dashboard', { replace: true });
+        } catch (error) {
+            alert(error.response?.data?.message || 'Login failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSendOTP = async (e) => {
+        e.preventDefault();
+        try {
+            setLoading(true);
+            const { data } = await API.post('/auth/request-otp', { mobile });
+            setOtpSent(true);
+            // Display OTP in alert for easy testing
+            alert(`OTP sent! Your code is: ${data.otp}`);
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to send OTP');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyOTP = async (e) => {
+        e.preventDefault();
+        try {
+            setLoading(true);
+            const { data } = await API.post('/auth/verify-otp', { mobile, otp });
+            localStorage.setItem('adminInfo', JSON.stringify(data)); // Store member info as adminInfo for compatibility
+            navigate('/dashboard', { replace: true });
+        } catch (error) {
+            alert(error.response?.data?.message || 'Invalid OTP');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
-            <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg border border-gray-100">
-                <div className="text-center">
-                    <div className="mx-auto h-16 w-16 bg-secondary text-white rounded-full flex items-center justify-center mb-4">
-                        <FaUserCircle size={40} />
+        <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] p-4 font-sans text-gray-800">
+            <div className="w-full max-w-[420px] bg-white rounded-3xl shadow-xl border border-white p-8 sm:p-10 flex flex-col items-center">
+
+                {/* Logo Section */}
+                <div className="mb-6 flex flex-col items-center text-center">
+                    <div className="w-20 h-20 bg-[#1e2a4a] rounded-2xl flex items-center justify-center shadow-md mb-4">
+                        {/* Use img if available, else icon */}
+                        {mewsLogo ? (
+                            <img src={mewsLogo} alt="MEWS" className="w-16 h-16 object-contain" />
+                        ) : (
+                            <FaUsers className="text-white text-3xl" />
+                        )}
                     </div>
-                    <h2 className="text-3xl font-extrabold text-secondary tracking-tight">
-                        Member Login
-                    </h2>
-                    <p className="mt-2 text-sm text-gray-600">
-                        Access your MEWS dashboard
-                    </p>
+                    <h1 className="text-[#1e2a4a] text-2xl font-extrabold tracking-tight">MEWS</h1>
+                    <h2 className="text-[#1e2a4a] text-sm font-semibold tracking-wide uppercase mt-1">Mala Educational Welfare Society</h2>
+                    <p className="text-gray-500 text-xs mt-1">Community Support at Your Fingertips</p>
                 </div>
 
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    <div className="rounded-md shadow-sm -space-y-px">
-                        <div className="mb-4">
-                            <label htmlFor="userId" className="sr-only">User ID</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                                    <FaUserCircle />
-                                </div>
-                                <input
-                                    id="userId"
-                                    name="userId"
-                                    type="text"
-                                    required
-                                    className="appearance-none rounded-lg relative block w-full pl-10 px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                                    placeholder="Membership ID / Email"
-                                    value={credentials.userId}
-                                    onChange={handleChange}
-                                />
+                {/* Form Section */}
+                <div className="w-full space-y-5">
+
+                    {loginMethod === 'otp' ? (
+                        <>
+                            {/* Member Login Header */}
+                            <div className="text-center mb-2">
+                                <h2 className="text-xl font-bold text-[#1e2a4a]">Member Login</h2>
                             </div>
-                        </div>
-                        <div>
-                            <label htmlFor="password" className="sr-only">Password</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                                    <FaLock />
-                                </div>
-                                <input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    required
-                                    className="appearance-none rounded-lg relative block w-full pl-10 px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                                    placeholder="Password"
-                                    value={credentials.password}
-                                    onChange={handleChange}
-                                />
+
+                            {!otpSent ? (
+                                <>
+                                    {/* Mobile Input */}
+                                    <div className="space-y-1.5">
+                                        <label className="block text-sm font-semibold text-gray-600 pl-1">Mobile Number</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                                <span className="text-gray-500 font-medium">+91</span>
+                                            </div>
+                                            <input
+                                                type="tel"
+                                                value={mobile}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    if (val.length <= 10) setMobile(val);
+                                                }}
+                                                placeholder="Enter 10-digit mobile number"
+                                                className="w-full bg-gray-100 border-none text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-[#1e2a4a] focus:bg-white block pl-12 p-3.5 placeholder-gray-400 font-medium transition-all"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Send OTP Button */}
+                                    <button
+                                        onClick={handleSendOTP}
+                                        disabled={loading}
+                                        className="w-full bg-[#1e2a4a] hover:bg-[#2c3e66] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#1e2a4a]/20 transition-all transform active:scale-[0.98] mt-2 text-sm disabled:opacity-70"
+                                    >
+                                        {loading ? 'Sending...' : 'Send OTP'}
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    {/* OTP Input */}
+                                    <div className="space-y-1.5">
+                                        <label className="block text-sm font-semibold text-gray-600 pl-1">Enter OTP</label>
+                                        <input
+                                            type="text"
+                                            value={otp}
+                                            onChange={(e) => setOtp(e.target.value)}
+                                            placeholder="Enter 6-digit OTP"
+                                            maxLength={6}
+                                            className="w-full bg-gray-100 border-none text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-[#1e2a4a] focus:bg-white block p-3.5 placeholder-gray-400 font-medium transition-all text-center tracking-widest text-lg"
+                                        />
+                                    </div>
+
+                                    {/* Verify Button */}
+                                    <button
+                                        onClick={handleVerifyOTP}
+                                        disabled={loading}
+                                        className="w-full bg-[#1e2a4a] hover:bg-[#2c3e66] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#1e2a4a]/20 transition-all transform active:scale-[0.98] mt-2 text-sm disabled:opacity-70"
+                                    >
+                                        {loading ? 'Verifying...' : 'Verify & Login'}
+                                    </button>
+
+                                    <button
+                                        onClick={() => setOtpSent(false)}
+                                        className="w-full text-center text-xs text-gray-500 hover:text-[#1e2a4a] mt-2"
+                                    >
+                                        Change Mobile Number
+                                    </button>
+                                </>
+                            )}
+                        </>
+                    ) : (
+                        /* Password Login Form */
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            {/* Member Login Header */}
+                            <div className="text-center mb-2">
+                                <h2 className="text-xl font-bold text-[#1e2a4a]">Member Login</h2>
                             </div>
-                        </div>
+
+                            <div className="space-y-1.5">
+                                <label className="block text-sm font-semibold text-gray-600 pl-1">User ID / Email</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                                        <FaUserCircle />
+                                    </div>
+                                    <input
+                                        name="userId"
+                                        type="text"
+                                        required
+                                        value={credentials.userId}
+                                        onChange={handleCredentialsChange}
+                                        className="w-full bg-gray-100 border-none text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-[#1e2a4a] focus:bg-white block pl-10 p-3.5 placeholder-gray-400 font-medium transition-all"
+                                        placeholder="Membership ID"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="block text-sm font-semibold text-gray-600 pl-1">Password</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                                        <FaLock />
+                                    </div>
+                                    <input
+                                        name="password"
+                                        type="password"
+                                        required
+                                        value={credentials.password}
+                                        onChange={handleCredentialsChange}
+                                        className="w-full bg-gray-100 border-none text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-[#1e2a4a] focus:bg-white block pl-10 p-3.5 placeholder-gray-400 font-medium transition-all"
+                                        placeholder="Enter Password"
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="w-full bg-[#1e2a4a] hover:bg-[#2c3e66] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#1e2a4a]/20 transition-all transform active:scale-[0.98] mt-2 text-sm flex items-center justify-center gap-2"
+                            >
+                                Login
+                                <FaArrowRight className="text-xs" />
+                            </button>
+                        </form>
+                    )}
+
+                    {/* Divider */}
+                    <div className="relative flex py-2 items-center">
+                        <div className="flex-grow border-t border-gray-200"></div>
+                        <span className="flex-shrink-0 mx-4 text-gray-400 text-xs font-semibold tracking-wider">OR</span>
+                        <div className="flex-grow border-t border-gray-200"></div>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                            <input
-                                id="remember-me"
-                                name="remember-me"
-                                type="checkbox"
-                                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                            />
-                            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                                Remember me
-                            </label>
-                        </div>
+                    {/* Toggle Button */}
+                    <button
+                        onClick={() => setLoginMethod(loginMethod === 'otp' ? 'password' : 'otp')}
+                        className="w-full bg-slate-50 hover:bg-slate-100 text-[#1e2a4a] font-bold py-3.5 rounded-xl border border-gray-200 transition-all text-sm"
+                    >
+                        {loginMethod === 'otp' ? 'Login with Password' : 'Login with OTP'}
+                    </button>
 
-                        <div className="text-sm">
-                            <a href="#" className="font-medium text-primary hover:text-orange-700">
-                                Forgot your password?
-                            </a>
-                        </div>
+                    {/* Forgot Password Link (Only for Password Mode usually, but kept generally) */}
+                    <div className="text-center pt-2">
+                        <a href="#" className="text-xs font-semibold text-[#1e2a4a] hover:underline">Forgot Password?</a>
                     </div>
 
-                    <div>
-                        <button
-                            type="submit"
-                            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-primary hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition shadow-md"
-                        >
-                            <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-                                <FaArrowRight className="h-4 w-4 text-orange-200 group-hover:text-white transition" />
-                            </span>
-                            Sign in to Dashboard
-                        </button>
-                    </div>
-                </form>
+                </div>
 
-                <div className="text-center mt-6">
-                    <p className="text-sm text-gray-600">
-                        Don't have an account?{' '}
-                        <Link to="/register" className="font-bold text-secondary hover:text-primary transition">
-                            Register now
-                        </Link>
-                    </p>
-                    <div className="mt-4 pt-4 border-t border-gray-100">
-                        <Link to="/" className="text-xs text-gray-400 hover:text-gray-600">
-                            ← Back to Home
-                        </Link>
+                {/* Footer */}
+                <div className="mt-10 text-center space-y-2">
+                    <p className="text-[10px] text-gray-300 font-medium">Version 1.0.2</p>
+                    <div className="flex gap-3 justify-center text-[10px] text-[#1e2a4a] font-medium">
+                        <a href="#" className="hover:underline">Privacy Policy</a>
+                        <span>•</span>
+                        <a href="#" className="hover:underline">Terms of Service</a>
                     </div>
                 </div>
+
             </div>
         </div>
     );

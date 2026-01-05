@@ -111,4 +111,100 @@ const generateToken = (id) => {
     });
 };
 
-module.exports = { loginUser, changePassword, toggleTwoFactor };
+// @desc    Request OTP for Member Login
+// @route   POST /api/auth/request-otp
+// @access  Public
+const Member = require('../models/Member');
+const { sendSms } = require('../utils/smsService');
+
+const requestOtp = asyncHandler(async (req, res) => {
+    const { mobile } = req.body;
+
+    if (!mobile) {
+        res.status(400);
+        throw new Error('Mobile number is required');
+    }
+
+    // Find member by mobile
+    const member = await Member.findOne({ mobileNumber: mobile });
+
+    if (!member) {
+        res.status(404);
+        throw new Error('Member not found with this mobile number');
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Set OTP and expiry (10 minutes)
+    member.otp = otp;
+    member.otpExpires = Date.now() + 10 * 60 * 1000;
+
+    await member.save();
+
+    // Format Mobile Number for Twilio (Ensure +91 for India if missing)
+    let formattedMobile = mobile.trim();
+    if (!formattedMobile.startsWith('+')) {
+        formattedMobile = `+91${formattedMobile}`;
+    }
+
+    // Send SMS via Twilio
+    const smsSent = await sendSms(formattedMobile, `Your MEWS Login OTP is: ${otp}. Valid for 10 minutes.`);
+
+    console.log(`[OTP] Generated for ${mobile}: ${otp} | SMS Sent: ${smsSent}`);
+
+    // Return OTP in response ONLY if SMS failed (or keep for dev? I'll keep for dev convenience)
+    res.json({
+        message: smsSent ? 'OTP sent to mobile' : 'Failed to send SMS (Check Consoles)',
+        mobile,
+        otp: otp // ALWAYS return OTP for testing as per user request
+    });
+
+    // Dev Override: Always return OTP for now to ensure user isn't locked out if credentials fail
+    // res.json({ message: 'OTP processed', mobile, otp, smsStatus: smsSent ? 'Sent' : 'Failed' });
+});
+
+// @desc    Verify OTP and Login Member
+// @route   POST /api/auth/verify-otp
+// @access  Public
+const verifyOtp = asyncHandler(async (req, res) => {
+    const { mobile, otp } = req.body;
+
+    if (!mobile || !otp) {
+        res.status(400);
+        throw new Error('Mobile and OTP are required');
+    }
+
+    const member = await Member.findOne({ mobileNumber: mobile });
+
+    if (!member) {
+        res.status(404);
+        throw new Error('Member not found');
+    }
+
+    if (member.otp !== otp) {
+        res.status(400);
+        throw new Error('Invalid OTP');
+    }
+
+    if (member.otpExpires < Date.now()) {
+        res.status(400);
+        throw new Error('OTP has expired');
+    }
+
+    // Clear OTP
+    member.otp = undefined;
+    member.otpExpires = undefined;
+    await member.save();
+
+    res.json({
+        _id: member.id,
+        name: member.name,
+        surname: member.surname,
+        mobileNumber: member.mobileNumber,
+        role: 'MEMBER', // Explicitly set role for frontend handling
+        token: generateToken(member._id)
+    });
+});
+
+module.exports = { loginUser, changePassword, toggleTwoFactor, requestOtp, verifyOtp };

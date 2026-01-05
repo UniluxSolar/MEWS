@@ -11,6 +11,7 @@ const FundRequestSchema = new mongoose.Schema({
     amountCollected: { type: Number, default: 0 },
     eventDate: { type: Date },
     description: { type: String, required: true },
+    courseName: { type: String },
 
     // Beneficiary
     beneficiary: { type: mongoose.Schema.Types.ObjectId, ref: 'Member' }, // Can be null if it's a community fund
@@ -18,6 +19,14 @@ const FundRequestSchema = new mongoose.Schema({
 
     // Location Scope (e.g., Is this fund only for a specific village?)
     locationScope: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+
+    // Bank Details
+    bankDetails: {
+        accountNumber: { type: String },
+        bankName: { type: String },
+        ifscCode: { type: String },
+        branchName: { type: String }
+    },
 
     // Docs
     supportingDocuments: [String], // URLs (Photos, Budget, etc.)

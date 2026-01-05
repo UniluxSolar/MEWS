@@ -1,29 +1,30 @@
-// backend/utils/smsService.js
+const twilio = require('twilio');
 
-/**
- * Mock SMS Service
- * In a real application, this would use a provider like Twilio, Msg91, AWS SNS, etc.
- */
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const fromNumber = process.env.TWILIO_PHONE_NUMBER;
 
-const sendWelcomeSMS = async (mobileNumber, username, resetLink) => {
+const sendSms = async (to, body) => {
     try {
-        console.log("=================================================");
-        console.log(" [SMS SERVICE MOCK] SENDING SMS...");
-        console.log(` TO: ${mobileNumber}`);
-        console.log(` MESSAGE:`);
-        console.log(` Welcome to MEWS! Your registration is successful.`);
-        console.log(` Username: ${username}`);
-        console.log(` Set your password here: ${resetLink}`);
-        console.log("=================================================");
+        if (!accountSid || !authToken || !fromNumber) {
+            console.warn('[Twilio] Credentials missing in .env. SMS not sent.');
+            return false;
+        }
 
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
+        const client = twilio(accountSid, authToken);
 
+        const message = await client.messages.create({
+            body: body,
+            from: fromNumber,
+            to: to // Ensure 'to' includes country code (e.g., +91)
+        });
+
+        console.log(`[Twilio] SMS sent. SID: ${message.sid}`);
         return true;
     } catch (error) {
-        console.error("Error sending SMS:", error);
+        console.error(`[Twilio] Error sending SMS: ${error.message}`);
         return false;
     }
 };
 
-module.exports = { sendWelcomeSMS };
+module.exports = { sendSms };

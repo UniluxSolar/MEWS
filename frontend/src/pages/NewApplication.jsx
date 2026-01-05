@@ -198,7 +198,26 @@ const NewApplication = () => {
                                     <input type="text" className="w-full border border-gray-300 rounded-lg p-3" placeholder="Enter college/school name" />
                                 </div>
                                 <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Course Name</label>
                                     <input type="text" className="w-full border border-gray-300 rounded-lg p-3" placeholder="e.g. B.Tech Computer Science" />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Bank Name</label>
+                                        <input type="text" className="w-full border border-gray-300 rounded-lg p-3" placeholder="e.g. SBI, HDFC" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Branch Name</label>
+                                        <input type="text" className="w-full border border-gray-300 rounded-lg p-3" placeholder="e.g. Nalgonda Main Branch" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">Account Number</label>
+                                        <input type="text" className="w-full border border-gray-300 rounded-lg p-3" placeholder="Enter Account Number" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-2">IFSC Code</label>
+                                        <input type="text" className="w-full border border-gray-300 rounded-lg p-3 uppercase" placeholder="e.g. SBIN0001234" maxLength={11} />
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2">Reason for Assistance</label>

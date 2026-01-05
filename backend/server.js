@@ -97,6 +97,9 @@ app.get('/api/proxy-image', async (req, res) => {
     }
 });
 
+const { errorHandler } = require('./middleware/errorMiddleware');
+app.use(errorHandler);
+
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {

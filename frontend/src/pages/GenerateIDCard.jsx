@@ -5,7 +5,7 @@ import {
     FaSearch, FaShieldAlt, FaBell, FaChevronDown, FaThLarge, FaUsers, FaBuilding,
     FaExclamationTriangle, FaFileAlt, FaHandHoldingUsd, FaChartLine, FaCog,
     FaQuestionCircle, FaBullhorn, FaSignOutAlt, FaPrint, FaDownload,
-    FaWhatsapp, FaEnvelope, FaCheckCircle, FaArrowLeft
+    FaWhatsapp, FaEnvelope, FaCheckCircle, FaArrowLeft, FaPhoneAlt, FaCheck
 } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -279,9 +279,9 @@ const GenerateIDCard = () => {
                                             {/* ID Number Removed from Absolute Position */}
 
                                             {/* Content */}
-                                            <div className="flex-1 flex px-4 pt-4 pb-3 relative z-10 w-full">
+                                            <div className="flex-1 flex px-4 pt-3 pb-2 relative z-10 w-full">
                                                 {/* Photo */}
-                                                <div className="w-[90px] mr-4 flex flex-col gap-2">
+                                                <div className="w-[90px] mr-3 flex flex-col gap-2">
                                                     <div className="w-[90px] h-[110px] bg-gray-100 border border-gray-300 shadow-sm p-0.5 relative overflow-hidden flex items-center justify-center">
                                                         <span className="text-3xl font-bold text-gray-300 select-none">{(member.name || '?').charAt(0)}</span>
                                                         <img
@@ -297,37 +297,46 @@ const GenerateIDCard = () => {
                                                 </div>
 
                                                 {/* Details */}
-                                                <div className="flex-1 flex flex-col pt-1">
-                                                    <div className="text-[#1e2a4a] text-[15px] font-extrabold uppercase leading-tight tracking-wide mb-1 break-words">
+                                                <div className="flex-1 flex flex-col pt-0.5">
+                                                    <div className="text-[#1e2a4a] text-[15px] font-extrabold uppercase leading-tight tracking-wide mb-0.5 break-words">
                                                         {member.name} {member.surname}
                                                     </div>
 
                                                     {member.fatherName && (
-                                                        <div className="text-[11px] font-bold text-gray-900 uppercase mb-2">
+                                                        <div className="text-[11px] font-bold text-gray-900 uppercase mb-1">
                                                             {member.gender === 'Male' ? 'S/o ' : ((member.maritalStatus === 'Married' || (member.relation && ['Spouse', 'Wife', 'Mother'].includes(member.relation))) ? 'W/o ' : 'D/o ')}
                                                             {member.fatherName}
                                                         </div>
                                                     )}
 
-                                                    <div className="text-gray-700 text-[10px] font-semibold uppercase leading-tight mt-1 max-w-[220px]">
+                                                    <div className="text-gray-700 text-[10px] font-semibold uppercase leading-tight mt-0.5 max-w-[220px]">
                                                         {member.houseNo && `H.No: ${member.houseNo}, `} {member.street && `${member.street},`} <br />
                                                         {member.village && `${member.village} (V),`} {member.mandal && `${member.mandal} (M)`} <br />
                                                         {member.district && `${member.district} (D),`} {member.state} - {member.pincode}
                                                     </div>
 
-                                                    {/* Digital Signature Block */}
-                                                    <div className="mt-auto w-full flex justify-end items-end">
-                                                        <div className="relative bottom-1 right-1">
-                                                            <div className="flex items-start gap-1 p-1 pr-2 bg-white/95 backdrop-blur-sm rounded border border-green-600/30 shadow-sm">
-                                                                <div className="relative pt-0.5">
-                                                                    <FaCheckCircle className="text-green-600 text-[20px]" />
+                                                    {/* Phone Number */}
+                                                    <div className="flex items-center gap-1 mt-0.5 text-[10px] font-bold text-gray-800">
+                                                        <FaPhoneAlt className="text-[9px] text-[#1e2a4a]" />
+                                                        <span>{member.mobile}</span>
+                                                    </div>
+
+                                                    {/* Digital Signature Block (Adobe/Aadhaar Text Overlay Style with Border) */}
+                                                    <div className="mt-auto w-full flex justify-end items-end relative z-20">
+                                                        <div className="relative right-[0px] bottom-[5px] bg-white/95 border-2 border-gray-300 p-1 px-2 w-fit max-w-[145px] rounded-sm shadow-sm scale-95 origin-bottom-right">
+                                                            {/* Content Layer */}
+                                                            <div className="relative z-10 text-right">
+                                                                <span className="text-[11px] font-bold text-black leading-none block mb-0.5 text-left">Signature valid</span>
+                                                                <div className="text-[6px] text-black font-medium leading-[1.1] text-left">
+                                                                    Digitally signed by <br />
+                                                                    <span className="font-bold">GENERAL SECRETARY</span><br />
+                                                                    Date: {new Date().toISOString().replace('T', ' ').substring(0, 19).split(' ')[0].split('-').reverse().join('/')} {new Date().toISOString().split('T')[1].substring(0, 8)} UTC
                                                                 </div>
-                                                                <div className="flex flex-col leading-none">
-                                                                    <span className="text-[10px] font-bold text-green-700">Signature valid</span>
-                                                                    <span className="text-[5px] text-gray-500 font-medium mt-0.5">Digitally signed by</span>
-                                                                    <span className="text-[6px] font-bold text-gray-800 uppercase">General Secretary</span>
-                                                                    <span className="text-[5px] text-gray-400 mt-0.5">Date: {new Date().toLocaleDateString()}</span>
-                                                                </div>
+                                                            </div>
+
+                                                            {/* Overlay Tick Layer */}
+                                                            <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+                                                                <FaCheck className="text-green-600 text-[35px] opacity-80" style={{ filter: 'drop-shadow(0px 0px 1px rgba(255,255,255,0.8))' }} />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -343,23 +352,19 @@ const GenerateIDCard = () => {
                                             </div>
 
                                             <div className="relative z-20 flex-1 p-4 flex flex-col h-full">
-                                                {/* Top Info Grid */}
-                                                <div className="grid grid-cols-2 gap-x-2 gap-y-3 mb-3 border-b border-gray-200 pb-3">
-                                                    <div>
-                                                        <div className="text-[8px] text-gray-500 uppercase tracking-wider font-bold mb-0.5">Date of Issue</div>
-                                                        <div className="text-xs font-bold text-slate-800">{new Date().toLocaleDateString('en-GB')}</div>
+                                                {/* Top Info List - Back Side */}
+                                                <div className="flex flex-col gap-1.5 mb-3 border-b border-gray-200 pb-3 pt-2 text-[10px]">
+                                                    <div className="flex items-center">
+                                                        <span className="w-[80px] font-bold text-gray-600">Blood Group</span>
+                                                        <span className="font-bold text-gray-800">: {member.bloodGroup || 'N/A'}</span>
                                                     </div>
-                                                    <div>
-                                                        <div className="text-[8px] text-gray-500 uppercase tracking-wider font-bold mb-0.5">Valid Until</div>
-                                                        <div className="text-xs font-bold text-slate-800">{member.validUntil}</div>
+                                                    <div className="flex items-center">
+                                                        <span className="w-[80px] font-bold text-gray-600">Date of Issue</span>
+                                                        <span className="font-bold text-gray-800">: {new Date().toLocaleDateString('en-GB')}</span>
                                                     </div>
-                                                    <div>
-                                                        <div className="text-[8px] text-gray-500 uppercase tracking-wider font-bold mb-0.5">Blood Group</div>
-                                                        <div className="text-xs font-bold text-slate-800 text-red-600">{member.bloodGroup || 'N/A'}</div>
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-[8px] text-gray-500 uppercase tracking-wider font-bold mb-0.5">Emergency</div>
-                                                        <div className="text-xs font-bold text-slate-800">+91 98765 43210</div>
+                                                    <div className="flex items-center">
+                                                        <span className="w-[80px] font-bold text-gray-600">Valid Upto</span>
+                                                        <span className="font-bold text-gray-800">: {member.validUntil}</span>
                                                     </div>
                                                 </div>
 
