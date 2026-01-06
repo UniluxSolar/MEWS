@@ -25,7 +25,6 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/locations', require('./routes/locationRoutes'));
 app.use('/api/members', require('./routes/memberRoutes'));
 app.use('/api/institutions', require('./routes/institutionRoutes'));
-app.use('/api/ocr', require('./routes/ocrRoutes'));
 
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/announcements', require('./routes/announcementRoutes'));
