@@ -15,7 +15,8 @@ try {
             keyFilename: keyFilePath
         });
     } else {
-        console.error(`OCR ERROR: Google Cloud Credentials file missing at ${keyFilePath}`);
+        console.log('gcp-key.json not found, attempting to use Application Default Credentials...');
+        client = new vision.ImageAnnotatorClient();
     }
 } catch (initError) {
     console.error('OCR ERROR: Failed to initialize Vision Client:', initError);
@@ -40,9 +41,14 @@ const pdf = require('pdf-parse');
 const uploadAndExtract = async (req, res) => {
     try {
         // 1. Check if Client Intialized (Lazy init for Image OCR)
-        if (!client && fs.existsSync(keyFilePath)) {
+        if (!client) {
             try {
-                client = new vision.ImageAnnotatorClient({ keyFilename: keyFilePath });
+                if (fs.existsSync(keyFilePath)) {
+                    client = new vision.ImageAnnotatorClient({ keyFilename: keyFilePath });
+                } else {
+                    console.log('Lazy init: Using Application Default Credentials');
+                    client = new vision.ImageAnnotatorClient();
+                }
             } catch (e) { console.error('Vision Client Init Warning:', e); }
         }
 
@@ -95,7 +101,7 @@ const uploadAndExtract = async (req, res) => {
         } else {
             // Image OCR handling
             if (!client) {
-                return res.status(500).json({ message: 'OCR Configuration Missing: Google Cloud Credentials not found.' });
+                return res.status(500).json({ message: 'OCR Configuration Failed: Could not initialize Vision Client.' });
             }
 
             console.log(`[OCR Start] Processing Image file of size: ${buffer.length} bytes`);
@@ -122,9 +128,11 @@ const uploadAndExtract = async (req, res) => {
         logError(error, 'uploadAndExtract');
 
         // Specific check for credential errors
-        if (error.message.includes('ENOENT') && error.message.includes('gcp-key.json')) {
+        // Specific check for credential errors
+        if (error.message.includes('Could not load the default credentials')) {
             return res.status(500).json({
-                message: 'Configuration Error: Google Cloud Credentials file missing',
+                message: 'Configuration Error: Google Cloud Credentials not found',
+                details: 'Please ensure the service account has correct permissions or gcp-key.json is present locally.',
                 error: error.message
             });
         }
