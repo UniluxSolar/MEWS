@@ -107,7 +107,7 @@ const FormSelect = ({ label, options, required = false, colSpan = "col-span-1", 
 
 // File Upload Component
 // File Upload Component
-const FileUpload = ({ label, name, onChange, colSpan = "col-span-1", fileName, error, fileUrl }) => (
+const FileUpload = ({ label, name, onChange, onRemove, colSpan = "col-span-1", fileName, error, fileUrl }) => (
     <div className={colSpan}>
         <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
             {label}
@@ -115,23 +115,37 @@ const FileUpload = ({ label, name, onChange, colSpan = "col-span-1", fileName, e
         <div className={`border-2 border-dashed ${error ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-gray-50'} rounded-lg p-2 flex flex-col items-center justify-center hover:bg-gray-100 transition cursor-pointer text-center h-[52px] box-border relative group`}>
 
             {/* View Link if URL exists */}
-            {fileUrl && (
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20" title="View Document">
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex gap-1">
+                {fileUrl && (
                     <a
                         href={fileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition"
                         onClick={(e) => e.stopPropagation()}
+                        title="View Document"
                     >
                         <FaEye size={14} />
                     </a>
-                </div>
-            )}
+                )}
+                {(fileName || fileUrl) && onRemove && (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onRemove(name);
+                        }}
+                        className="flex items-center justify-center w-8 h-8 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition"
+                        title="Remove Document"
+                    >
+                        <FaEraser size={14} />
+                    </button>
+                )}
+            </div>
 
-            <div className={`absolute inset-0 flex items-center ${fileUrl ? 'justify-start pl-4' : 'justify-center'} gap-2 text-gray-500 group-hover:text-blue-600 pointer-events-none`}>
+            <div className={`absolute inset-0 flex items-center ${(fileUrl || fileName) ? 'justify-start pl-4' : 'justify-center'} gap-2 text-gray-500 group-hover:text-blue-600 pointer-events-none`}>
                 <FaUpload size={14} className={error ? 'text-red-500' : ''} />
-                <span className={`text-xs font-bold truncate max-w-[180px] ${error ? 'text-red-600' : ''}`}>
+                <span className={`text-xs font-bold truncate max-w-[120px] ${error ? 'text-red-600' : ''}`}>
                     {fileName ? fileName : (fileUrl ? 'File Uploaded' : 'Choose File')}
                 </span>
             </div>
@@ -535,6 +549,8 @@ const MemberRegistration = () => {
             setSameAsPresent(false);
             // Clear errors
             setErrors({});
+            // Clear removed files tracking
+            setRemovedFiles([]);
             // Reset sections to default (only Basic Info open)
 
             setOpenSections({
@@ -583,7 +599,8 @@ const MemberRegistration = () => {
     // Occupation Handling
     const memberOccupations = [
         "Student", "Farmer", "Business", "Private Employee",
-        "Government Employee", "Labourer", "House Wife", "Unemployed", "Retired", "Other"
+        "Government Employee", "Labourer", "House Wife", "Unemployed",
+        "Retired Govt. Employee", "Retired Private Employee", "Other"
     ];
 
     // Dynamic Constituency Filtering
@@ -942,6 +959,44 @@ const MemberRegistration = () => {
             }
             return newData;
         });
+
+        // Clear error when user changes the value
+        if (errors[name]) {
+            setErrors(prev => {
+                const newErrs = { ...prev };
+                delete newErrs[name];
+                return newErrs;
+            });
+        }
+    };
+
+    // Check Duplicate
+    const checkFieldDuplicate = async (name, value) => {
+        if (!value || isEditMode) return; // Skip if empty or editing (in edit, own value might trigger duplicate)
+
+        // Map frontend field names to backend expected keys
+        let fieldKey = '';
+        if (name === 'aadhaarNumber') fieldKey = 'aadhaarNumber';
+        if (name === 'epicNumber') fieldKey = 'voterId';
+        if (name === 'rationCardNumber') fieldKey = 'rationCard';
+
+        if (!fieldKey) return;
+
+        try {
+            const { data } = await API.post('/members/check-duplicate', { field: fieldKey, value });
+            if (data.isDuplicate) {
+                setErrors(prev => ({ ...prev, [name]: data.message }));
+            }
+        } catch (error) {
+            console.error("Duplicate check failed", error);
+        }
+    };
+
+    const handleBlur = (e) => {
+        const { name, value } = e.target;
+        if (['aadhaarNumber', 'epicNumber', 'rationCardNumber'].includes(name)) {
+            checkFieldDuplicate(name, value);
+        }
     };
 
     // Handle File Change
@@ -1099,6 +1154,35 @@ const MemberRegistration = () => {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [createdMemberData, setCreatedMemberData] = useState(null);
 
+    // Document Removal State (Tracks existing files removed by user during Edit)
+    const [removedFiles, setRemovedFiles] = useState([]);
+
+    const handleRemoveFile = (fieldName) => {
+        // 1. Clear from files state (for both new and existing files)
+        setFiles(prev => {
+            const updated = { ...prev };
+            delete updated[fieldName];
+            return updated;
+        });
+
+        // 2. If it was an existing file (marker 'existing' or has url in backend data), track for deletion
+        const targetFile = files[fieldName];
+        if (targetFile?.existing || targetFile?.type === 'existing' || targetFile?.url) {
+            setRemovedFiles(prev => [...prev, fieldName]);
+        }
+    };
+
+    const handleRemoveFamilyFile = (fieldName) => {
+        // Clear from familyMemberFiles state
+        setFamilyMemberFiles(prev => {
+            const updated = { ...prev };
+            delete updated[fieldName];
+            return updated;
+        });
+        // Note: Family members are updated as a full list, so clearing from state is enough.
+        // The backend resolver handles undefined/null values by clearing the field.
+    };
+
     // Final Submission
     const handleFinalSubmit = async () => {
         setLoading(true);
@@ -1119,6 +1203,11 @@ const MemberRegistration = () => {
                     dataPayload.append(key, file);
                 }
             });
+
+            // Append Removed Files for Backend Processing
+            if (isEditMode && removedFiles.length > 0) {
+                dataPayload.append('removedFiles', JSON.stringify(removedFiles));
+            }
 
             // Process Family Members
             let photoCount = 0;
@@ -1323,18 +1412,30 @@ const MemberRegistration = () => {
 
                 // Populate files state with existing document URLs (for display/preview)
                 const initialFiles = {};
-                if (data.documents) {
-                    data.documents.forEach(doc => {
-                        const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
-                        const fullUrl = doc.url.startsWith('http') ? doc.url : `${baseUrl}/${doc.url.replace(/\\/g, '/')}`;
-                        initialFiles[doc.type] = {
-                            name: doc.url.split(/[/\\]/).pop(),
-                            url: fullUrl,
-                            existing: true,
-                            type: 'existing' // Marker
-                        };
-                    });
-                }
+                const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
+
+                const resolveExistingFile = (url) => {
+                    if (!url) return null;
+                    // If url is already a full link (signed GCS URL), use as is.
+                    const fullUrl = (url.startsWith('http') || url.startsWith('blob:')) ? url : `${baseUrl}/${url.replace(/\\/g, '/')}`;
+                    return {
+                        name: url.split(/[/\\]/).pop().split('?')[0], // Remove query params if GCS
+                        url: fullUrl,
+                        existing: true,
+                        type: 'existing'
+                    };
+                };
+
+                if (data.photoUrl) initialFiles.photo = resolveExistingFile(data.photoUrl);
+                if (data.aadhaarCardUrl) initialFiles.aadhaarFront = resolveExistingFile(data.aadhaarCardUrl);
+                if (data.aadhaarCardBackUrl) initialFiles.aadhaarBack = resolveExistingFile(data.aadhaarCardBackUrl);
+                if (data.casteDetails?.certificateUrl) initialFiles.communityCert = resolveExistingFile(data.casteDetails.certificateUrl);
+                if (data.partnerDetails?.certificateUrl) initialFiles.marriageCert = resolveExistingFile(data.partnerDetails.certificateUrl);
+                if (data.rationCard?.fileUrl) initialFiles.rationCardFile = resolveExistingFile(data.rationCard.fileUrl);
+                if (data.voterId?.fileUrl) initialFiles.voterIdFront = resolveExistingFile(data.voterId.fileUrl);
+                if (data.voterId?.backFileUrl) initialFiles.voterIdBack = resolveExistingFile(data.voterId.backFileUrl);
+                if (data.bankDetails?.passbookUrl) initialFiles.bankPassbook = resolveExistingFile(data.bankDetails.passbookUrl);
+
                 setFiles(initialFiles);
 
                 // Populate family members
@@ -2115,13 +2216,35 @@ const MemberRegistration = () => {
                                                     </>
                                                 )}
 
+                                                {(formData.occupation === 'Retired Govt. Employee' || formData.occupation === 'Retired Private Employee') && (
+                                                    <FormInput
+                                                        label="Designation"
+                                                        name="jobDesignation"
+                                                        value={formData.jobDesignation}
+                                                        onChange={handleChange}
+                                                        placeholder="Enter designation"
+                                                        required
+                                                    />
+                                                )}
+
+                                                {formData.occupation === 'Other' && (
+                                                    <FormInput
+                                                        label="Specify Details"
+                                                        name="jobDesignation"
+                                                        value={formData.jobDesignation}
+                                                        onChange={handleChange}
+                                                        placeholder="Enter occupation details"
+                                                        required
+                                                    />
+                                                )}
+
                                                 {formData.occupation === 'Student' && (
                                                     <FormSelect
                                                         label="Education Level"
                                                         name="educationLevel"
                                                         value={formData.educationLevel}
                                                         onChange={handleChange}
-                                                        options={["School", "Intermediate", "Degree", "PG"]}
+                                                        options={["Primary School", "High School", "Intermediate", "Vocational / ITI", "Polytechnic / Diploma", "Engineering & Technology", "Degree", "PG", "Research / Doctoral Studies (PhD)"]}
                                                         required
                                                     />
                                                 )}
@@ -2164,7 +2287,7 @@ const MemberRegistration = () => {
                                         <FormInput label="Alternate Mobile Number" name="alternateMobile" value={formData.alternateMobile} onChange={handleChange} placeholder="Enter alternate mobile number" />
 
                                         <FormInput label="Email Address" name="email" value={formData.email} onChange={handleChange} placeholder="Enter email address" colSpan="md:col-span-2" />
-                                        <FormInput label="Aadhar Number" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleChange} placeholder="Enter 12-digit Aadhar number" required error={errors.aadhaarNumber} />
+                                        <FormInput label="Aadhar Number" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleChange} onBlur={handleBlur} placeholder="Enter 12-digit Aadhar number" required error={errors.aadhaarNumber} />
 
                                         {/* Member Photo removed from here as requested, moved to bottom */}
                                     </div>
@@ -2402,7 +2525,7 @@ const MemberRegistration = () => {
                                         <FormSelect label="Member's Sub-Caste" name="subCaste" value={formData.subCaste} onChange={handleChange} options={subCastes} placeholder="Select sub-caste" />
 
                                         <FormInput label="Community Certificate Number" name="communityCertNumber" value={formData.communityCertNumber} onChange={handleChange} placeholder="Enter certificate number" />
-                                        <FileUpload label="Community Certificate Upload" name="communityCert" onChange={handleFileChange} fileName={files.communityCert?.name} fileUrl={files.communityCert?.url} />
+                                        <FileUpload label="Community Certificate Upload" name="communityCert" onChange={handleFileChange} onRemove={handleRemoveFile} fileName={files.communityCert?.name} fileUrl={files.communityCert?.url} />
                                     </div>
                                 </CollapsibleSection>
 
@@ -2506,12 +2629,12 @@ const MemberRegistration = () => {
                                         onToggle={() => toggleSection(6)}
                                     >
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <FormInput label="Voter ID Number (EPIC Number)" name="epicNumber" value={formData.epicNumber} onChange={handleChange} placeholder="Enter EPIC number" />
-                                            <FormInput label="Voter Name as per Card" name="voterName" value={formData.voterName} onChange={handleChange} placeholder="Enter name as per voter ID" />
+                                            <FormInput label="Voter ID Number (EPIC Number)" name="epicNumber" value={formData.epicNumber} onChange={handleChange} onBlur={handleBlur} placeholder="Enter EPIC number" />
+
                                             <FormInput label="Polling Booth Number" name="pollingBooth" value={formData.pollingBooth} onChange={handleChange} placeholder="Enter booth number" />
                                             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <FileUpload label="Upload Voter ID Front" name="voterIdFront" onChange={handleFileChange} fileName={files.voterIdFront?.name} fileUrl={files.voterIdFront?.url} />
-                                                <FileUpload label="Upload Voter ID Back" name="voterIdBack" onChange={handleFileChange} fileName={files.voterIdBack?.name} fileUrl={files.voterIdBack?.url} />
+                                                <FileUpload label="Upload Voter ID Front" name="voterIdFront" onChange={handleFileChange} onRemove={handleRemoveFile} fileName={files.voterIdFront?.name} fileUrl={files.voterIdFront?.url} />
+                                                <FileUpload label="Upload Voter ID Back" name="voterIdBack" onChange={handleFileChange} onRemove={handleRemoveFile} fileName={files.voterIdBack?.name} fileUrl={files.voterIdBack?.url} />
                                             </div>
                                         </div>
                                     </CollapsibleSection>
@@ -2529,19 +2652,33 @@ const MemberRegistration = () => {
                                 >
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                                         <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${errors.photo ? 'border-red-500 bg-red-50' : (files.photo ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100')}`}>
-                                            {files.photo?.url && (
-                                                <div className="absolute right-2 top-2 z-20" title="View Photo">
+                                            <div className="absolute right-2 top-2 z-20 flex gap-1">
+                                                {files.photo?.url && (
                                                     <a
                                                         href={files.photo.url}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition"
                                                         onClick={(e) => e.stopPropagation()}
+                                                        title="View Photo"
                                                     >
                                                         <FaEye size={14} />
                                                     </a>
-                                                </div>
-                                            )}
+                                                )}
+                                                {files.photo && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRemoveFile('photo');
+                                                        }}
+                                                        className="flex items-center justify-center w-8 h-8 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition"
+                                                        title="Remove Photo"
+                                                    >
+                                                        <FaEraser size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
                                             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
                                                 <FaFileImage className={errors.photo ? 'text-red-500' : (files.photo ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500')} />
                                             </div>
@@ -2555,19 +2692,33 @@ const MemberRegistration = () => {
                                             <input type="file" name="photo" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer z-10" />
                                         </div>
                                         <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${errors.aadhaarFront ? 'border-red-500 bg-red-50' : (files.aadhaarFront ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100')}`}>
-                                            {files.aadhaarFront?.url && (
-                                                <div className="absolute right-2 top-2 z-20" title="View Document">
+                                            <div className="absolute right-2 top-2 z-20 flex gap-1">
+                                                {files.aadhaarFront?.url && (
                                                     <a
                                                         href={files.aadhaarFront.url}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition"
                                                         onClick={(e) => e.stopPropagation()}
+                                                        title="View Document"
                                                     >
                                                         <FaEye size={14} />
                                                     </a>
-                                                </div>
-                                            )}
+                                                )}
+                                                {files.aadhaarFront && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRemoveFile('aadhaarFront');
+                                                        }}
+                                                        className="flex items-center justify-center w-8 h-8 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition"
+                                                        title="Remove Aadhaar Front"
+                                                    >
+                                                        <FaEraser size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
                                             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
                                                 <FaIdCard className={errors.aadhaarFront ? 'text-red-500' : (files.aadhaarFront ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500')} />
                                             </div>
@@ -2581,19 +2732,33 @@ const MemberRegistration = () => {
                                             <input type="file" name="aadhaarFront" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer z-10" />
                                         </div>
                                         <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${files.aadhaarBack ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
-                                            {files.aadhaarBack?.url && (
-                                                <div className="absolute right-2 top-2 z-20" title="View Document">
+                                            <div className="absolute right-2 top-2 z-20 flex gap-1">
+                                                {files.aadhaarBack?.url && (
                                                     <a
                                                         href={files.aadhaarBack.url}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition"
                                                         onClick={(e) => e.stopPropagation()}
+                                                        title="View Document"
                                                     >
                                                         <FaEye size={14} />
                                                     </a>
-                                                </div>
-                                            )}
+                                                )}
+                                                {files.aadhaarBack && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRemoveFile('aadhaarBack');
+                                                        }}
+                                                        className="flex items-center justify-center w-8 h-8 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition"
+                                                        title="Remove Aadhaar Back"
+                                                    >
+                                                        <FaEraser size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
                                             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
                                                 <FaIdCard className={files.aadhaarBack ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500'} />
                                             </div>
@@ -2765,11 +2930,11 @@ const MemberRegistration = () => {
 
                                     {formData.hasRationCard && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <FormInput label="Ration Card Number" name="rationCardNumber" value={formData.rationCardNumber} onChange={handleChange} placeholder="Enter ration card number" />
+                                            <FormInput label="Ration Card Number" name="rationCardNumber" value={formData.rationCardNumber} onChange={handleChange} onBlur={handleBlur} placeholder="Enter ration card number" />
                                             <FormInput label="Ration Card Holder Name" name="rationCardHolderName" value={formData.rationCardHolderName} onChange={handleChange} placeholder="Enter card holder name" />
                                             <FormSelect label="Ration Card Type" name="rationCardTypeFamily" value={formData.rationCardTypeFamily} onChange={handleChange} options={["Food Security Card", "Antyodaya Anna Yojana", "Annapurna Scheme"]} />
                                             <div className="md:col-span-2">
-                                                <FileUpload label="Upload Ration Card" name="rationCardFile" onChange={handleFileChange} fileName={files.rationCardFile?.name} fileUrl={files.rationCardFile?.url} />
+                                                <FileUpload label="Upload Ration Card" name="rationCardFile" onChange={handleFileChange} onRemove={handleRemoveFile} fileName={files.rationCardFile?.name} fileUrl={files.rationCardFile?.url} />
                                                 <p className="text-[10px] text-gray-500 mt-1">Max file size: 5 MB</p>
                                             </div>
                                         </div>
@@ -2988,7 +3153,7 @@ const MemberRegistration = () => {
                                 />
                                 <FormInput label="Surname" name="surname" value={familyMemberForm.surname} onChange={handleFamilyChange} placeholder="Surname" required />
                                 <FormInput label="Name" name="name" value={familyMemberForm.name} onChange={handleFamilyChange} placeholder="Name" required />
-                                <FormInput label="Father's Name" name="fatherName" value={familyMemberForm.fatherName} onChange={handleFamilyChange} placeholder="Father Name" required />
+                                <FormInput label="S/o, W/o, D/o" name="fatherName" value={familyMemberForm.fatherName} onChange={handleFamilyChange} placeholder="Enter S/o, W/o, D/o Name" required />
                                 <FormInput label="Date of Birth (DD-MM-YYYY)" name="dob" value={familyMemberForm.dob} onChange={(e) => handleDateChange(e, setFamilyMemberForm, 'dob')} placeholder="DD-MM-YYYY" maxLength={10} />
                                 <FormInput label="Age" name="age" value={familyMemberForm.age} onChange={handleFamilyChange} placeholder="Age" type="number" />
                                 <FormSelect label="Gender" name="gender" value={familyMemberForm.gender} onChange={handleFamilyChange} options={["Male", "Female", "Other"]} />
@@ -3059,13 +3224,33 @@ const MemberRegistration = () => {
                                             </>
                                         )}
 
+                                        {(familyMemberForm.occupation === 'Retired Govt. Employee' || familyMemberForm.occupation === 'Retired Private Employee') && (
+                                            <FormInput
+                                                label="Designation"
+                                                name="jobDesignation"
+                                                value={familyMemberForm.jobDesignation}
+                                                onChange={handleFamilyChange}
+                                                placeholder="Enter designation"
+                                            />
+                                        )}
+
+                                        {familyMemberForm.occupation === 'Other' && (
+                                            <FormInput
+                                                label="Specify Details"
+                                                name="jobDesignation"
+                                                value={familyMemberForm.jobDesignation}
+                                                onChange={handleFamilyChange}
+                                                placeholder="Enter occupation details"
+                                            />
+                                        )}
+
                                         {familyMemberForm.occupation === 'Student' && (
                                             <FormSelect
                                                 label="Education Level"
                                                 name="educationLevel"
                                                 value={familyMemberForm.educationLevel}
                                                 onChange={handleFamilyChange}
-                                                options={["School", "Intermediate", "Degree", "PG"]}
+                                                options={["Primary School", "High School", "Intermediate", "Vocational / ITI", "Polytechnic / Diploma", "Engineering & Technology", "Degree", "PG", "Research / Doctoral Studies (PhD)"]}
                                                 required
                                             />
                                         )}
@@ -3080,21 +3265,21 @@ const MemberRegistration = () => {
                                     <>
                                         <div className="md:col-span-2 mt-4"><h3 className="font-bold text-blue-600 border-b pb-1 mb-2">Voter ID Details</h3></div>
                                         <FormInput label="EPIC Number" name="epicNumber" value={familyMemberForm.epicNumber} onChange={handleFamilyChange} placeholder="EPIC No" />
-                                        <FormInput label="Voter Name" name="voterName" value={familyMemberForm.voterName} onChange={handleFamilyChange} placeholder="Name on Card" />
+
                                         <FormInput label="Polling Booth" name="pollingBooth" value={familyMemberForm.pollingBooth} onChange={handleFamilyChange} placeholder="Booth No" />
                                     </>
                                 )}
 
                                 {/* Documents */}
                                 <div className="md:col-span-2 mt-4"><h3 className="font-bold text-blue-600 border-b pb-1 mb-2">Document Uploads</h3></div>
-                                <FileUpload label="Member Photo" name="photo" onChange={handleFamilyFileChange} fileName={familyMemberFiles.photo?.name} />
-                                <FileUpload label="Aadhaar Front" name="aadhaarFront" onChange={handleFamilyFileChange} fileName={familyMemberFiles.aadhaarFront?.name} />
-                                <FileUpload label="Aadhaar Back" name="aadhaarBack" onChange={handleFamilyFileChange} fileName={familyMemberFiles.aadhaarBack?.name} />
+                                <FileUpload label="Member Photo" name="photo" onChange={handleFamilyFileChange} onRemove={handleRemoveFamilyFile} fileName={familyMemberFiles.photo?.name} />
+                                <FileUpload label="Aadhaar Front" name="aadhaarFront" onChange={handleFamilyFileChange} onRemove={handleRemoveFamilyFile} fileName={familyMemberFiles.aadhaarFront?.name} />
+                                <FileUpload label="Aadhaar Back" name="aadhaarBack" onChange={handleFamilyFileChange} onRemove={handleRemoveFamilyFile} fileName={familyMemberFiles.aadhaarBack?.name} />
 
                                 {(!familyMemberForm.age || parseInt(familyMemberForm.age) >= 18) && (
                                     <>
-                                        <FileUpload label="Voter ID Front" name="voterIdFront" onChange={handleFamilyFileChange} fileName={familyMemberFiles.voterIdFront?.name} />
-                                        <FileUpload label="Voter ID Back" name="voterIdBack" onChange={handleFamilyFileChange} fileName={familyMemberFiles.voterIdBack?.name} />
+                                        <FileUpload label="Voter ID Front" name="voterIdFront" onChange={handleFamilyFileChange} onRemove={handleRemoveFamilyFile} fileName={familyMemberFiles.voterIdFront?.name} />
+                                        <FileUpload label="Voter ID Back" name="voterIdBack" onChange={handleFamilyFileChange} onRemove={handleRemoveFamilyFile} fileName={familyMemberFiles.voterIdBack?.name} />
                                     </>
                                 )}
 

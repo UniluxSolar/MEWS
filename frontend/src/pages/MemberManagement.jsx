@@ -17,7 +17,7 @@ import AdminHeader from '../components/AdminHeader';
 import DashboardHeader from '../components/common/DashboardHeader';
 import MultiSelect from '../components/common/MultiSelect';
 // Map Imports
-import { MapContainer, TileLayer, Marker, Tooltip, useMap, CircleMarker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Tooltip, useMap, CircleMarker, Popup, LayersControl } from 'react-leaflet';
 import L from 'leaflet';
 
 // Fix for default marker icons in React Leaflet
@@ -127,17 +127,17 @@ const MemberManagement = () => {
             // Fallback: Hash
             let hash = 0;
             for (let i = 0; i < inputString.length; i++) hash = inputString.charCodeAt(i) + ((hash << 5) - hash);
-            const latBase = (hash % 1000) / 2500;
-            const lngBase = ((hash >> 5) % 1000) / 2500;
+            const latBase = ((hash % 1000) - 500) / 20000;
+            const lngBase = (((hash >> 5) % 1000) - 500) / 20000;
             baseCoords = [17.0500 + latBase, 79.2667 + lngBase];
         }
 
-        // Jitter
+        // Jitter: Centered and tighter
         let seedHash = 0;
         const combinedSeed = seed || 'default';
         for (let i = 0; i < combinedSeed.length; i++) seedHash = combinedSeed.charCodeAt(i) + ((seedHash << 5) - seedHash);
-        const latJitter = (seedHash % 100) / 50000;
-        const lngJitter = ((seedHash >> 5) % 100) / 50000;
+        const latJitter = ((seedHash % 100) - 50) / 100000;
+        const lngJitter = (((seedHash >> 5) % 100) - 50) / 100000;
 
         return [baseCoords[0] + latJitter, baseCoords[1] + lngJitter];
     };
@@ -182,6 +182,8 @@ const MemberManagement = () => {
     const [selectedMaritalStatuses, setSelectedMaritalStatuses] = useState([]);
     const [selectedBloodGroups, setSelectedBloodGroups] = useState([]);
     const [selectedSubCaste, setSelectedSubCaste] = useState('');
+    const [selectedVoterStatus, setSelectedVoterStatus] = useState('');
+    const [selectedEmploymentStatus, setSelectedEmploymentStatus] = useState('');
 
     const location = useLocation();
 
@@ -195,6 +197,8 @@ const MemberManagement = () => {
         const ageRange = params.get('ageRange');
         const occupation = params.get('occupation');
         const villages = params.get('villages');
+        const voterStatus = params.get('voterStatus');
+        const employmentStatus = params.get('employmentStatus');
 
         if (gender) {
             setSelectedGenders({
@@ -210,6 +214,8 @@ const MemberManagement = () => {
         if (ageRange) setSelectedAgeRanges(ageRange.split(',').filter(Boolean));
         if (occupation) setSelectedCategories(occupation.split(',').filter(Boolean));
         if (villages) setSelectedVillages(villages.split(',').filter(Boolean));
+        if (voterStatus) setSelectedVoterStatus(voterStatus);
+        if (employmentStatus) setSelectedEmploymentStatus(employmentStatus);
 
     }, [location.search]);
 
@@ -265,8 +271,9 @@ const MemberManagement = () => {
 
         // Multi-Select Filters
         if (selectedVillages.length > 0) {
-            const villageName = getLocationName(member.address?.village);
-            if (!selectedVillages.includes(villageName)) return false;
+            const villageName = getLocationName(member.address?.village).trim();
+            // Use case-insensitive check
+            if (!selectedVillages.some(v => v.toLowerCase().trim() === villageName.toLowerCase())) return false;
         }
 
         if (selectedAgeRanges.length > 0) {
@@ -284,11 +291,16 @@ const MemberManagement = () => {
         }
 
         if (selectedCategories.length > 0) {
-            const job = (member.occupation || '').toLowerCase();
-            // Check if member matches ANY selected category (case-insensitive check)
-            const matchesAnyCategory = selectedCategories.some(cat =>
-                job.includes(cat.toLowerCase()) || (cat === 'Private Job' && job.includes('private'))
-            );
+            const job = (member.occupation || '').toLowerCase().trim();
+            // Check if member matches ANY selected category (case-insensitive strict check)
+            // Exception: 'Private Job' acts as a catch-all category
+            const matchesAnyCategory = selectedCategories.some(cat => {
+                const filterVal = cat.toLowerCase().trim();
+                if (cat === 'Private Job') {
+                    return job.includes('private');
+                }
+                return job === filterVal;
+            });
             if (!matchesAnyCategory) return false;
         }
 
@@ -316,6 +328,25 @@ const MemberManagement = () => {
             const caste = (member.casteDetails?.caste || '').toLowerCase();
             if (!sub.includes(selectedSubCaste.toLowerCase()) && !caste.includes(selectedSubCaste.toLowerCase())) return false;
         }
+
+        if (selectedVoterStatus) {
+            const age = Number(member.age) || 0;
+            if (selectedVoterStatus === 'Voter' && age < 18) return false;
+            if (selectedVoterStatus === 'Non-Voter' && age >= 18) return false;
+        }
+
+        if (selectedEmploymentStatus) {
+            const job = (member.occupation || '').toLowerCase().trim();
+            const unemployedKeywords = ["student", "house wife", "housewife", "homemaker", "unemployed", "retired", "child", "nil", "none", ""];
+            // Check if exact match or contains? The dashboard bucketed them.
+            // Dashboard bucket logic: $in: [student, house wife...]
+            // Let's use strict check against keywords for consistency, or include check.
+            const isUnemployed = unemployedKeywords.includes(job) || job === '';
+
+            if (selectedEmploymentStatus === 'Unemployed' && !isUnemployed) return false;
+            if (selectedEmploymentStatus === 'Employed' && isUnemployed) return false;
+        }
+
         return true;
     });
 
@@ -442,9 +473,11 @@ const MemberManagement = () => {
         if (selectedVillages.length > 0) newFilters.push(`Villages: ${selectedVillages.length} selected`);
         if (selectedCategories.length > 0) newFilters.push(`Occupation: ${selectedCategories.length} selected`);
         if (selectedBloodGroups.length > 0) newFilters.push(`Blood: ${selectedBloodGroups.length} selected`);
+        if (selectedVoterStatus) newFilters.push(`Voter: ${selectedVoterStatus}`);
+        if (selectedEmploymentStatus) newFilters.push(`Employment: ${selectedEmploymentStatus}`);
         setActiveFilters(newFilters);
         setCurrentPage(1);
-    }, [selectedVillages, selectedAgeRanges, selectedCategories, selectedGenders, selectedBloodGroups]);
+    }, [selectedVillages, selectedAgeRanges, selectedCategories, selectedGenders, selectedBloodGroups, selectedVoterStatus, selectedEmploymentStatus]);
 
     const clearFilters = () => {
         setSearchTerm('');
@@ -452,6 +485,8 @@ const MemberManagement = () => {
         setSelectedAgeRanges([]);
         setSelectedCategories([]);
         setSelectedBloodGroups([]);
+        setSelectedVoterStatus('');
+        setSelectedEmploymentStatus('');
         setSelectedGenders({ All: true, Male: false, Female: false, Other: false });
         setActiveFilters([]);
         setCurrentPage(1);
@@ -895,10 +930,20 @@ const MemberManagement = () => {
                                             {/* Map Container */}
                                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 w-full lg:w-9/12 aspect-square lg:aspect-auto lg:h-[600px] overflow-hidden relative">
                                                 <MapContainer center={[17.0500, 79.2667]} zoom={10} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
-                                                    <TileLayer
-                                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                    />
+                                                    <LayersControl position="topright">
+                                                        <LayersControl.BaseLayer checked name="Standard">
+                                                            <TileLayer
+                                                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                            />
+                                                        </LayersControl.BaseLayer>
+                                                        <LayersControl.BaseLayer name="Satellite">
+                                                            <TileLayer
+                                                                attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                                                                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                                            />
+                                                        </LayersControl.BaseLayer>
+                                                    </LayersControl>
                                                     <MapUpdater locations={mapLocations} />
                                                     {filteredMembers.map((member, index) => {
                                                         const coords = getCoordinates(getLocationName(member.address?.village) || `mem-${index}`, member._id);

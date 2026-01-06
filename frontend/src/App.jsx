@@ -41,6 +41,7 @@ import StudentProfile from './pages/StudentProfile';
 import MyDonations from './pages/MyDonations';
 import DonationCheckout from './pages/DonationCheckout';
 import DonationSuccess from './pages/DonationSuccess';
+import OCRConcept from './pages/OCRConcept';
 import TermsAndConditions from './pages/TermsAndConditions';
 
 const ThemeInitializer = () => {
@@ -62,6 +63,7 @@ function App() {
             <Routes>
                 <Route path="/" element={<UserLandingPage />} />
                 <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+                <Route path="/ocr-concept" element={<OCRConcept />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/admin/login" element={<AdminLoginPage />} />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />

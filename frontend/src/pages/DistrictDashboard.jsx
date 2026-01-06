@@ -11,7 +11,7 @@ import StatCard from '../components/common/StatCard';
 import ActionCard from '../components/common/ActionCard';
 import DashboardHeader from '../components/common/DashboardHeader';
 // Map Imports
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, LayersControl } from 'react-leaflet';
 import L from 'leaflet';
 
 // Fix for default marker icons in React Leaflet
@@ -86,14 +86,57 @@ const DistrictDashboard = () => {
         fetchStats();
     }, []);
 
+    // Predefined Coordinates for Nalgonda villages
+    const VILLAGE_COORDINATES = {
+        'Nalgonda': [17.0500, 79.2667],
+        'Adavdevulapally': [17.0908, 79.4161],
+        'Addagudur': [17.3975, 79.3761],
+        'Adloor': [16.6815, 79.9818],
+        'Agamothkur': [17.0433, 79.5034],
+        'Aipur': [17.2529, 79.3561],
+        'Aitipamula': [17.1698, 79.3585],
+        'Akaram': [17.3157, 79.3799],
+        'Akkinepally': [17.0908, 79.4161],
+        'Akupamula': [17.0092, 79.9015],
+        'Nakrekal': [17.1666, 79.4299],
+        'Miryalaguda': [16.8741, 79.5694],
+        'Suryapet': [17.1415, 79.6236],
+        'Devarakonda': [16.5938, 78.9328],
+        'Munugode': [17.0667, 79.0833],
+        'Chityal': [17.2244, 79.1378],
+        'Kattangur': [17.1833, 79.3667],
+        'Amanagal': [17.0620, 79.5760] // Corrected to residential area
+    };
+
     // Helper for Map Coordinates
-    const getCoordinates = (inputString) => {
+    const getCoordinates = (inputString, seed = '') => {
         if (!inputString) return [17.0500, 79.2667];
-        let hash = 0;
-        for (let i = 0; i < inputString.length; i++) hash = inputString.charCodeAt(i) + ((hash << 5) - hash);
-        const latOffset = (hash % 1000) / 2500;
-        const lngOffset = ((hash >> 5) % 1000) / 2500;
-        return [17.0500 + latOffset, 79.2667 + lngOffset];
+
+        let baseCoords = [17.0500, 79.2667];
+        const villageKey = Object.keys(VILLAGE_COORDINATES).find(key =>
+            inputString.toLowerCase().includes(key.toLowerCase())
+        );
+
+        if (villageKey) {
+            baseCoords = VILLAGE_COORDINATES[villageKey];
+        } else {
+            let hash = 0;
+            for (let i = 0; i < inputString.length; i++) hash = inputString.charCodeAt(i) + ((hash << 5) - hash);
+            const latBase = ((hash % 1000) - 500) / 20000;
+            const lngBase = (((hash >> 5) % 1000) - 500) / 20000;
+            baseCoords = [17.0500 + latBase, 79.2667 + lngBase];
+        }
+
+        const coords = baseCoords;
+
+        // Jitter: Centered and tighter
+        let seedHash = 0;
+        const combinedSeed = seed || 'default';
+        for (let i = 0; i < combinedSeed.length; i++) seedHash = combinedSeed.charCodeAt(i) + ((seedHash << 5) - seedHash);
+        const latJitter = ((seedHash % 100) - 50) / 100000;
+        const lngJitter = (((seedHash >> 5) % 100) - 50) / 100000;
+
+        return [coords[0] + latJitter, coords[1] + lngJitter];
     };
 
     return (
@@ -245,12 +288,22 @@ const DistrictDashboard = () => {
                                 {viewMode === 'map' && (
                                     <div className="h-[500px] w-full rounded-xl overflow-hidden border border-gray-200">
                                         <MapContainer center={[17.0500, 79.2667]} zoom={10} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
-                                            <TileLayer
-                                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                            />
+                                            <LayersControl position="topright">
+                                                <LayersControl.BaseLayer checked name="Standard">
+                                                    <TileLayer
+                                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                    />
+                                                </LayersControl.BaseLayer>
+                                                <LayersControl.BaseLayer name="Satellite">
+                                                    <TileLayer
+                                                        attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                                                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                                    />
+                                                </LayersControl.BaseLayer>
+                                            </LayersControl>
                                             {stats.mandals.map((mandal, idx) => {
-                                                const coords = getCoordinates(mandal.name);
+                                                const coords = getCoordinates(mandal.name, mandal.id || idx.toString());
                                                 return (
                                                     <Marker key={idx} position={coords}>
                                                         <Popup>

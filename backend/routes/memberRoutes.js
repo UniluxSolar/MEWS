@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { registerMember, getMembers, getMemberById, updateMemberStatus, updateMember, deleteMember } = require('../controllers/memberController');
+const { registerMember, getMembers, getMemberById, updateMemberStatus, updateMember, deleteMember, checkDuplicate } = require('../controllers/memberController');
 const upload = require('../middleware/uploadMiddleware');
 const { protect, authorize } = require('../middleware/authMiddleware');
+
+router.post('/check-duplicate', protect, checkDuplicate);
 
 router.route('/')
     .post(upload.fields([

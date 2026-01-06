@@ -62,6 +62,9 @@ const AdminSidebar = ({ activePage }) => {
                 <SidebarItem to="/admin/settings" icon={FaCog} label="Village Settings" active={activePage === 'settings'} />
                 <SidebarItem to="/admin/help" icon={FaQuestionCircle} label="Help & Support" active={activePage === 'help'} />
                 <SidebarItem to="/admin/announcements" icon={FaBullhorn} label="Announcements" active={activePage === 'announcements'} />
+
+                {/* Testing Section */}
+                {/* Testing Section - Removed */}
             </div>
 
             <div className="mt-auto p-4 border-t border-gray-100">

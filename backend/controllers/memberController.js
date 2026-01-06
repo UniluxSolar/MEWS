@@ -185,7 +185,8 @@ const registerMember = asyncHandler(async (req, res) => {
                 epicNumber: clean(data.epicNumber),
                 nameOnCard: clean(data.voterName),
                 pollingBooth: clean(data.pollingBooth),
-                fileUrl: getFilePath('voterIdFront')
+                fileUrl: getFilePath('voterIdFront'),
+                backFileUrl: getFilePath('voterIdBack')
             },
             bankDetails: {
                 bankName: clean(data.bankName),
@@ -197,6 +198,7 @@ const registerMember = asyncHandler(async (req, res) => {
             },
             photoUrl: getFilePath('photo'),
             aadhaarCardUrl: getFilePath('aadhaarFront'),
+            aadhaarCardBackUrl: getFilePath('aadhaarBack'),
             mewsId,
             verificationStatus: (req.user && req.user.role === 'VILLAGE_ADMIN') ? 'APPROVED_VILLAGE' : 'PENDING'
         };
@@ -239,6 +241,10 @@ const registerMember = asyncHandler(async (req, res) => {
                             occupation: clean(fm.occupation),
                             mobileNumber: clean(fm.mobileNumber),
                             aadhaarNumber: clean(fm.aadhaarNumber),
+                            annualIncome: clean(data.annualIncome), // Propagated from Head
+                            memberCount: cleanNum(data.memberCount), // Propagated from Head
+                            dependentCount: cleanNum(data.dependentCount), // Propagated from Head
+                            rationCardNumber: clean(data.rationCardNumber), // Propagated from Head
                             epicNumber: clean(fm.epicNumber),
                             voterName: clean(fm.voterName),
                             pollingBooth: clean(fm.pollingBooth),
@@ -270,10 +276,10 @@ const registerMember = asyncHandler(async (req, res) => {
         const resetLink = `${req.protocol}://${req.get('host')}/reset-password?user=${member.mewsId}`;
 
         // 3. Send SMS
-        const { sendWelcomeSMS } = require('../utils/smsService');
-        await sendWelcomeSMS(member.mobileNumber, username, resetLink);
+        // 3. Send SMS (REMOVED)
 
-        console.log(`[REG] Member Created: ${member.mewsId}, SMS Sent.`);
+
+        console.log(`[REG] Member Created: ${member.mewsId}`);
 
         // Populate for frontend (ID Card)
         const populatedMember = await Member.findById(member._id)
@@ -312,7 +318,11 @@ const registerMember = asyncHandler(async (req, res) => {
                         // Caste (Inherit from Head)
                         casteDetails: memberData.casteDetails,
 
+                        // Ration Card (Inherit from Head)
+                        rationCard: memberData.rationCard,
+
                         // Family Links
+                        familyDetails: memberData.familyDetails, // Inherit Income/Counts
                         headOfFamily: member._id, // Use the Created ID
                         headOfFamily: member._id, // Use the Created ID
                         relationToHead: fm.relation,
@@ -361,6 +371,72 @@ const registerMember = asyncHandler(async (req, res) => {
 // @access  Private (Admin)
 const getMembers = asyncHandler(async (req, res) => {
     let query = {};
+
+    // --- Standard Filters ---
+    const filterFields = ['gender', 'maritalStatus', 'bloodGroup', 'educationLevel', 'occupation'];
+    filterFields.forEach(field => {
+        if (req.query[field]) {
+            query[field] = req.query[field];
+        }
+    });
+
+    // Caste Filter (Deep match)
+    if (req.query.subCaste) {
+        query['casteDetails.subCaste'] = req.query.subCaste;
+    }
+    if (req.query.caste) {
+        query['casteDetails.caste'] = req.query.caste;
+    }
+
+    // Age Range Filter
+    if (req.query.ageRange) {
+        if (req.query.ageRange === '50+') {
+            query['age'] = { $gt: 50 };
+        } else {
+            const parts = req.query.ageRange.split('-');
+            if (parts.length === 2) {
+                query['age'] = { $gte: Number(parts[0]), $lte: Number(parts[1]) };
+            }
+        }
+    }
+
+    // Voter Status Filter (Based on Age >= 18)
+    if (req.query.voterStatus) {
+        if (req.query.voterStatus === 'Voter') {
+            // Age >= 18
+            query['age'] = { $gte: 18 };
+        } else if (req.query.voterStatus === 'Non-Voter') {
+            // Age < 18
+            query['age'] = { $lt: 18 };
+        }
+    }
+
+    // Employment Status Filter
+    if (req.query.employmentStatus) {
+        const unemployedKeywords = ["student", "house wife", "housewife", "homemaker", "unemployed", "retired", "child", "nil", "none", ""];
+        const unemployedRegex = unemployedKeywords.map(k => new RegExp(`^${k}$`, 'i'));
+
+        // Add empty string check for regex
+        // Logic: Unemployed = matches keywords OR is empty/null
+        const unemployedQuery = {
+            $or: [
+                { occupation: { $in: unemployedRegex } },
+                { occupation: null },
+                { occupation: '' }
+            ]
+        };
+
+        if (req.query.employmentStatus === 'Unemployed') {
+            Object.assign(query, unemployedQuery);
+        } else if (req.query.employmentStatus === 'Employed') {
+            // Employed = NOT Unemployed
+            query['$and'] = [
+                { occupation: { $nin: unemployedRegex } },
+                { occupation: { $ne: null } },
+                { occupation: { $ne: '' } }
+            ];
+        }
+    }
 
     // Allow filtering by Head of Family (for fetching dependents)
     if (req.query.headOfFamily) {
@@ -511,6 +587,9 @@ const updateMember = asyncHandler(async (req, res) => {
         const newAadhaarFront = getFilePath('aadhaarFront');
         if (newAadhaarFront) member.aadhaarCardUrl = newAadhaarFront;
 
+        const newAadhaarBack = getFilePath('aadhaarBack');
+        if (newAadhaarBack) member.aadhaarCardBackUrl = newAadhaarBack;
+
         // Update Address
         // Logic: specific fields passed flat from frontend
         if (!member.address) member.address = {};
@@ -583,6 +662,9 @@ const updateMember = asyncHandler(async (req, res) => {
         const newVoterFile = getFilePath('voterIdFront');
         if (newVoterFile) member.voterId.fileUrl = newVoterFile;
 
+        const newVoterBackFile = getFilePath('voterIdBack');
+        if (newVoterBackFile) member.voterId.backFileUrl = newVoterBackFile;
+
         // Bank Details
         if (!member.bankDetails) member.bankDetails = {};
         if (data.bankName !== undefined) member.bankDetails.bankName = clean(data.bankName);
@@ -593,6 +675,29 @@ const updateMember = asyncHandler(async (req, res) => {
 
         const newPassbook = getFilePath('bankPassbook');
         if (newPassbook) member.bankDetails.passbookUrl = newPassbook;
+
+        // --- NEW: Handle Explicit Document Removals ---
+        if (data.removedFiles) {
+            try {
+                const removedFields = JSON.parse(data.removedFiles);
+                if (Array.isArray(removedFields)) {
+                    removedFields.forEach(field => {
+                        if (field === 'photo') member.photoUrl = undefined;
+                        if (field === 'aadhaarFront') member.aadhaarCardUrl = undefined;
+                        if (field === 'aadhaarBack') member.aadhaarCardBackUrl = undefined;
+                        if (field === 'communityCert') member.casteDetails.certificateUrl = undefined;
+                        if (field === 'marriageCert') member.partnerDetails.certificateUrl = undefined;
+                        if (field === 'rationCardFile') member.rationCard.fileUrl = undefined;
+                        if (field === 'voterIdFront') member.voterId.fileUrl = undefined;
+                        if (field === 'voterIdBack') member.voterId.backFileUrl = undefined;
+                        if (field === 'bankPassbook') member.bankDetails.passbookUrl = undefined;
+                    });
+                }
+            } catch (e) {
+                console.error("Error parsing removedFiles:", e);
+            }
+        }
+        // ----------------------------------------------
 
         // Family Members List Update
         // Logic: if familyMembers string is passed, we replace the whole list? Or merge?
@@ -641,6 +746,12 @@ const updateMember = asyncHandler(async (req, res) => {
                                     return req.files[fileField][index].path;
                                 }
                             }
+                            // If index is -1, it means 'fieldVal' holds the existing URL OR is empty (removed)
+                            // If the field is explicitly set to empty/null by the frontend, return undefined to clear it.
+                            if (fieldVal === "" || fieldVal === null || fieldVal === "null") {
+                                return undefined;
+                            }
+
                             // No new file. Use the value passed from frontend (which should be the URL) 
                             // UNLESS it was the INDEX string and we failed to find file (shouldn't happen).
                             return (fieldVal && !fieldVal.startsWith('INDEX:')) ? fieldVal : existingVal;
@@ -668,6 +779,10 @@ const updateMember = asyncHandler(async (req, res) => {
                             occupation: clean(fm.occupation),
                             mobileNumber: clean(fm.mobileNumber),
                             aadhaarNumber: clean(fm.aadhaarNumber),
+                            annualIncome: member.familyDetails ? member.familyDetails.annualIncome : undefined, // Propagated from Head
+                            memberCount: member.familyDetails ? member.familyDetails.memberCount : undefined, // Propagated from Head
+                            dependentCount: member.familyDetails ? member.familyDetails.dependentCount : undefined, // Propagated from Head
+                            rationCardNumber: member.rationCard ? member.rationCard.number : undefined, // Propagated from Head
                             epicNumber: clean(fm.epicNumber),
                             voterName: clean(fm.voterName),
                             pollingBooth: clean(fm.pollingBooth),
@@ -819,7 +934,41 @@ const deleteMember = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Check for duplicate unique fields
+// @route   POST /api/members/check-duplicate
+// @access  Public
+const checkDuplicate = asyncHandler(async (req, res) => {
+    const { field, value } = req.body;
+
+    if (!field || !value) {
+        return res.status(400).json({ message: "Field and value are required" });
+    }
+
+    let query = {};
+    if (field === 'aadhaarNumber') {
+        query.aadhaarNumber = value;
+    } else if (field === 'voterId') {
+        query['voterId.epicNumber'] = value;
+    } else if (field === 'rationCard') {
+        query['rationCard.number'] = value;
+    } else {
+        return res.status(400).json({ message: "Invalid field type" });
+    }
+
+    const exists = await Member.findOne(query);
+
+    if (exists) {
+        return res.status(200).json({
+            isDuplicate: true,
+            message: `This ${field === 'voterId' ? 'Voter ID' : (field === 'rationCard' ? 'Ration Card' : 'Aadhaar Number')} is already registered.`
+        });
+    }
+
+    res.status(200).json({ isDuplicate: false });
+});
+
 module.exports = {
+    checkDuplicate,
     registerMember,
     getMembers,
     getMemberById,

@@ -85,7 +85,8 @@ const MemberSchema = new mongoose.Schema({
         epicNumber: { type: String, default: '' },
         nameOnCard: { type: String, default: '' },
         pollingBooth: { type: String, default: '' },
-        fileUrl: { type: String, default: '' }
+        fileUrl: { type: String, default: '' },
+        backFileUrl: { type: String, default: '' }
     },
 
     // H. Bank Account
@@ -101,6 +102,7 @@ const MemberSchema = new mongoose.Schema({
     // I. Other Docs
     photoUrl: String,
     aadhaarCardUrl: String,
+    aadhaarCardBackUrl: String,
 
     // J. Admin Verification & System Fields
     mewsId: { type: String, unique: true }, // Generated after approval
@@ -128,6 +130,12 @@ const MemberSchema = new mongoose.Schema({
         occupation: String,
         mobileNumber: String,
         aadhaarNumber: String,
+        annualIncome: String, // Propagated from Head
+        memberCount: Number,  // Propagated from Head
+        dependentCount: Number, // Propagated from Head
+
+        rationCardNumber: String, // Propagated from Head
+
 
         // Voter ID
         epicNumber: String,

@@ -5,11 +5,17 @@ const Announcement = require('../models/Announcement');
 // @route   POST /api/announcements
 // @access  Private (Admin only)
 const createAnnouncement = asyncHandler(async (req, res) => {
-    const { subject, body, targetScope, targetType, selectedTargets, schedule, scheduledDate } = req.body;
+    const { subject, body, targetScope, targetType, selectedTargets, schedule, scheduledDate, status } = req.body;
 
     if (!subject || !body || !targetScope || !targetType) {
         res.status(400);
         throw new Error('Please fill in all required fields');
+    }
+
+    // Process attachments if any
+    let attachmentPaths = [];
+    if (req.files && req.files.length > 0) {
+        attachmentPaths = req.files.map(file => file.path || file.location || file.key);
     }
 
     const announcement = await Announcement.create({
@@ -17,11 +23,12 @@ const createAnnouncement = asyncHandler(async (req, res) => {
         body,
         scope: targetScope,
         targetType,
-        selectedTargets: targetScope === 'whole' ? [] : selectedTargets,
+        selectedTargets: targetScope === 'whole' ? [] : (typeof selectedTargets === 'string' ? JSON.parse(selectedTargets) : selectedTargets),
         sender: req.user._id,
         senderRole: req.user.role,
-        status: schedule === 'later' ? 'scheduled' : 'sent',
-        scheduledFor: schedule === 'later' ? scheduledDate : null
+        status: status || (schedule === 'later' ? 'scheduled' : 'sent'),
+        scheduledFor: (status === 'scheduled' || schedule === 'later') ? scheduledDate : null,
+        attachments: attachmentPaths
     });
 
     res.status(201).json(announcement);

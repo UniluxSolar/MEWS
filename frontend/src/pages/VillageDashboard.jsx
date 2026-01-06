@@ -49,6 +49,12 @@ const VillageDashboard = () => {
             case 'occupation':
                 query = `?occupation=${encodeURIComponent(label)}`;
                 break;
+            case 'voter':
+                query = `?voterStatus=${encodeURIComponent(label)}`;
+                break;
+            case 'employment':
+                query = `?employmentStatus=${encodeURIComponent(label)}`;
+                break;
         }
         if (query) navigate(`/admin/members${query}`);
     };
@@ -63,7 +69,7 @@ const VillageDashboard = () => {
     });
 
     const [demographics, setDemographics] = useState({
-        gender: [], occupation: [], caste: [], marital: [], age: [], bloodGroup: []
+        gender: [], occupation: [], caste: [], marital: [], age: [], bloodGroup: [], voter: [], employment: []
     });
 
     useEffect(() => {
@@ -101,7 +107,9 @@ const VillageDashboard = () => {
                     marital: sanitize(analyticsData.demographics.marital),
 
                     age: sanitize(analyticsData.demographics.age),
-                    bloodGroup: sanitize(analyticsData.demographics.bloodGroup)
+                    bloodGroup: sanitize(analyticsData.demographics.bloodGroup),
+                    voter: sanitize(analyticsData.demographics.voter),
+                    employment: sanitize(analyticsData.demographics.employment)
                 });
 
             } catch (error) {
@@ -268,79 +276,144 @@ const VillageDashboard = () => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                                {/* Caste Distribution */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                    <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
-                                        Mala Community - Sub Castes
-                                    </h3>
-                                    <div className="h-80 w-full">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={demographics.community || []} barSize={40}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                                <XAxis dataKey="_id" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                                <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
-                                                <RechartsTooltip
-                                                    cursor={{ fill: '#f1f5f9' }}
-                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                                />
-                                                <Bar dataKey="count" name="Members" radius={[6, 6, 0, 0]} onClick={(data) => handleChartClick(data, 'community')} style={{ cursor: 'pointer' }}>
-                                                    {(demographics.community || []).map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={getColor(index)} />
-                                                    ))}
-                                                    <LabelList dataKey="count" position="top" fill="#64748b" fontSize={12} />
-                                                </Bar>
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
 
-                                {/* Age Groups */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                    <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
-                                        Age Demographics
-                                    </h3>
-                                    <div className="h-80 w-full">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={demographics.age || []} barSize={40}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                                <XAxis dataKey="_id" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                                <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} domain={[0, dataMax => dataMax + 2]} />
-                                                <RechartsTooltip
-                                                    cursor={{ fill: '#f1f5f9' }}
-                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                                />
-                                                <Bar dataKey="count" name="Members" fill="#10b981" radius={[6, 6, 0, 0]} onClick={(data) => handleChartClick(data, 'age')} style={{ cursor: 'pointer' }}>
-                                                    <LabelList dataKey="count" position="top" fill="#64748b" fontSize={12} />
-                                                </Bar>
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            </div>
+                        </div>
 
-                            {/* Top Occupations */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                            {/* Caste Distribution */}
                             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
                                 <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
-                                    Occupation Distribution
+                                    Mala Community - Sub Castes
                                 </h3>
-                                <div className="h-96 w-full">
+                                <div className="h-80 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={demographics.occupation || []} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }} barSize={30}>
-                                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
-                                            <XAxis type="number" allowDecimals={false} hide />
-                                            <YAxis dataKey="_id" type="category" width={140} tick={{ fontSize: 13, fill: '#475569', fontWeight: 500 }} axisLine={false} tickLine={false} />
+                                        <BarChart data={demographics.community || []} barSize={40}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                            <XAxis dataKey="_id" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                                            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
                                             <RechartsTooltip
                                                 cursor={{ fill: '#f1f5f9' }}
                                                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                             />
-                                            <Bar dataKey="count" name="Members" radius={[0, 6, 6, 0]} onClick={(data) => handleChartClick(data, 'occupation')} style={{ cursor: 'pointer' }}>
-                                                {(demographics.occupation || []).map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={getColor(index + 3)} />
+                                            <Bar dataKey="count" name="Members" radius={[6, 6, 0, 0]} onClick={(data) => handleChartClick(data, 'community')} style={{ cursor: 'pointer' }}>
+                                                {(demographics.community || []).map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={getColor(index)} />
                                                 ))}
-                                                <LabelList dataKey="count" position="right" fill="#64748b" fontSize={12} />
+                                                <LabelList dataKey="count" position="top" fill="#64748b" fontSize={12} />
                                             </Bar>
                                         </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Age Groups */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
+                                <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
+                                    Age Demographics
+                                </h3>
+                                <div className="h-80 w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={demographics.age || []} barSize={40}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                            <XAxis dataKey="_id" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                                            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} domain={[0, dataMax => dataMax + 2]} />
+                                            <RechartsTooltip
+                                                cursor={{ fill: '#f1f5f9' }}
+                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                            />
+                                            <Bar dataKey="count" name="Members" fill="#10b981" radius={[6, 6, 0, 0]} onClick={(data) => handleChartClick(data, 'age')} style={{ cursor: 'pointer' }}>
+                                                <LabelList dataKey="count" position="top" fill="#64748b" fontSize={12} />
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                            {/* Top Occupations (Converted from Bar to Pie) */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
+                                <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
+                                    Occupation Distribution
+                                </h3>
+                                <div className="h-80 w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={demographics.occupation || []}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={60}
+                                                outerRadius={100}
+                                                dataKey="count"
+                                                nameKey="_id"
+                                                label={({ _id, percent }) => `${_id} (${(percent * 100).toFixed(0)}%)`}
+                                            >
+                                                {(demographics.occupation || []).map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={getColor(index + 3)} onClick={() => handleChartClick(entry, 'occupation')} style={{ cursor: 'pointer' }} />
+                                                ))}
+                                            </Pie>
+                                            <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Employment Status */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
+                                <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
+                                    Employment Status
+                                </h3>
+                                <div className="h-80 w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={demographics.employment || []}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={0}
+                                                outerRadius={100}
+                                                dataKey="count"
+                                                nameKey="_id"
+                                                label={({ _id, percent }) => `${_id} (${(percent * 100).toFixed(0)}%)`}
+                                            >
+                                                {(demographics.employment || []).map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry._id === 'Employed' ? '#3b82f6' : '#94a3b8'} strokeWidth={2} stroke="#fff" onClick={() => handleChartClick(entry, 'employment')} style={{ cursor: 'pointer' }} />
+                                                ))}
+                                            </Pie>
+                                            <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Total Voters (Moved Here) */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
+                                <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
+                                    Total Voters
+                                </h3>
+                                <div className="h-80 w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={demographics.voter || []}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={0}
+                                                outerRadius={90}
+                                                dataKey="count"
+                                                nameKey="_id"
+                                                label={({ _id, count }) => `${_id}: ${count}`}
+                                            >
+                                                {(demographics.voter || []).map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry._id === 'Voter' ? '#10b981' : '#f43f5e'} strokeWidth={2} stroke="#fff" onClick={() => handleChartClick(entry, 'voter')} style={{ cursor: 'pointer' }} />
+                                                ))}
+                                            </Pie>
+                                            <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                        </PieChart>
                                     </ResponsiveContainer>
                                 </div>
                             </div>

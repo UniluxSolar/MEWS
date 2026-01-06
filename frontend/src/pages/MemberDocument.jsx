@@ -122,7 +122,7 @@ const MemberDocument = ({ data, lookups }) => {
                     <table className="w-full">
                         <tbody>
                             <InfoRow label="Full Name" value={`${data.name} ${data.surname}`} />
-                            <InfoRow label="Parent / Spouse Name" value={data.fatherName} />
+                            <InfoRow label="S/o , W/o, D/o" value={data.fatherName} />
                             <InfoRow label="Date of Birth / Age" value={`${data.dob ? new Date(data.dob).toLocaleDateString('en-GB') : '-'} (${data.age} Years)`} />
                             <InfoRow label="Gender / Blood Group" value={`${data.gender} / ${data.bloodGroup || '-'}`} />
                             <InfoRow label="Occupation" value={data.occupation} />

@@ -310,7 +310,7 @@ const EditMember = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <FormInput label="Sur Name" name="surname" value={formData.surname} onChange={handleChange} />
                             <FormInput label="Name" name="name" value={formData.name} onChange={handleChange} />
-                            <FormInput label="Father's Name" name="fatherName" value={formData.fatherName} onChange={handleChange} />
+                            <FormInput label="S/o, W/o, D/o" name="fatherName" value={formData.fatherName} onChange={handleChange} />
                             <FormInput label="Date of Birth" name="dob" value={formData.dob} onChange={handleChange} type="date" />
                             <FormInput label="Age" name="age" value={formData.age} onChange={handleChange} />
                             <FormSelect label="Gender" name="gender" value={formData.gender} onChange={handleChange} options={['Male', 'Female', 'Other']} />
@@ -322,8 +322,8 @@ const EditMember = () => {
                             <FormSelect label="Marital Status" name="maritalStatus" value={formData.maritalStatus} onChange={handleChange} options={['Unmarried', 'Married', 'Widowed', 'Divorced']} />
 
                             {/* New Fields */}
-                            <FormSelect label="Education Level" name="educationLevel" value={formData.educationLevel} onChange={handleChange} options={["Illiterate", "Primary School", "High School", "Intermediate", "Degree", "PG", "Doctorate"]} />
-                            <FormSelect label="Occupation" name="occupation" value={formData.occupation} onChange={handleChange} options={["Farmer", "Student", "Unemployed", "Private Job", "Government Employee", "Business", "Daily Wage Worker", "Self Employed", "Retired", "Homemaker"]} />
+                            <FormSelect label="Education Level" name="educationLevel" value={formData.educationLevel} onChange={handleChange} options={["Primary School", "High School", "Intermediate", "Vocational / ITI", "Polytechnic / Diploma", "Engineering & Technology", "Degree", "PG", "Research / Doctoral Studies (PhD)"]} />
+                            <FormSelect label="Occupation" name="occupation" value={formData.occupation} onChange={handleChange} options={["Farmer", "Student", "Unemployed", "Private Job", "Government Employee", "Business", "Daily Wage Worker", "Self Employed", "Retired Govt. Employee", "Retired Private Employee", "Homemaker"]} />
 
                             {formData.occupation === 'Government Employee' && (
                                 <>
@@ -332,12 +332,18 @@ const EditMember = () => {
                                 </>
                             )}
 
-                            {(formData.occupation !== 'Farmer' && formData.occupation !== 'Student' && formData.occupation !== 'Unemployed' && formData.occupation !== 'Homemaker') && (
+                            {(formData.occupation !== 'Farmer' && formData.occupation !== 'Student' && formData.occupation !== 'Unemployed' && formData.occupation !== 'Homemaker' && formData.occupation !== 'Retired Govt. Employee' && formData.occupation !== 'Retired Private Employee' && formData.occupation !== 'Other') && (
                                 <>
                                     <FormInput label="Job Sector/Category" name="jobSector" value={formData.jobSector} onChange={handleChange} />
                                     <FormInput label="Organization" name="jobOrganization" value={formData.jobOrganization} onChange={handleChange} />
                                     <FormInput label="Designation" name="jobDesignation" value={formData.jobDesignation} onChange={handleChange} />
                                 </>
+                            )}
+                            {(formData.occupation === 'Retired Govt. Employee' || formData.occupation === 'Retired Private Employee') && (
+                                <FormInput label="Designation" name="jobDesignation" value={formData.jobDesignation} onChange={handleChange} />
+                            )}
+                            {formData.occupation === 'Other' && (
+                                <FormInput label="Specify Details" name="jobDesignation" value={formData.jobDesignation} onChange={handleChange} />
                             )}
                         </div>
 

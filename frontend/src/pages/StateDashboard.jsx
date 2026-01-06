@@ -8,7 +8,7 @@ import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import DashboardHeader from '../components/common/DashboardHeader';
 // Map Imports
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, LayersControl } from 'react-leaflet';
 import L from 'leaflet';
 
 // Fix for default marker icons in React Leaflet
@@ -58,13 +58,22 @@ const StateDashboard = () => {
     }, []);
 
     // Helper for Map Coordinates
-    const getCoordinates = (inputString) => {
+    const getCoordinates = (inputString, seed = '') => {
         if (!inputString) return [17.0500, 79.2667];
         let hash = 0;
         for (let i = 0; i < inputString.length; i++) hash = inputString.charCodeAt(i) + ((hash << 5) - hash);
-        const latOffset = (hash % 1000) / 2500;
-        const lngOffset = ((hash >> 5) % 1000) / 2500;
-        return [17.0500 + latOffset, 79.2667 + lngOffset];
+        const latBase = ((hash % 1000) - 500) / 20000;
+        const lngBase = (((hash >> 5) % 1000) - 500) / 20000;
+        const coords = [17.0500 + latBase, 79.2667 + lngBase];
+
+        // Jitter: Centered and tighter
+        let seedHash = 0;
+        const combinedSeed = seed || 'default';
+        for (let i = 0; i < combinedSeed.length; i++) seedHash = combinedSeed.charCodeAt(i) + ((seedHash << 5) - seedHash);
+        const latJitter = ((seedHash % 100) - 50) / 100000;
+        const lngJitter = (((seedHash >> 5) % 100) - 50) / 100000;
+
+        return [coords[0] + latJitter, coords[1] + lngJitter];
     };
 
     return (
@@ -166,12 +175,22 @@ const StateDashboard = () => {
                             {viewMode === 'map' && (
                                 <div className="h-[500px] w-full relative">
                                     <MapContainer center={[17.0500, 79.2667]} zoom={9} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
-                                        <TileLayer
-                                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                        />
+                                        <LayersControl position="topright">
+                                            <LayersControl.BaseLayer checked name="Standard">
+                                                <TileLayer
+                                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                />
+                                            </LayersControl.BaseLayer>
+                                            <LayersControl.BaseLayer name="Satellite">
+                                                <TileLayer
+                                                    attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                                                    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                                />
+                                            </LayersControl.BaseLayer>
+                                        </LayersControl>
                                         {stats.districts.map((dist, idx) => {
-                                            const coords = getCoordinates(dist.name);
+                                            const coords = getCoordinates(dist.name, idx.toString());
                                             return (
                                                 <Marker key={idx} position={coords}>
                                                     <Popup>
