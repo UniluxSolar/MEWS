@@ -534,12 +534,7 @@ const getMembers = asyncHandler(async (req, res) => {
                 // Add debug log
                 console.log(`[GET MEMBERS] Resolved ${assignedLoc.name} to IDs:`, locIds);
 
-                const villageConstraint = {
-                    $or: [
-                        { 'address.village': { $in: locIds } },
-                        { 'address.village': { $regex: new RegExp(`^${assignedLoc.name.trim()}$`, 'i') } }
-                    ]
-                };
+                const villageConstraint = { 'address.village': { $in: locIds } };
 
                 if (!query.$and) query.$and = [];
                 query.$and.push(villageConstraint);
@@ -548,36 +543,20 @@ const getMembers = asyncHandler(async (req, res) => {
             }
         }
         else if (req.user.role === 'MANDAL_ADMIN') {
-            // STRICT: Must match the assigned Mandal ID OR Name
+            // STRICT: Must match the assigned Mandal ID
             const assignedLoc = await Location.findById(locationId);
             if (assignedLoc) {
-                const mandalConstraint = {
-                    $or: [
-                        { 'address.mandal': locationId },
-                        { 'address.mandal': { $regex: new RegExp(`^${assignedLoc.name.trim()}$`, 'i') } }
-                    ]
-                };
-                if (!query.$and) query.$and = [];
-                query.$and.push(mandalConstraint);
+                // Resolve name to IDs just in case (though Mandal duplicates are rarer within same parent, but let's stick to ID)
+                // Actually, for Mandals/Districts, we can trust the ID. 
+                // We CANNOT use regex on the ObjectId field.
+                query['address.mandal'] = locationId;
             } else {
                 query['address.mandal'] = locationId;
             }
         }
         else if (req.user.role === 'DISTRICT_ADMIN') {
-            // STRICT: Must match the assigned District ID OR Name
-            const assignedLoc = await Location.findById(locationId);
-            if (assignedLoc) {
-                const districtConstraint = {
-                    $or: [
-                        { 'address.district': locationId },
-                        { 'address.district': { $regex: new RegExp(`^${assignedLoc.name.trim()}$`, 'i') } }
-                    ]
-                };
-                if (!query.$and) query.$and = [];
-                query.$and.push(districtConstraint);
-            } else {
-                query['address.district'] = locationId;
-            }
+            // STRICT: Must match the assigned District ID
+            query['address.district'] = locationId;
         }
         else if (req.user.role === 'STATE_ADMIN') {
             // STRICT: Must match any District under the assigned State
