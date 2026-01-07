@@ -897,26 +897,38 @@ const updateMember = asyncHandler(async (req, res) => {
                         const extractPathFromUrl = (url) => {
                             if (!url) return undefined;
                             try {
-                                // If it's a signed URL (base64 encoded query params etc), strip query
                                 const urlObj = new URL(url);
-                                // Remove leading slash if present in pathname to match storage path format usually
-                                let pathname = urlObj.pathname;
+                                let pathname = decodeURIComponent(urlObj.pathname);
 
-                                // If using GCS public URL or similar, we might need to be careful.
-                                // Our storage paths are usually 'uploads/...'
-                                // If the signed URL path is '/uploads/...' we want 'uploads/...'
+                                // 1. Remove leading slash
                                 if (pathname.startsWith('/')) pathname = pathname.substring(1);
 
-                                // If it's a proxy URL (e.g., /api/proxy-image?url=...), extract the 'url' param
+                                // 2. Handle GCS Custom Domain (storage.googleapis.com)
+                                // Standard GCS URL: https://storage.googleapis.com/BUCKET_NAME/PATH/TO/FILE
+                                // The pathname is: /BUCKET_NAME/PATH/TO/FILE
+                                // We need just: PATH/TO/FILE
+                                if (urlObj.hostname === 'storage.googleapis.com') {
+                                    // Split by slash. Parts: ["", "BUCKET_NAME", "PATH", "TO", "FILE"]
+                                    // If we removed leading slash above: ["BUCKET_NAME", "PATH", "TO", "FILE"]
+                                    const parts = pathname.split('/');
+                                    // Remove the first part (Bucket Name) if it looks like one
+                                    // We can try to verify against process.env.GCS_BUCKET_NAME if we want to be safe,
+                                    // but stripping the first segment is standard for this domain structure.
+                                    if (parts.length > 1) {
+                                        parts.shift(); // Remove bucket name
+                                        pathname = parts.join('/');
+                                    }
+                                }
+
+                                // 3. Handle Proxy URL (e.g. /api/proxy-image?url=...)
                                 if (pathname.includes('proxy-image')) {
                                     const params = new URLSearchParams(urlObj.search);
                                     const originalUrl = params.get('url');
-                                    if (originalUrl) return originalUrl; // Recursively clean if needed, but usually this is the path
+                                    if (originalUrl) return extractPathFromUrl(originalUrl); // Recurse
                                 }
 
-                                return decodeURIComponent(pathname);
+                                return pathname;
                             } catch (e) {
-                                // If not a full URL (just a path), return as is
                                 return url;
                             }
                         };
