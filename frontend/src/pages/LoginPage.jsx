@@ -16,6 +16,7 @@ const LoginPage = () => {
     const [loading, setLoading] = useState(false);
     const [timer, setTimer] = useState(0); // Timer state
     const otpInputRef = useRef(null); // Ref for auto-focus
+    const [feedbackMessage, setFeedbackMessage] = useState(null); // New state for inline messages
 
     // Timer Effect
     useEffect(() => {
@@ -59,19 +60,22 @@ const LoginPage = () => {
 
     const handleSendOTP = async (e) => {
         e.preventDefault();
+        setFeedbackMessage(null); // Clear previous messages
         try {
             setLoading(true);
-            // Assuming the API returns success even if rate limited (handled by catch below if 429)
-            // But we should check if timer is running to prevent accidental clicks if disabled state fails
             if (timer > 0) return;
 
             const { data } = await API.post('/auth/request-otp', { mobile });
             setOtpSent(true);
             setTimer(60); // Start 60s timer
-            alert(data.message || 'OTP sent successfully!'); // Show server message
+
+            // Show success message inline
+            setFeedbackMessage({ type: 'success', text: data.message || 'OTP sent successfully!' });
+
         } catch (error) {
             const msg = error.response?.data?.message || 'Failed to send OTP';
-            alert(msg);
+            // Show error message inline
+            setFeedbackMessage({ type: 'error', text: msg });
         } finally {
             setLoading(false);
         }
@@ -142,6 +146,16 @@ const LoginPage = () => {
                                         </div>
                                     </div>
 
+                                    {/* Feedback Message (Mobile Screen) */}
+                                    {feedbackMessage && !otpSent && (
+                                        <div className={`p-3 rounded-lg text-xs font-bold text-center mb-2 ${feedbackMessage.type === 'success'
+                                                ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                                                : 'bg-red-50 text-red-600 border border-red-200'
+                                            }`}>
+                                            {feedbackMessage.text}
+                                        </div>
+                                    )}
+
                                     {/* Send OTP Button */}
                                     <button
                                         onClick={handleSendOTP}
@@ -153,6 +167,16 @@ const LoginPage = () => {
                                 </>
                             ) : (
                                 <>
+                                    {/* Feedback Message */}
+                                    {feedbackMessage && (
+                                        <div className={`p-3 rounded-lg text-xs font-bold text-center mb-2 ${feedbackMessage.type === 'success'
+                                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                                            : 'bg-red-50 text-red-600 border border-red-200'
+                                            }`}>
+                                            {feedbackMessage.text}
+                                        </div>
+                                    )}
+
                                     {/* OTP Input */}
                                     <div className="space-y-1.5">
                                         <label className="block text-sm font-semibold text-gray-600 pl-1">Enter OTP</label>
