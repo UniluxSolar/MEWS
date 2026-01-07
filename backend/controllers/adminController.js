@@ -120,10 +120,11 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                 req.mandalsData = mandalsData;
 
             } else if (req.user.role === 'STATE_ADMIN') {
-                memberQuery = { 'address.state': location._id };
-
-                // Get Districts for breakdown
+                // Robust Fix: Get all districts and query per district instead of relying on address.state
                 const districts = await Location.find({ parent: location._id, type: 'DISTRICT' });
+                const districtIds = districts.map(d => d._id);
+
+                memberQuery = { 'address.district': { $in: districtIds } };
 
                 // Institution Query: regex match state name or district names
                 const locationNames = [location.name, ...districts.map(d => d.name)].map(name =>
