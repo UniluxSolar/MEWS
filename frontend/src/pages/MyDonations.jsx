@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
     FaHeart, FaDownload, FaSearch, FaFilter, FaChevronLeft, FaChevronRight,
-    FaCalendarAlt, FaFileInvoiceDollar, FaHandHoldingHeart, FaUserFriends, FaMedal
+    FaCalendarAlt, FaFileInvoiceDollar, FaHandHoldingHeart, FaUserFriends, FaMedal, FaArrowLeft
 } from 'react-icons/fa';
 
 const StatCard = ({ icon: Icon, label, value, subtext, color, trend }) => (
@@ -40,8 +40,8 @@ const DonationRow = ({ date, amount, purpose, type, transactionId, status }) => 
         </td>
         <td className="py-5">
             <span className={`px-3 py-1 rounded-full text-xs font-bold border ${type === 'Sponsorship'
-                    ? 'bg-blue-50 text-blue-600 border-blue-100'
-                    : 'bg-orange-50 text-orange-600 border-orange-100'
+                ? 'bg-blue-50 text-blue-600 border-blue-100'
+                : 'bg-orange-50 text-orange-600 border-orange-100'
                 }`}>
                 {type}
             </span>
@@ -68,18 +68,98 @@ const DonationRow = ({ date, amount, purpose, type, transactionId, status }) => 
 
 const MyDonations = () => {
     const [activeTab, setActiveTab] = useState('all');
+    const [donationsList, setDonationsList] = useState([]);
+    const [stats, setStats] = useState({
+        totalDonated: 0,
+        activeSponsorships: 0,
+        taxDeduction: 0,
+        livesTouched: 0
+    });
+    const [loading, setLoading] = useState(true);
 
-    // Mock Data
-    const donations = [
-        { date: '15 Jan, 2025', amount: '5,100', purpose: 'Priya S. - B.Tech Sponsorship', type: 'Sponsorship', transactionId: 'TXN123456789', status: 'Completed' },
-        { date: '28 Dec, 2024', amount: '2,500', purpose: 'General Fund - Education Support', type: 'General', transactionId: 'TXN123456788', status: 'Completed' },
-        { date: '10 Dec, 2024', amount: '8,000', purpose: 'Rahul K. - MBA Sponsorship', type: 'Sponsorship', transactionId: 'TXN123456787', status: 'Completed' },
-        { date: '25 Nov, 2024', amount: '1,200', purpose: 'Health Assistance Fund', type: 'Health Aid', transactionId: 'TXN123456786', status: 'Completed' },
-        { date: '18 Nov, 2024', amount: '3,500', purpose: 'Anjali M. - B.Tech Sponsorship', type: 'Sponsorship', transactionId: 'TXN123456785', status: 'Completed' },
-    ];
+    useEffect(() => {
+        const fetchDonationData = async () => {
+            try {
+                const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
+                const token = adminInfo?.token;
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+                const [donationsRes, statsRes] = await Promise.all([
+                    fetch('/api/donations/my-donations', { headers }),
+                    fetch('/api/donations/stats', { headers })
+                ]);
+
+                if (donationsRes.ok) {
+                    const data = await donationsRes.json();
+                    // Map backend data to frontend structure
+                    const formattedData = data.map(d => ({
+                        date: new Date(d.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, ' '),
+                        // Note: The row expects "15 Jan, 2025". toLocaleDateString might give "15 Jan 2025". 
+                        // Let's force a comma or update the row. Updating row is better, but for now let's try to match.
+                        // Helper to match "15 Jan, 2025"
+                        // actually the row splits by comma. So we NEED a comma.
+                        amount: d.amount ? d.amount.toLocaleString() : '0',
+                        purpose: d.purpose || 'General Donation',
+                        type: d.type,
+                        transactionId: d.transactionId,
+                        status: d.status
+                    })).map(d => ({
+                        ...d,
+                        date: new Date(d.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ (?=[0-9]{4})/, ', ')
+                        // Reuse the d object but fix date properly if needed. 
+                        // Actually easier to just format it manually in the map above.
+                    }));
+
+                    // Simplified manual formatting to ensure comma
+                    const finalData = data.map(d => {
+                        const dateObj = new Date(d.createdAt);
+                        const day = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                        const year = dateObj.getFullYear();
+                        return {
+                            ...d,
+                            date: `${day}, ${year}`,
+                            amount: d.amount ? d.amount.toLocaleString() : '0'
+                        };
+                    });
+
+                    setDonationsList(finalData);
+                }
+
+                if (statsRes.ok) {
+                    const data = await statsRes.json();
+                    setStats(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch donation data", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDonationData();
+    }, []);
+
+    // Filter Logic
+    const filteredDonations = donationsList.filter(d => {
+        if (activeTab === 'all donations' || activeTab === 'all') return true;
+        if (activeTab === 'student sponsorships') return d.type === 'Sponsorship';
+        if (activeTab === 'one-time donations') return d.type !== 'Sponsorship';
+        return true;
+    });
+
+    if (loading) {
+        return <div className="p-10 text-center">Loading donation history...</div>;
+    }
 
     return (
         <div className="w-full space-y-8 pb-10">
+            {/* Back Button */}
+            <div className="">
+                <Link to="/dashboard" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
+                    <FaArrowLeft size={12} /> Back to Dashboard
+                </Link>
+            </div>
+
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -91,7 +171,7 @@ const MyDonations = () => {
                         Financial Year 2024-25
                     </span>
                     <Link to="/dashboard/donate" className="bg-[#1e2a4a] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#2a3b66] transition shadow-lg hover:shadow-xl flex items-center gap-2">
-                        <FaHeart className="text-rose-400" /> Make Another Donation
+                        <FaHeart className="text-rose-400" /> Donate / Sponsor
                     </Link>
                 </div>
             </div>
@@ -101,7 +181,7 @@ const MyDonations = () => {
                 <StatCard
                     icon={FaFileInvoiceDollar}
                     label="Total Donated This Year"
-                    value="₹85,400"
+                    value={`₹${stats.totalDonated.toLocaleString()}`}
                     subtext="↑ 15% more than last year"
                     color="bg-blue-500"
                     trend={{ value: '12%', positive: true }}
@@ -109,21 +189,21 @@ const MyDonations = () => {
                 <StatCard
                     icon={FaUserFriends}
                     label="Active Sponsorships"
-                    value="3"
+                    value={stats.activeSponsorships}
                     subtext="Supporting students in B.Tech, MBA"
                     color="bg-purple-500"
                 />
                 <StatCard
                     icon={FaFileInvoiceDollar}
                     label="80G Tax Deduction"
-                    value="₹42,700"
+                    value={`₹${stats.taxDeduction.toLocaleString()}`}
                     subtext="50% of eligible donations"
                     color="bg-emerald-500"
                 />
                 <StatCard
                     icon={FaMedal}
                     label="Lives Touched"
-                    value="147"
+                    value={stats.livesTouched}
                     subtext="Gold Donor Status"
                     color="bg-[#f59e0b]"
                 />
@@ -209,29 +289,25 @@ const MyDonations = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {donations.map((donation, index) => (
-                                <DonationRow key={index} {...donation} />
-                            ))}
+                            {filteredDonations.length > 0 ? (
+                                filteredDonations.map((donation, index) => (
+                                    <DonationRow key={index} {...donation} />
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="7" className="py-10 text-center text-gray-500">
+                                        No donations found. Start your journey by donating today!
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
 
                 {/* Pagination */}
                 <div className="p-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
-                    <span className="text-sm text-gray-500 font-medium">Showing 1-5 of 23 donations</span>
-                    <div className="flex items-center gap-2">
-                        <button className="p-2 border border-gray-200 rounded-lg hover:bg-white disabled:opacity-50 text-gray-600" disabled>
-                            <FaChevronLeft size={12} />
-                        </button>
-                        <button className="w-8 h-8 flex items-center justify-center bg-[#1e2a4a] text-white rounded-lg text-sm font-bold shadow-sm">1</button>
-                        <button className="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-50">2</button>
-                        <button className="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-50">3</button>
-                        <span className="text-gray-400">...</span>
-                        <button className="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-50">5</button>
-                        <button className="p-2 border border-gray-200 rounded-lg hover:bg-white text-gray-600">
-                            <FaChevronRight size={12} />
-                        </button>
-                    </div>
+                    <span className="text-sm text-gray-500 font-medium">Showing {filteredDonations.length} records</span>
+                    {/* Simplified pagination for now */}
                 </div>
             </div>
         </div>

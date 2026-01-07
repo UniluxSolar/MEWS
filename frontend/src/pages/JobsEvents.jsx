@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     FaSearch, FaCalendarAlt, FaMapMarkerAlt, FaUsers, FaTh, FaList, FaCalendar,
-    FaFilter, FaChevronDown, FaQrcode, FaMapMarkedAlt
+    FaFilter, FaChevronDown, FaQrcode, FaMapMarkedAlt, FaArrowLeft
 } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import RegistrationSuccessModal from '../components/RegistrationSuccessModal';
@@ -343,6 +343,13 @@ const JobsEvents = () => {
                     location="JNTU Campus, Warangal"
                 />
             )}
+
+            {/* Back Button */}
+            <div className="">
+                <Link to="/dashboard" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
+                    <FaArrowLeft size={12} /> Back to Dashboard
+                </Link>
+            </div>
 
             {/* Header */}
             <div className="flex justify-between items-start">

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaUserCircle, FaLock, FaArrowRight, FaUsers } from 'react-icons/fa';
 import mewsLogo from '../assets/mews_main_logo_new.png';
@@ -14,6 +14,26 @@ const LoginPage = () => {
     const [otp, setOtp] = useState('');
     const [otpSent, setOtpSent] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [timer, setTimer] = useState(0); // Timer state
+    const otpInputRef = useRef(null); // Ref for auto-focus
+
+    // Timer Effect
+    useEffect(() => {
+        let interval;
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [timer]);
+
+    // Auto-focus Effect
+    useEffect(() => {
+        if (otpSent && otpInputRef.current) {
+            otpInputRef.current.focus();
+        }
+    }, [otpSent]);
     const [credentials, setCredentials] = useState({ userId: '', password: '' });
 
     const handleCredentialsChange = (e) => {
@@ -41,12 +61,17 @@ const LoginPage = () => {
         e.preventDefault();
         try {
             setLoading(true);
+            // Assuming the API returns success even if rate limited (handled by catch below if 429)
+            // But we should check if timer is running to prevent accidental clicks if disabled state fails
+            if (timer > 0) return;
+
             const { data } = await API.post('/auth/request-otp', { mobile });
             setOtpSent(true);
-            // Display OTP in alert for easy testing
-            alert(`OTP sent! Your code is: ${data.otp}`);
+            setTimer(60); // Start 60s timer
+            alert(data.message || 'OTP sent successfully!'); // Show server message
         } catch (error) {
-            alert(error.response?.data?.message || 'Failed to send OTP');
+            const msg = error.response?.data?.message || 'Failed to send OTP';
+            alert(msg);
         } finally {
             setLoading(false);
         }
@@ -132,13 +157,29 @@ const LoginPage = () => {
                                     <div className="space-y-1.5">
                                         <label className="block text-sm font-semibold text-gray-600 pl-1">Enter OTP</label>
                                         <input
+                                            ref={otpInputRef}
                                             type="text"
                                             value={otp}
                                             onChange={(e) => setOtp(e.target.value)}
-                                            placeholder="Enter 6-digit OTP"
-                                            maxLength={6}
+                                            placeholder="Enter 4-digit OTP"
+                                            maxLength={4}
                                             className="w-full bg-gray-100 border-none text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-[#1e2a4a] focus:bg-white block p-3.5 placeholder-gray-400 font-medium transition-all text-center tracking-widest text-lg"
                                         />
+                                    </div>
+
+                                    {/* Resend Timer / Button */}
+                                    <div className="text-right">
+                                        {timer > 0 ? (
+                                            <span className="text-xs text-gray-500 font-medium">Resend OTP in {timer}s</span>
+                                        ) : (
+                                            <button
+                                                onClick={handleSendOTP}
+                                                type="button"
+                                                className="text-xs font-bold text-[#1e2a4a] hover:underline"
+                                            >
+                                                Resend OTP
+                                            </button>
+                                        )}
                                     </div>
 
                                     {/* Verify Button */}

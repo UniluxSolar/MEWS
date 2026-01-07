@@ -85,21 +85,42 @@ const GenerateIDCard = () => {
                     const validUntil = getValidUntil();
                     const rel = member.relationToHead || member.relation || 'Family';
 
+                    // Robust Photo Logic
+                    let photoSrc = null; // No default photo per user request
+                    const rawPhoto = member.photoUrl || member.photo;
+
+                    if (rawPhoto) {
+                        if (rawPhoto.startsWith('blob:')) {
+                            photoSrc = rawPhoto;
+                        } else {
+                            // Cache buster
+                            const activeDate = member.updatedAt ? new Date(member.updatedAt).getTime() : Date.now();
+                            const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+
+                            if (rawPhoto.startsWith('http')) {
+                                photoSrc = `${baseUrl}/api/proxy-image?url=${encodeURIComponent(rawPhoto)}&t=${activeDate}`;
+                            } else {
+                                const normalized = rawPhoto.replace(/\\/g, '/').replace(/^\//, '');
+                                photoSrc = `${baseUrl}/${normalized}?t=${activeDate}`;
+                            }
+                        }
+                    }
+
                     return {
-                        name: member.name,
-                        surname: member.surname,
-                        id: member.mewsId || 'PENDING',
-                        mobile: member.mobileNumber || '+91 XXXXX XXXXX',
-                        photo: member.photoUrl ? (member.photoUrl.startsWith('http') ? member.photoUrl : `${import.meta.env.VITE_API_BASE_URL || ''}/${member.photoUrl.replace(/\\/g, '/').replace(/^uploads\//, 'uploads/')}`) : (member.photo || member2), // Embedded uses photo, API uses photoUrl
-                        bloodGroup: member.bloodGroup || '-',
+                        name: member.name || rawData.name || rawData.firstName || '',
+                        surname: member.surname || rawData.surname || rawData.lastName || '',
+                        id: member.mewsId || generatedId, // Fallback to generated if missing
+                        mobile: member.mobileNumber || rawData.mobileNumber || '+91 XXXXX XXXXX',
+                        photo: photoSrc,
+                        bloodGroup: member.bloodGroup || rawData.bloodGroup || '-',
                         village: vName || 'Unknown',
                         mandal: mName || '',
                         district: dName || '',
                         fullAddress: fullAddress,
-                        dob: member.dob ? new Date(member.dob).toISOString().split('T')[0] : '',
-                        fatherName: member.fatherName,
-                        gender: member.gender,
-                        maritalStatus: member.maritalStatus,
+                        dob: member.dob ? new Date(member.dob).toISOString().split('T')[0] : (rawData.dob ? new Date(rawData.dob).toISOString().split('T')[0] : ''),
+                        fatherName: member.fatherName || rawData.fatherName,
+                        gender: member.gender || rawData.gender,
+                        maritalStatus: member.maritalStatus || rawData.maritalStatus,
                         validUntil: validUntil,
                         relation: isDependent ? rel : 'Member',
                         houseNo,
@@ -284,15 +305,15 @@ const GenerateIDCard = () => {
                                                 <div className="w-[90px] mr-3 flex flex-col gap-2">
                                                     <div className="w-[90px] h-[110px] bg-gray-100 border border-gray-300 shadow-sm p-0.5 relative overflow-hidden flex items-center justify-center">
                                                         <span className="text-3xl font-bold text-gray-300 select-none">{(member.name || '?').charAt(0)}</span>
-                                                        <img
-                                                            src={member.photo.startsWith('http')
-                                                                ? `${import.meta.env.VITE_API_URL || ''}/api/proxy-image?url=${encodeURIComponent(member.photo)}`
-                                                                : (member.photo.startsWith('/') ? member.photo : `/${member.photo.replace(/\\/g, '/').replace(/^\//, '')}`)}
-                                                            alt="Member"
-                                                            className="w-full h-full object-cover absolute top-0 left-0"
-                                                            crossOrigin="anonymous"
-                                                            onError={(e) => { e.target.style.display = 'none'; }}
-                                                        />
+                                                        {member.photo && (
+                                                            <img
+                                                                src={member.photo}
+                                                                alt="Member"
+                                                                className="w-full h-full object-cover absolute top-0 left-0"
+                                                                crossOrigin="anonymous"
+                                                                onError={(e) => { e.target.style.display = 'none'; }}
+                                                            />
+                                                        )}
                                                     </div>
                                                 </div>
 

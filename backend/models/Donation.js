@@ -7,9 +7,10 @@ const DonationSchema = new mongoose.Schema({
     fundRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'FundRequest' },
     type: {
         type: String,
-        enum: ['CAMPAIGN', 'COMMUNITY_POOL'],
+        enum: ['Sponsorship', 'General', 'Education', 'Health', 'Legal Aid', 'Employment', 'Welfare'],
         required: true
     },
+    purpose: { type: String }, // E.g., "Education Fund" or "Priya S. - Scholarship"
 
     amount: { type: Number, required: true },
     currency: { type: String, default: 'INR' },

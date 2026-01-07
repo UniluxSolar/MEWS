@@ -5,18 +5,33 @@ const fs = require('fs');
 
 let keyFilename = process.env.GCS_KEYFILE_PATH;
 // Auto-detect local key for development if not provided in env
-const localKeyPath = path.join(__dirname, '../../gcs-key.json');
-if (!keyFilename && fs.existsSync(localKeyPath)) {
-    keyFilename = localKeyPath;
+const localKeyPath = path.join(__dirname, '../gcp-key.json'); // Corrected: One level up from utils to backend
+// Also try the gcs-key.json just in case
+const altLocalKeyPath = path.join(__dirname, '../gcs-key.json');
+if (!keyFilename) {
+    if (fs.existsSync(localKeyPath)) keyFilename = localKeyPath;
+    else if (fs.existsSync(altLocalKeyPath)) keyFilename = altLocalKeyPath;
 }
 
-const storage = new Storage({
-    projectId: process.env.GCS_PROJECT_ID,
-    keyFilename: keyFilename,
-});
-
+let storage;
+let bucket;
 const bucketName = process.env.GCS_BUCKET_NAME || 'mews-uploads';
-const bucket = storage.bucket(bucketName);
+
+// Graceful Init
+if (keyFilename && fs.existsSync(keyFilename)) {
+    try {
+        storage = new Storage({
+            projectId: process.env.GCS_PROJECT_ID,
+            keyFilename: keyFilename,
+        });
+        bucket = storage.bucket(bucketName);
+        console.log(`[GCS] Initialized with key: ${keyFilename}`);
+    } catch (e) {
+        console.error("[GCS] Failed to initialize storage:", e.message);
+    }
+} else {
+    console.warn(`[GCS] Key file not found at ${keyFilename || 'default locations'}. Image signing disabled. URLs will be returned as-is.`);
+}
 
 /**
  * Generates a signed URL for a given GCS file path or public URL.
@@ -28,10 +43,27 @@ const getSignedUrl = async (fileUrlOrPath) => {
     if (!fileUrlOrPath) return fileUrlOrPath;
 
     // Check for local uploads, static profiles, or remote URLs and return immediately
-    if (fileUrlOrPath.startsWith('uploads/') ||
-        fileUrlOrPath.startsWith('uploads\\') ||
-        fileUrlOrPath.startsWith('/profiles') ||
-        fileUrlOrPath.startsWith('http')) {
+    // Normalize path for local uploads (Windows fix)
+    let normalizedPath = fileUrlOrPath;
+    if (typeof fileUrlOrPath === 'string') {
+        normalizedPath = fileUrlOrPath.replace(/\\/g, '/');
+    }
+
+    if (normalizedPath.startsWith('uploads/') ||
+        normalizedPath.startsWith('/uploads/') ||
+        normalizedPath.startsWith('/profiles') ||
+        normalizedPath.startsWith('http')) {
+
+        // Ensure local uploads start with / so they are treated as root-relative on frontend
+        if (normalizedPath.startsWith('uploads/')) {
+            return '/' + normalizedPath;
+        }
+        return normalizedPath;
+    }
+
+    // Safety Check: If bucket is not initialized (key missing), we cannot sign.
+    if (!bucket) {
+        // console.warn(`[GCS] Cannot sign URL for ${fileUrlOrPath} because bucket is not initialized.`);
         return fileUrlOrPath;
     }
 

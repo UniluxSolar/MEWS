@@ -28,6 +28,7 @@ const MemberSchema = new mongoose.Schema({
         district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         constituency: String, // New Field
         pinCode: String,
+        state: String, // Added state field
         residencyType: String // e.g., Owned, Rented
     },
 
@@ -174,8 +175,11 @@ const MemberSchema = new mongoose.Schema({
     // K1. Family Linking End (Already closed in line 165)
 
     // L. Authentication (OTP)
-    otp: { type: String },
-    otpExpires: { type: Date }
+    // L. Authentication (OTP)
+    otpHash: { type: String },
+    otpExpires: { type: Date },
+    otpLastSent: { type: Date },
+    isPhoneVerified: { type: Boolean, default: false }
 }, {
     timestamps: true
 });

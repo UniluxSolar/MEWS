@@ -33,6 +33,8 @@ coverage
 .env.production
 backend/uploads/
 gcs-key.json
+gcp-key.json
+backend/gcp-key.json
 
 # Exclude system files mistakenly installed in frontend
 frontend/mingw64/

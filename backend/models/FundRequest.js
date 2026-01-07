@@ -4,7 +4,7 @@ const FundRequestSchema = new mongoose.Schema({
     // Basic Info
     purpose: {
         type: String,
-        enum: ['Medical', 'Education', 'Emergency', 'Legal', 'Community'],
+        enum: ['Education', 'Health', 'Legal', 'Welfare', 'Employment'],
         required: true
     },
     amountRequired: { type: Number, required: true },

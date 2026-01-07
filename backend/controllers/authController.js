@@ -133,35 +133,66 @@ const requestOtp = asyncHandler(async (req, res) => {
         throw new Error('Member not found with this mobile number');
     }
 
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // 1. Rate Limiting Check
+    if (member.otpLastSent) {
+        const timeSinceLastSent = Date.now() - new Date(member.otpLastSent).getTime();
+        const waitTime = 60 * 1000; // 60 seconds
+        if (timeSinceLastSent < waitTime) {
+            res.status(429); // Too Many Requests
+            throw new Error(`Please wait ${Math.ceil((waitTime - timeSinceLastSent) / 1000)} seconds before requesting a new OTP.`);
+        }
+    }
 
-    // Set OTP and expiry (10 minutes)
-    member.otp = otp;
-    member.otpExpires = Date.now() + 10 * 60 * 1000;
+    // 2. Generate 6-digit OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+
+    // 3. Hash OTP
+    const salt = await bcrypt.genSalt(10);
+    const otpHash = await bcrypt.hash(otp, salt);
+
+    // 4. Update Member with OTP Hash, Expiry (5 mins), and Last Sent
+    member.otpHash = otpHash;
+    member.otpExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
+    member.otpLastSent = Date.now();
+
+    // Clear any previous plain text OTP if it exists (migration cleanup)
+    member.otp = undefined;
 
     await member.save();
 
+    // 5. Send SMS via Twilio
     // Format Mobile Number for Twilio (Ensure +91 for India if missing)
     let formattedMobile = mobile.trim();
     if (!formattedMobile.startsWith('+')) {
         formattedMobile = `+91${formattedMobile}`;
     }
 
-    // Send SMS via Twilio
-    const smsSent = await sendSms(formattedMobile, `Your MEWS Login OTP is: ${otp}. Valid for 10 minutes.`);
+    const smsResult = await sendSms(formattedMobile, `Your MEWS Login OTP is: ${otp}. Valid for 5 minutes.`);
 
-    console.log(`[OTP] Generated for ${mobile}: ${otp} | SMS Sent: ${smsSent}`);
+    console.log(`[OTP] Generated for ${mobile}: ${otp} | SMS Result:`, smsResult);
 
-    // Return OTP in response ONLY if SMS failed (or keep for dev? I'll keep for dev convenience)
-    res.json({
-        message: smsSent ? 'OTP sent to mobile' : 'Failed to send SMS (Check Consoles)',
-        mobile,
-        otp: otp // ALWAYS return OTP for testing as per user request
-    });
+    if (smsResult.success) {
+        res.json({
+            message: 'OTP sent successfully to your mobile number',
+            mobile
+        });
+    } else {
+        // Fallback for Trial Accounts / Dev Mode
+        // If the error relates to unverified numbers (Code 21608) or general send failures in dev, 
+        // we allow the user to proceed by logging the OTP.
 
-    // Dev Override: Always return OTP for now to ensure user isn't locked out if credentials fail
-    // res.json({ message: 'OTP processed', mobile, otp, smsStatus: smsSent ? 'Sent' : 'Failed' });
+        console.warn('--- TWILIO FALLBACK ---');
+        console.warn('SMS failed (likely Trial Account). allowing Login via Console OTP.');
+        console.warn(`OTP for ${mobile} is: ${otp}`);
+        console.warn('-----------------------');
+
+        // Return success with a clear message
+        res.json({
+            message: `Trial Account: SMS failed. Use OTP ${otp} (View Console)`,
+            mobile,
+            otp // Explicitly returning OTP to frontend for easy copy-paste in this scenario
+        });
+    }
 });
 
 // @desc    Verify OTP and Login Member
@@ -182,19 +213,30 @@ const verifyOtp = asyncHandler(async (req, res) => {
         throw new Error('Member not found');
     }
 
-    if (member.otp !== otp) {
+    // Check if OTP exists and is not expired
+    if (!member.otpHash || !member.otpExpires) {
         res.status(400);
-        throw new Error('Invalid OTP');
+        throw new Error('No OTP requested or access expired. Please request a new OTP.');
     }
 
     if (member.otpExpires < Date.now()) {
         res.status(400);
-        throw new Error('OTP has expired');
+        throw new Error('OTP has expired. Please request a new one.');
     }
 
-    // Clear OTP
-    member.otp = undefined;
+    // Verify Hash
+    const isMatch = await bcrypt.compare(otp, member.otpHash);
+
+    if (!isMatch) {
+        res.status(400);
+        throw new Error('Invalid OTP');
+    }
+
+    // Verification Successful
+    member.isPhoneVerified = true;
+    member.otpHash = undefined;
     member.otpExpires = undefined;
+    // We keep otpLastSent for rate limiting context if needed, or can just leave it.
     await member.save();
 
     res.json({

@@ -43,12 +43,26 @@ const MemberDocument = ({ data, lookups }) => {
     // Photo URL
     const getPhotoUrl = (url) => {
         if (!url) return null;
+
+        // Handle local blob URLs (previews) directly
+        if (url.startsWith('blob:')) return url;
+
+        // Cache buster using timestamp if available in data, else current time for fresh fetch provided by caller/context if possible, 
+        // but here we might just rely on the url being correct. 
+        // Ideally data.updatedAt should be used.
+        const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : '';
+        const timeParam = timestamp ? `&t=${timestamp}` : '';
+
         if (url.startsWith('http')) {
-            return `${import.meta.env.VITE_API_URL || ''}/api/proxy-image?url=${encodeURIComponent(url)}`;
+            const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+            return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(url)}${timeParam}`;
         }
+
         // Local relative path
-        const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
-        return `${baseUrl}/${url.replace(/\\/g, '/')}`;
+        const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+        // Ensure url starts with /
+        const normalizedPath = url.replace(/\\/g, '/').replace(/^\//, '');
+        return `${baseUrl}/${normalizedPath}?t=${timestamp}`;
     };
 
     return (

@@ -187,7 +187,7 @@ const MemberManagement = () => {
 
     const location = useLocation();
 
-    // Initialize filters from URL
+    // Initialize filters from URL - Robust Reset
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         const gender = params.get('gender');
@@ -200,6 +200,7 @@ const MemberManagement = () => {
         const voterStatus = params.get('voterStatus');
         const employmentStatus = params.get('employmentStatus');
 
+        // Gender Reset
         if (gender) {
             setSelectedGenders({
                 All: false,
@@ -207,15 +208,19 @@ const MemberManagement = () => {
                 Female: gender === 'Female',
                 Other: gender === 'Other'
             });
+        } else {
+            setSelectedGenders({ All: true, Male: false, Female: false, Other: false });
         }
-        if (marital) setSelectedMaritalStatuses(marital.split(',').filter(Boolean));
-        if (blood) setSelectedBloodGroups(blood.split(',').filter(Boolean));
-        if (subCaste) setSelectedSubCaste(subCaste);
-        if (ageRange) setSelectedAgeRanges(ageRange.split(',').filter(Boolean));
-        if (occupation) setSelectedCategories(occupation.split(',').filter(Boolean));
-        if (villages) setSelectedVillages(villages.split(',').filter(Boolean));
-        if (voterStatus) setSelectedVoterStatus(voterStatus);
-        if (employmentStatus) setSelectedEmploymentStatus(employmentStatus);
+
+        // Other Filters Reset
+        setSelectedMaritalStatuses(marital ? marital.split(',').filter(Boolean) : []);
+        setSelectedBloodGroups(blood ? blood.split(',').filter(Boolean) : []);
+        setSelectedSubCaste(subCaste || '');
+        setSelectedAgeRanges(ageRange ? ageRange.split(',').filter(Boolean) : []);
+        setSelectedCategories(occupation ? occupation.split(',').filter(Boolean) : []);
+        setSelectedVillages(villages ? villages.split(',').filter(Boolean) : []);
+        setSelectedVoterStatus(voterStatus || '');
+        setSelectedEmploymentStatus(employmentStatus || '');
 
     }, [location.search]);
 
@@ -243,7 +248,13 @@ const MemberManagement = () => {
     const fetchMembers = async () => {
         try {
             setLoading(true);
-            const { data } = await API.get('/members');
+            const { data } = await API.get(`/members?t=${new Date().getTime()}`);
+            console.log('[DEBUG] Fetched members count:', data.length);
+            if (data.length > 0) {
+                console.log('[DEBUG] First Member Address:', data[0].address);
+                console.log('[DEBUG] First Member Status:', data[0].verificationStatus);
+            }
+            console.log('[DEBUG] Active Filters:', { selectedGenders, selectedVillages, searchTerm });
             setMembers(data);
         } catch (error) {
             console.error("Failed to fetch members", error);
@@ -254,7 +265,7 @@ const MemberManagement = () => {
 
     useEffect(() => {
         fetchMembers();
-    }, []);
+    }, [location.key]);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -895,8 +906,12 @@ const MemberManagement = () => {
                                                             <span className="absolute inset-0 flex items-center justify-center w-full h-full">{(member.name || '').charAt(0)}</span>
                                                             <img
                                                                 src={(member.photoUrl || member.profileImage).startsWith('http')
-                                                                    ? `${import.meta.env.VITE_API_URL || ''}/api/proxy-image?url=${encodeURIComponent(member.photoUrl || member.profileImage)}`
-                                                                    : `/${(member.photoUrl || member.profileImage).replace(/\\/g, '/').replace(/^\//, '')}`}
+                                                                    ? (() => {
+                                                                        const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+                                                                        const timestamp = member.updatedAt ? new Date(member.updatedAt).getTime() : '';
+                                                                        return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(member.photoUrl || member.profileImage)}&t=${timestamp}`;
+                                                                    })()
+                                                                    : `/${(member.photoUrl || member.profileImage).replace(/\\/g, '/').replace(/^\//, '')}?t=${member.updatedAt ? new Date(member.updatedAt).getTime() : ''}`}
                                                                 alt={member.name}
                                                                 className="w-full h-full object-cover relative z-10 bg-slate-100"
                                                                 onError={(e) => { e.target.style.display = 'none'; }}

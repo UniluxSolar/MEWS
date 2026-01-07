@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     FaHeart, FaGraduationCap, FaHeartbeat, FaBalanceScale, FaCheckCircle,
-    FaLock, FaCreditCard, FaUserSecret, FaInfoCircle, FaHandHoldingHeart
+    FaLock, FaCreditCard, FaUserSecret, FaInfoCircle, FaHandHoldingHeart, FaBriefcase, FaArrowLeft
 } from 'react-icons/fa';
 
 // --- Sub-components (Internal) ---
@@ -57,18 +57,31 @@ const AmountButton = ({ amount, value, selected, onClick, isPopular }) => (
 const Donate = () => {
     const navigate = useNavigate();
     const [donationType, setDonationType] = useState('one-time');
-    const [purpose, setPurpose] = useState('general');
-    const [amount, setAmount] = useState('5100');
+    const [purpose, setPurpose] = useState(''); // No default
+    const [amount, setAmount] = useState(''); // No default
     const [customAmount, setCustomAmount] = useState('');
     const [isAnonymous, setIsAnonymous] = useState(false);
 
     // Form States
     const [formData, setFormData] = useState({
-        name: 'Rajesh Kumar',
-        email: 'rajesh.kumar@email.com',
-        phone: '+91 98765 43210',
+        name: '',
+        email: '',
+        phone: '',
         pan: ''
     });
+
+    useEffect(() => {
+        // 1. Fetch User Details
+        const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
+        if (adminInfo) {
+            setFormData({
+                name: (adminInfo.name + ' ' + adminInfo.surname).trim() || '',
+                email: adminInfo.email || '',
+                phone: adminInfo.mobileNumber || '',
+                pan: ''
+            });
+        }
+    }, []);
 
     const handleAmountClick = (value) => {
         setAmount(value);
@@ -83,8 +96,13 @@ const Donate = () => {
 
     return (
         <div className="w-full space-y-8 pb-12">
-
-            {/* Page Header */}
+            {/* Back Button */}
+            <div className="">
+                <Link to="/dashboard/donations" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
+                    <FaArrowLeft size={12} /> Back to My Donations
+                </Link>
+            </div>
+            {/* Page Header - Keeping existing code... */}
             <div className="text-center md:text-left">
                 <h1 className="text-3xl font-bold text-[#1e2a4a]">Support Our Community</h1>
                 <p className="text-gray-500 mt-2 max-w-2xl">
@@ -134,51 +152,17 @@ const Donate = () => {
                         </button>
                     </div>
 
-
-
                     {donationType === 'sponsor' ? (
                         <div className="bg-white rounded-xl border border-gray-200 p-6">
+                            {/* Existing Sponsor Code - Keeping it simple by not replacing the whole block if possible, but I am replacing the whole Main Component start... */}
                             <h2 className="text-lg font-bold text-gray-800 mb-4">Featured Students Requiring Support</h2>
-                            <div className="grid gap-6">
-                                {/* Student Card: Priya */}
-                                <div className="flex flex-col md:flex-row gap-4 p-4 border rounded-xl hover:shadow-md transition">
-                                    <div className="w-full md:w-32 h-32 bg-gray-200 rounded-lg overflow-hidden shrink-0">
-                                        {/* Placeholder Image */}
-                                        <div className="w-full h-full bg-gray-300 flex items-center justify-center text-gray-500">
-                                            <FaGraduationCap size={32} />
-                                        </div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <h3 className="font-bold text-lg text-gray-900">Priya</h3>
-                                                <p className="text-sm text-gray-500">B.Tech Computer Science • 2nd Year</p>
-                                            </div>
-                                            <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                <FaCheckCircle size={10} /> Verified
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                                            "Education is the only way I can lift my family out of poverty. I promise to work hard..."
-                                        </p>
-                                        <div className="mt-4 flex items-center justify-between">
-                                            <div className="text-xs font-bold text-gray-500">
-                                                <span className="text-green-600">35% Funded</span> • ₹1,55,000 Remaining
-                                            </div>
-                                            <Link to="/dashboard/sponsor/student/1" className="bg-primary text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-[#2a3b66] transition">
-                                                View Profile & Sponsor
-                                            </Link>
-                                        </div>
-                                        <div className="mt-2 h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                                            <div className="h-full bg-green-500 w-[35%] rounded-full"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {/* More students can be added here */}
+                            <div className="text-center p-8 text-gray-500 bg-gray-50 rounded-lg">
+                                Sponsorship feature is coming soon.
                             </div>
                         </div>
                     ) : (
                         <>
+                            {/* Step 1: Choose Cause */}
                             {/* Step 1: Choose Cause */}
                             <section className="bg-white p-6 md:p-8 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
                                 <div className="absolute top-0 left-0 w-1.5 h-full bg-primary"></div>
@@ -187,32 +171,39 @@ const Donate = () => {
                                 </h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <PurposeCard
-                                        icon={FaHeart}
-                                        title="General Fund"
-                                        description="Unrestricted funds used where the need is greatest."
-                                        selected={purpose === 'general'}
-                                        onClick={() => setPurpose('general')}
-                                    />
-                                    <PurposeCard
                                         icon={FaGraduationCap}
                                         title="Education"
                                         description="Scholarships, books, and uniforms for students."
-                                        selected={purpose === 'education'}
-                                        onClick={() => setPurpose('education')}
+                                        selected={purpose === 'Education'}
+                                        onClick={() => setPurpose('Education')}
                                     />
                                     <PurposeCard
                                         icon={FaHeartbeat}
-                                        title="Healthcare"
-                                        description="Medical camps and emergency surgery support."
-                                        selected={purpose === 'health'}
-                                        onClick={() => setPurpose('health')}
+                                        title="Health"
+                                        description="Medical camps, surgeries, and emergency support."
+                                        selected={purpose === 'Health'}
+                                        onClick={() => setPurpose('Health')}
                                     />
                                     <PurposeCard
                                         icon={FaBalanceScale}
                                         title="Legal Aid"
                                         description="Pro-bono legal support for the marginalized."
-                                        selected={purpose === 'legal'}
-                                        onClick={() => setPurpose('legal')}
+                                        selected={purpose === 'Legal Aid'}
+                                        onClick={() => setPurpose('Legal Aid')}
+                                    />
+                                    <PurposeCard
+                                        icon={FaBriefcase}
+                                        title="Employment"
+                                        description="Skill development and job placement initiatives."
+                                        selected={purpose === 'Employment'}
+                                        onClick={() => setPurpose('Employment')}
+                                    />
+                                    <PurposeCard
+                                        icon={FaHandHoldingHeart}
+                                        title="Welfare"
+                                        description="Community support, food security, and shelter."
+                                        selected={purpose === 'Welfare'}
+                                        onClick={() => setPurpose('Welfare')}
                                     />
                                 </div>
                             </section>
@@ -320,9 +311,16 @@ const Donate = () => {
 
                             {/* Submit Button */}
                             <button
-                                onClick={() => navigate('/dashboard/donate/checkout', {
-                                    state: { amount, purpose, donorDetails: formData }
-                                })}
+                                onClick={() => {
+                                    if (!amount) {
+                                        alert("Please select or enter a donation amount.");
+                                        return;
+                                    }
+
+                                    navigate('/dashboard/donate/checkout', {
+                                        state: { amount, purpose, donorDetails: formData }
+                                    });
+                                }}
                                 className="w-full bg-[#1e2a4a] text-white text-xl font-bold py-5 rounded-2xl shadow-xl hover:bg-[#2a3b66] hover:shadow-2xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-3">
                                 Proceed to Pay ₹{amount}
                                 <FaCreditCard className="opacity-70" />

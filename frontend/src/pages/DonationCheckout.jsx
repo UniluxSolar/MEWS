@@ -54,18 +54,62 @@ const DonationCheckout = () => {
             return;
         }
 
-        // Simulate payment processing
-        setTimeout(() => {
-            navigate('/dashboard/donate/success', {
-                state: {
-                    amount,
-                    purpose,
-                    transactionId: 'TXN' + Date.now(),
-                    date: new Date().toLocaleString(),
-                    paymentMethod: paymentMethod
+        // Create Donation via API
+        const createDonation = async () => {
+            try {
+                const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
+                const token = adminInfo?.token;
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                };
+
+                // Determine correct type from purpose string
+                const validTypes = ['Sponsorship', 'Education', 'Health', 'Legal Aid', 'Employment', 'Welfare'];
+                let selectedType = 'General';
+
+                if (validTypes.includes(purpose)) {
+                    selectedType = purpose;
+                } else if (purpose.includes('Sponsorship')) {
+                    selectedType = 'Sponsorship';
                 }
-            });
-        }, 1500); // Simulate delay
+
+                const payload = {
+                    amount: amount.replace(/,/g, ''), // Ensure numeric value
+                    type: selectedType,
+                    purpose: purpose, // Keep the full descriptive purpose string
+                    paymentMethod: paymentMethod.toUpperCase(),
+                    transactionId: 'TXN' + Date.now()
+                };
+
+                const response = await fetch('/api/donations', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    navigate('/dashboard/donate/success', {
+                        state: {
+                            amount,
+                            purpose,
+                            transactionId: data.transactionId,
+                            date: new Date(data.createdAt).toLocaleString(),
+                            paymentMethod: paymentMethod
+                        }
+                    });
+                } else {
+                    alert("Payment failed or could not be recorded. Please try again.");
+                }
+
+            } catch (error) {
+                console.error("Donation processing error:", error);
+                alert("An error occurred. Please try again.");
+            }
+        };
+
+        createDonation();
     };
 
     return (

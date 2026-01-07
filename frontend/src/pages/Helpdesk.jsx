@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import {
     FaPlus, FaSearch, FaFilter, FaCircle, FaCommentAlt,
-    FaPaperclip, FaChevronRight, FaTicketAlt, FaTimes, FaFileAlt, FaTrash
+    FaPaperclip, FaChevronRight, FaTicketAlt, FaTimes, FaFileAlt, FaTrash, FaArrowLeft
 } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 
 const TicketRow = ({ id, subject, category, date, status, hasAttachment }) => {
     const statusColors = {
@@ -199,7 +200,7 @@ const Helpdesk = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [tickets, setTickets] = useState([
         { id: 'TKT-2025-8921', subject: 'Scholarship Application Status Inquiry', category: 'Scholarship', date: 'Jan 10, 2025', status: 'Open', hasAttachment: false },
-        { id: 'TKT-2025-8900', subject: 'Unable to upload KYC documents', category: 'Technical Issue', date: 'Jan 08, 2025', status: 'In Progress', hasAttachment: true },
+
         { id: 'TKT-2024-7655', subject: 'Bank Account Update Request', category: 'Profile Update', date: 'Dec 15, 2024', status: 'Closed', hasAttachment: true },
         { id: 'TKT-2024-7100', subject: 'Login Issues on Mobile', category: 'Technical Issue', date: 'Nov 22, 2024', status: 'Closed', hasAttachment: false },
     ]);
@@ -237,6 +238,13 @@ const Helpdesk = () => {
                 onClose={() => setIsModalOpen(false)}
                 onCreate={handleCreateTicket}
             />
+
+            {/* Back Button */}
+            <div className="">
+                <Link to="/dashboard" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
+                    <FaArrowLeft size={12} /> Back to Dashboard
+                </Link>
+            </div>
 
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -279,8 +287,8 @@ const Helpdesk = () => {
                         key={filter}
                         onClick={() => setActiveFilter(filter)}
                         className={`px-4 py-2 rounded-full text-xs font-bold transition whitespace-nowrap ${activeFilter === filter
-                                ? 'bg-[#1e2a4a] text-white'
-                                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                            ? 'bg-[#1e2a4a] text-white'
+                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                             }`}
                     >
                         {filter}

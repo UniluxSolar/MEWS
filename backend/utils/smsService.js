@@ -20,10 +20,10 @@ const sendSms = async (to, body) => {
         });
 
         console.log(`[Twilio] SMS sent. SID: ${message.sid}`);
-        return true;
+        return { success: true, sid: message.sid };
     } catch (error) {
         console.error(`[Twilio] Error sending SMS: ${error.message}`);
-        return false;
+        return { success: false, error: error.message };
     }
 };
 

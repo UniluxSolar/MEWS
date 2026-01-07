@@ -89,7 +89,7 @@ const ApplicationDetail = () => {
             {/* Back Link */}
             <div className="mb-6">
                 <Link to="/dashboard/applications" className="text-gray-500 hover:text-primary text-sm flex items-center gap-2 font-bold transition">
-                    <FaChevronLeft size={10} /> Back to My Applications
+                    <FaChevronLeft size={10} /> Back to Funding Request
                 </Link>
             </div>
 

@@ -1,4 +1,5 @@
 const Member = require('../models/Member');
+const FundRequest = require('../models/FundRequest');
 const Location = require('../models/Location');
 const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
@@ -81,6 +82,19 @@ const registerMember = asyncHandler(async (req, res) => {
         let mandalId = clean(data.presentMandal);
         let districtId = clean(data.presentDistrict);
 
+        // ENFORCE ADMIN JURISDICTION
+        // Ensure admins can only create members in their assigned location
+        if (req.user && req.user.assignedLocation) {
+            console.log(`[REG] Enforcing jurisdiction for ${req.user.role}: ${req.user.assignedLocation}`);
+            if (req.user.role === 'VILLAGE_ADMIN') {
+                villageId = req.user.assignedLocation;
+            } else if (req.user.role === 'MANDAL_ADMIN') {
+                mandalId = req.user.assignedLocation;
+            } else if (req.user.role === 'DISTRICT_ADMIN') {
+                districtId = req.user.assignedLocation;
+            }
+        }
+
         if (villageId) {
             const vLoc = await Location.findById(villageId);
             // Note: The frontend might send an ID if the dropdown is smart, OR a name. 
@@ -91,12 +105,26 @@ const registerMember = asyncHandler(async (req, res) => {
             }
             // If not found by ID, try name
             if (!vLocDoc) {
-                vLocDoc = await Location.findOne({ name: { $regex: new RegExp(`^${villageId.trim()}$`, 'i') }, type: 'VILLAGE' });
+                // BUG FIX: If villageId matches Assigned Location, do NOT search by name logic which might find duplicates
+                // Only search by name if it's NOT a valid ID yet.
+                if (!mongoose.Types.ObjectId.isValid(villageId)) {
+                    vLocDoc = await Location.findOne({ name: { $regex: new RegExp(`^${villageId.trim()}$`, 'i') }, type: 'VILLAGE' });
+                }
             }
 
             if (vLocDoc) {
                 console.log(`Mapping Village '${vLocDoc.name}' -> ${vLocDoc._id}`);
-                villageId = vLocDoc._id; // Ensure consistent ID usage
+                // Only update villageId if it wasn't already enforced by Jurisdiction
+                // Wait, if it WAS enforced, it is already an ID.
+                // So vLocDoc matching that ID is fine.
+                // But if vLocDoc was found by NAME from req.body value (which might differ), we must be careful.
+
+                // CRITICAL FIX: If Jurisdiction Enforced, DO NOT ALLOW vLocDoc to change it based on Name Search from body
+                if (req.user && req.user.assignedLocation && req.user.role === 'VILLAGE_ADMIN') {
+                    // Keep established ID
+                } else {
+                    villageId = vLocDoc._id;
+                }
 
                 // AUTO-SYNC: Traverse Up Hierarchy
                 if (vLocDoc.parent) {
@@ -460,6 +488,10 @@ const getMembers = asyncHandler(async (req, res) => {
                     type: 'VILLAGE'
                 });
                 const locIds = relatedLocations.map(l => l._id);
+                // SAFEGUARD: Explicitly include the assigned ID itself
+                if (!locIds.some(id => id.toString() === locationId.toString())) {
+                    locIds.push(locationId);
+                }
                 query['address.village'] = { $in: locIds };
             } else {
                 query['address.village'] = locationId; // Fallback
@@ -515,7 +547,13 @@ const getMembers = asyncHandler(async (req, res) => {
 // @route   GET /api/members/:id
 // @access  Private
 const getMemberById = asyncHandler(async (req, res) => {
-    const member = await Member.findById(req.params.id);
+    const member = await Member.findById(req.params.id)
+        .populate({
+            path: 'address.district',
+            populate: { path: 'parent' } // Populate State from District
+        })
+        .populate('address.mandal')
+        .populate('address.village');
     if (member) {
         const signedMember = await signMemberData(member);
         res.json(signedMember);
@@ -523,6 +561,57 @@ const getMemberById = asyncHandler(async (req, res) => {
         res.status(404);
         throw new Error('Member not found');
     }
+});
+
+// @desc    Get member application stats
+// @route   GET /api/members/stats
+// @access  Private (Member/User)
+const getMemberStats = asyncHandler(async (req, res) => {
+    // Determine user type and query key
+    // If the user is a Member, they are the beneficiary.
+    // If the user is a Village Admin (User), they might be the requester.
+    // For 'My Applications', we usually mean applications where I am the focus.
+
+    let query = {};
+    if (req.user.mewsId || req.user.role === 'MEMBER') {
+        // Logged in as Member
+        query.beneficiary = req.user._id;
+    } else {
+        // Logged in as Admin/User
+        query.requestedBy = req.user._id;
+    }
+
+    const applications = await FundRequest.find(query);
+
+    // Calculate Stats
+    // 1. Active: Not Rejected, Not Completed? Or just total Active?
+    // Let's assume Status: ['DRAFT', 'PENDING_APPROVAL', 'ACTIVE', 'COMPLETED', 'REJECTED', 'FROZEN']
+    // User wants "Active Applications". Usually means currently in progress (Pending or Active).
+    const activeCount = applications.filter(app => ['PENDING_APPROVAL', 'ACTIVE'].includes(app.status)).length;
+
+    // 2. Approved Applications
+    const approvedCount = applications.filter(app => ['ACTIVE', 'COMPLETED'].includes(app.status)).length;
+
+    // 3. Total Amount Disbursed
+    // Sum of amountCollected for Approved/Completed applications
+    const totalDisbursed = applications
+        .filter(app => ['ACTIVE', 'COMPLETED'].includes(app.status))
+        .reduce((sum, app) => sum + (app.amountCollected || 0), 0);
+
+    // 4. Pending Reviews
+    const pendingCount = applications.filter(app => app.status === 'PENDING_APPROVAL').length;
+
+    // 5. Total Applications (For the "15 Applications found" text)
+    const totalApplications = applications.length;
+
+    res.json({
+        activeApplications: activeCount,
+        approvedApplications: approvedCount,
+        totalAmountDisbursed: totalDisbursed,
+        pendingReviews: pendingCount,
+        totalApplications: totalApplications,
+        applications: applications // Return full list for the table too!
+    });
 });
 
 const updateMemberStatus = asyncHandler(async (req, res) => {
@@ -550,6 +639,35 @@ const updateMember = asyncHandler(async (req, res) => {
     if (member) {
         console.log(`----- UPDATE MEMBER START: ${member._id} -----`);
         const data = req.body;
+
+        // Parse JSON strings if coming from FormData (e.g., address, familyMembers, removedFiles)
+        try {
+            if (typeof data.address === 'string') data.address = JSON.parse(data.address);
+            if (typeof data.familyMembers === 'string') {
+                // Determine if double encoded or just string? usually just string.
+                // But registerMember and updateMember logic below expects 'data.familyMembers' to be the string itself? 
+                // Wait, lines 781 uses JSON.parse(data.familyMembers). So if it's ALREADY a string, we don't need to parse it here?
+                // Actually, if it's from JSON body, it's an array/object. If FormData, it's a string.
+                // But lines 781 does: const parsedMembers = JSON.parse(data.familyMembers);
+                // This implies lines 781 EXPECTS it to be a string.
+                // If I send it as a string in FormData, it works for line 781.
+                // If I send it as Array in JSON body, line 781 throws Error?
+                // Let's check line 205 (register): const parsedMembers = JSON.parse(data.familyMembers);
+                // So the backend ALREADY EXPECTS A STRING for familyMembers.
+                // So NO parsing needed for familyMembers here.
+
+                // DATA.ADDRESS however:
+                // Line 659: if (data.address) ...
+                // Line 660: data.address.district ...
+                // If data.address is string "{}", data.address.district is undefined.
+                // So we MUST parse data.address.
+            }
+            if (typeof data.removedFiles === 'string') {
+                // Line 756 uses JSON.parse(data.removedFiles) -> Expects string. OK.
+            }
+        } catch (e) {
+            console.error("Error parsing FormData JSON fields:", e);
+        }
 
         // Helpers (Duplicate from register for isolation)
         const getFilePath = (fieldname) => {
@@ -590,25 +708,47 @@ const updateMember = asyncHandler(async (req, res) => {
         const newAadhaarBack = getFilePath('aadhaarBack');
         if (newAadhaarBack) member.aadhaarCardBackUrl = newAadhaarBack;
 
-        // Update Address
-        // Logic: specific fields passed flat from frontend
+        // Helper to resolve location (Name -> ID)
+        const resolveLocation = async (val, type) => {
+            if (!val) return undefined;
+            if (mongoose.Types.ObjectId.isValid(val)) return val;
+            const query = { name: { $regex: new RegExp(`^${val.trim()}$`, 'i') } };
+            if (type) query.type = type;
+            const loc = await Location.findOne(query);
+            return loc ? loc._id : undefined; // Return undefined if not found to avoid CastError
+        };
+
+        // Update Address (Support Nested & Flat)
         if (!member.address) member.address = {};
-        if (data.presentDistrict !== undefined) member.address.district = clean(data.presentDistrict);
+
+        // Nested (New Frontend)
+        if (data.address) {
+            if (data.address.district !== undefined) member.address.district = await resolveLocation(data.address.district, 'DISTRICT');
+            if (data.address.mandal !== undefined) member.address.mandal = await resolveLocation(data.address.mandal, 'MANDAL');
+            if (data.address.village !== undefined) member.address.village = await resolveLocation(data.address.village, 'VILLAGE');
+            if (data.address.houseNumber !== undefined) member.address.houseNumber = clean(data.address.houseNumber);
+            if (data.address.street !== undefined) member.address.street = clean(data.address.street);
+            if (data.address.pinCode !== undefined) member.address.pinCode = clean(data.address.pinCode);
+            if (data.address.state !== undefined) member.address.state = clean(data.address.state);
+        }
+
+        // Flat (Legacy Support)
+        if (data.presentDistrict !== undefined) member.address.district = await resolveLocation(data.presentDistrict, 'DISTRICT');
         if (data.presentConstituency !== undefined) member.address.constituency = clean(data.presentConstituency);
-        if (data.presentMandal !== undefined) member.address.mandal = clean(data.presentMandal);
-        if (data.presentVillage !== undefined) member.address.village = clean(data.presentVillage);
+        if (data.presentMandal !== undefined) member.address.mandal = await resolveLocation(data.presentMandal, 'MANDAL');
+        if (data.presentVillage !== undefined) member.address.village = await resolveLocation(data.presentVillage, 'VILLAGE');
         if (data.presentHouseNo !== undefined) member.address.houseNumber = clean(data.presentHouseNo);
         if (data.presentStreet !== undefined) member.address.street = clean(data.presentStreet);
-        if (data.presentPincode !== undefined) member.address.pinCode = clean(data.presentPincode); // Note: Schema uses 'pinCode' or 'pincode'? register uses 'pinCode'
+        if (data.presentPincode !== undefined) member.address.pinCode = clean(data.presentPincode);
         if (data.residenceType !== undefined) member.address.residencyType = clean(data.residenceType);
         if (data.presentLandmark !== undefined) member.address.landmark = clean(data.presentLandmark);
 
         // Update Permanent Address
         if (!member.permanentAddress) member.permanentAddress = {};
-        if (data.permDistrict !== undefined) member.permanentAddress.district = clean(data.permDistrict);
+        if (data.permDistrict !== undefined) member.permanentAddress.district = await resolveLocation(data.permDistrict);
         if (data.permConstituency !== undefined) member.permanentAddress.constituency = clean(data.permConstituency);
-        if (data.permMandal !== undefined) member.permanentAddress.mandal = clean(data.permMandal);
-        if (data.permVillage !== undefined) member.permanentAddress.village = clean(data.permVillage);
+        if (data.permMandal !== undefined) member.permanentAddress.mandal = await resolveLocation(data.permMandal);
+        if (data.permVillage !== undefined) member.permanentAddress.village = await resolveLocation(data.permVillage);
         if (data.permHouseNo !== undefined) member.permanentAddress.houseNumber = clean(data.permHouseNo);
         if (data.permStreet !== undefined) member.permanentAddress.street = clean(data.permStreet);
         if (data.permPincode !== undefined) member.permanentAddress.pinCode = clean(data.permPincode);
@@ -974,5 +1114,6 @@ module.exports = {
     getMemberById,
     updateMemberStatus,
     updateMember,
-    deleteMember
+    deleteMember,
+    getMemberStats
 };

@@ -13,10 +13,23 @@ const protect = async (req, res, next) => {
             token = req.headers.authorization.split(' ')[1];
 
             // Verify token
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+            console.log("[AuthMiddleware] Decoded ID:", decoded.id);
 
             // Get user from the token
             req.user = await User.findById(decoded.id).select('-passwordHash');
+
+            if (!req.user) {
+                // If not found in User, check Member (for Member Login)
+                const Member = require('../models/Member');
+                req.user = await Member.findById(decoded.id);
+                console.log("[AuthMiddleware] Found in Member?", !!req.user);
+
+                if (req.user) {
+                    // Add a flag or ensure role is set to differentiate, though schema handles it
+                    if (!req.user.role) req.user.role = 'MEMBER';
+                }
+            }
 
             if (!req.user) {
                 return res.status(401).json({ message: 'Not authorized, user not found' });

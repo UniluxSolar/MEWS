@@ -56,8 +56,12 @@ const HealthAssistance = () => {
 
     return (
         <div className="w-full pb-12">
-
-            {/* Header */}
+            {/* Back Button */}
+            <div className="mb-4">
+                <Link to="/dashboard/services" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
+                    <FaArrowLeft size={12} /> Back to MEWS Services
+                </Link>
+            </div>
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-[#1e2a4a]">Health Assistance Application</h1>
                 <p className="text-gray-500 text-sm mt-1">Complete all steps to submit your application for health assistance</p>

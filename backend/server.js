@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
+const path = require('path');
+const fs = require('fs');
 
 // Initialize Express App
 const app = express();
@@ -28,18 +30,27 @@ app.use('/api/institutions', require('./routes/institutionRoutes'));
 
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/announcements', require('./routes/announcementRoutes'));
-app.use('/api/admin', require('./routes/adminRoutes'));
-app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/fund-requests', require('./routes/fundRequestRoutes'));
+app.use('/api/donations', require('./routes/donationRoutes'));
 
 // Proxy Endpoint for Images (Fixes CORS for html2canvas & Private GCS Buckets)
 const axios = require('axios');
 const { Storage } = require('@google-cloud/storage');
 
-// Initialize GCS for Proxy
+// Initialize GCS for Proxy with Auto-detection
+let keyFilename = process.env.GCS_KEYFILE_PATH;
+const localKeyPath = path.join(__dirname, 'gcp-key.json');
+const altLocalKeyPath = path.join(__dirname, 'gcs-key.json');
+
+if (!keyFilename) {
+    if (fs.existsSync(localKeyPath)) keyFilename = localKeyPath;
+    else if (fs.existsSync(altLocalKeyPath)) keyFilename = altLocalKeyPath;
+}
+
 const storage = new Storage({
     projectId: process.env.GCS_PROJECT_ID,
-    keyFilename: process.env.GCS_KEYFILE_PATH
+    keyFilename: keyFilename
 });
 const bucketName = process.env.GCS_BUCKET_NAME || 'mews-uploads';
 const bucket = storage.bucket(bucketName);
@@ -54,18 +65,24 @@ app.get('/api/proxy-image', async (req, res) => {
             // Extract filename from URL: https://storage.googleapis.com/BUCKET_NAME/FILENAME
             const parts = url.split(`${bucketName}/`);
             if (parts.length > 1) {
-                const filename = decodeURIComponent(parts[1]);
+                // Decode and strip any query parameters (e.g. signed URL params)
+                const filename = decodeURIComponent(parts[1]).split('?')[0];
+
+                if (!filename) return res.status(400).send('Invalid filename');
+
                 const file = bucket.file(filename);
 
                 const [exists] = await file.exists();
                 if (!exists) {
-                    // console.log(`[Proxy] GCS File not found: ${filename}`);
+                    console.error(`[Proxy] File not found in GCS: ${filename}`);
                     return res.status(404).send('Image not found in bucket');
                 }
 
                 // Get metadata for content-type
                 const [metadata] = await file.getMetadata();
-                res.set('Content-Type', metadata.contentType || 'image/jpeg');
+                res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
+                // Cache control
+                res.setHeader('Cache-Control', 'public, max-age=86400');
 
                 // Stream the file
                 return file.createReadStream()
@@ -84,11 +101,11 @@ app.get('/api/proxy-image', async (req, res) => {
             responseType: 'stream'
         });
 
-        res.set('Content-Type', response.headers['content-type']);
+        res.setHeader('Content-Type', response.headers['content-type']);
         response.data.pipe(res);
 
     } catch (error) {
-        // console.error(`Proxy Error for ${url}:`, error.message);
+        console.error(`[Proxy Error] URL: ${url} | Message: ${error.message}`);
         if (error.response) {
             res.status(error.response.status).send(error.response.statusText);
         } else {

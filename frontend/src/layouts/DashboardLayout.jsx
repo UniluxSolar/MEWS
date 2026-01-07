@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     FaThLarge, FaFileAlt, FaUserCheck, FaBriefcase, FaHeart, FaNotesMedical,
     FaBalanceScale, FaHandHoldingUsd, FaHeadset, FaQuestionCircle, FaBars,
-    FaSearch, FaBell, FaUserCircle, FaChevronDown
+    FaSearch, FaBell, FaUserCircle, FaChevronDown, FaSignOutAlt
 } from 'react-icons/fa';
 
 const SidebarItem = ({ to, icon: Icon, label, active, collapsed }) => (
@@ -22,6 +22,12 @@ const SidebarItem = ({ to, icon: Icon, label, active, collapsed }) => (
 const DashboardLayout = () => {
     const [collapsed, setCollapsed] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        localStorage.removeItem('adminInfo');
+        navigate('/login');
+    };
 
     const isActive = (path) => location.pathname.includes(path);
 
@@ -39,19 +45,18 @@ const DashboardLayout = () => {
             const segment = pathSegments[1];
 
             if (segment === 'applications') {
-                breadcrumbs.push({ label: 'My Applications', path: '/dashboard/applications' });
+                breadcrumbs.push({ label: 'Funding Request', path: '/dashboard/applications' });
                 if (pathSegments.includes('new')) breadcrumbs.push({ label: 'New Application', path: '' });
                 else if (pathSegments.length > 2) breadcrumbs.push({ label: 'Application Details', path: '' });
             }
-            else if (segment === 'kyc') {
-                breadcrumbs.push({ label: 'KYC Status', path: '/dashboard/kyc' });
-                if (pathSegments.includes('success')) breadcrumbs.push({ label: 'Verification Complete', path: '' });
-            }
+
+            else if (segment === 'services') breadcrumbs.push({ label: 'MEWS Services', path: '/dashboard/services' });
             else if (segment === 'jobs') {
                 breadcrumbs.push({ label: 'Jobs & Events', path: '/dashboard/jobs' });
                 if (pathSegments.length > 2) breadcrumbs.push({ label: 'Event Details', path: '' });
             }
             else if (segment === 'donate') {
+                breadcrumbs.push({ label: 'My Donations', path: '/dashboard/donations' });
                 breadcrumbs.push({ label: 'Donate / Sponsor', path: '/dashboard/donate' });
                 if (pathSegments.includes('checkout')) breadcrumbs.push({ label: 'Checkout', path: '' });
                 else if (pathSegments.includes('success')) breadcrumbs.push({ label: 'Donation Success', path: '' });
@@ -82,17 +87,22 @@ const DashboardLayout = () => {
 
                 <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1 scrollbar-thin scrollbar-thumb-gray-600">
                     <SidebarItem to="/dashboard" icon={FaThLarge} label="Dashboard" active={location.pathname === '/dashboard'} collapsed={collapsed} />
-                    <SidebarItem to="/dashboard/applications" icon={FaFileAlt} label="My Applications" active={isActive('applications')} collapsed={collapsed} />
-                    <SidebarItem to="/dashboard/kyc" icon={FaUserCheck} label="KYC Status" active={isActive('kyc')} collapsed={collapsed} />
-                    <SidebarItem to="/dashboard/jobs" icon={FaBriefcase} label="Jobs & Events" active={isActive('jobs')} collapsed={collapsed} />
-                    <SidebarItem to="/dashboard/donate" icon={FaHeart} label="Donate / Sponsor" active={isActive('donate')} collapsed={collapsed} />
-                    <SidebarItem to="/dashboard/health" icon={FaNotesMedical} label="Health Assistance" active={isActive('health')} collapsed={collapsed} />
-                    <SidebarItem to="/dashboard/legal" icon={FaBalanceScale} label="Legal Aid" active={isActive('legal')} collapsed={collapsed} />
+                    <SidebarItem to="/dashboard/applications" icon={FaFileAlt} label="Funding Request" active={isActive('applications')} collapsed={collapsed} />
                     <SidebarItem to="/dashboard/donations" icon={FaHandHoldingUsd} label="My Donations" active={isActive('donations')} collapsed={collapsed} />
+                    <SidebarItem to="/dashboard/services" icon={FaThLarge} label="MEWS Services" active={isActive('services')} collapsed={collapsed} />
+                    <SidebarItem to="/dashboard/jobs" icon={FaBriefcase} label="Jobs & Events" active={isActive('jobs')} collapsed={collapsed} />
                     <SidebarItem to="/dashboard/helpdesk" icon={FaHeadset} label="Helpdesk" active={isActive('helpdesk')} collapsed={collapsed} />
 
                     <div className="my-4 border-t border-gray-700 mx-2"></div>
                     <SidebarItem to="/dashboard/support" icon={FaQuestionCircle} label="Help & Support" active={isActive('support')} collapsed={collapsed} />
+
+                    <button
+                        onClick={handleLogout}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors mb-1 text-red-400 hover:bg-red-500/10 hover:text-red-300 ${collapsed ? 'justify-center' : ''}`}
+                    >
+                        <FaSignOutAlt size={18} />
+                        {!collapsed && <span className="font-bold">Logout</span>}
+                    </button>
                 </div>
 
                 <div className="p-4 text-xs text-gray-500 text-center border-t border-gray-700">
@@ -150,7 +160,11 @@ const DashboardLayout = () => {
                             <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-primary">4</span>
                         </Link>
                         <Link to="/dashboard/profile" className="flex items-center gap-2 cursor-pointer border-l border-gray-600 pl-6 group">
-                            <img src="/assets/images/user-profile.png" alt="Profile" className="w-8 h-8 rounded-full border border-gray-500 group-hover:border-white transition" />
+                            <img
+                                src={JSON.parse(localStorage.getItem('adminInfo'))?.photoUrl || "/assets/images/user-profile.png"}
+                                alt="Profile"
+                                className="w-8 h-8 rounded-full border border-gray-500 group-hover:border-white transition object-cover"
+                            />
                             <FaChevronDown size={12} className="text-gray-400 group-hover:text-white transition" />
                         </Link>
                     </div>

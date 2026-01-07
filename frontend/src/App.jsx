@@ -23,15 +23,15 @@ import AdminHelpSupport from './pages/AdminHelpSupport';
 import DashboardLayout from './layouts/DashboardLayout';
 import MyApplications from './pages/MyApplications';
 import DashboardHome from './pages/DashboardHome';
-import KYCVerification from './pages/KYCVerification';
-import KYCSuccess from './pages/KYCSuccess';
+import MEWSServices from './pages/MEWSServices';
+
 import Notifications from './pages/Notifications';
 import AdminNotifications from './pages/AdminNotifications';
 import Helpdesk from './pages/Helpdesk';
 import HelpSupport from './pages/HelpSupport';
 import JobsEvents from './pages/JobsEvents';
 import EventDetail from './pages/EventDetail';
-import ApplicationDetail from './pages/ApplicationDetail';
+import ApplicationDetails from './pages/ApplicationDetails';
 import Donate from './pages/Donate';
 import ProfileSettings from './pages/ProfileSettings';
 import HealthAssistance from './pages/HealthAssistance';
@@ -94,11 +94,11 @@ function App() {
                     <Route index element={<DashboardHome />} />
                     <Route path="applications" element={<MyApplications />} />
                     <Route path="applications/new" element={<NewApplication />} />
-                    <Route path="kyc" element={<KYCVerification />} />
-                    <Route path="kyc/success" element={<KYCSuccess />} />
+                    <Route path="services" element={<MEWSServices />} />
+
                     <Route path="jobs" element={<JobsEvents />} />
                     <Route path="jobs/:id" element={<EventDetail />} />
-                    <Route path="applications/:id" element={<ApplicationDetail />} />
+                    <Route path="applications/:id" element={<ApplicationDetails />} />
                     <Route path="donate" element={<Donate />} />
                     <Route path="profile" element={<ProfileSettings />} />
                     <Route path="health" element={<HealthAssistance />} />

@@ -3015,8 +3015,60 @@ const MemberRegistration = () => {
                             <div className="bg-white shadow-xl rounded-xl overflow-hidden p-0 print:shadow-none">
                                 {/* Pass createdMemberData (if fresh) OR construct data from formData if loading existing member */}
                                 {/* Pass createdMemberData (if fresh) OR construct data from formData if loading existing member */}
+                                {/* Pass createdMemberData (if fresh) OR construct data from formData if loading existing member */}
+                                {/* Pass createdMemberData (if fresh) OR construct data from formData if loading existing member */}
                                 <MemberDocument
-                                    data={createdMemberData}
+                                    data={{
+                                        ...createdMemberData,
+                                        // Fallbacks for critical fields
+                                        name: createdMemberData?.name || formData.name,
+                                        surname: createdMemberData?.surname || formData.surname,
+                                        fatherName: createdMemberData?.fatherName || formData.fatherName,
+                                        mobileNumber: createdMemberData?.mobileNumber || formData.mobileNumber,
+                                        dob: createdMemberData?.dob || formData.dob,
+                                        gender: createdMemberData?.gender || formData.gender,
+                                        occupation: createdMemberData?.occupation || formData.occupation,
+                                        bloodGroup: createdMemberData?.bloodGroup || formData.bloodGroup,
+                                        maritalStatus: createdMemberData?.maritalStatus || formData.maritalStatus,
+
+                                        // Ensure local photo preview if backend URL is missing but file is selected
+                                        photoUrl: createdMemberData?.photoUrl || (files.photo instanceof File ? URL.createObjectURL(files.photo) : (files.photo ? files.photo.url : null)),
+
+                                        // Fallbacks for nested objects if missing
+                                        address: createdMemberData?.address || {
+                                            houseNumber: formData.presentHouseNo,
+                                            street: formData.presentStreet,
+                                            village: formData.presentVillage,
+                                            mandal: formData.presentMandal,
+                                            district: formData.presentDistrict,
+                                            pinCode: formData.presentPincode,
+                                            residencyType: formData.residencyType
+                                        },
+                                        permanentAddress: createdMemberData?.permanentAddress || {
+                                            houseNumber: formData.permHouseNo,
+                                            street: formData.permStreet,
+                                            village: formData.permVillage,
+                                            mandal: formData.permMandal,
+                                            district: formData.permDistrict,
+                                            pinCode: formData.permPincode,
+                                            landmark: formData.permLandmark
+                                        },
+                                        casteDetails: createdMemberData?.casteDetails || {
+                                            caste: formData.caste,
+                                            subCaste: formData.subCaste,
+                                            communityCertNumber: formData.communityCertNumber
+                                        },
+                                        familyDetails: createdMemberData?.familyDetails || {
+                                            annualIncome: formData.annualIncome,
+                                            rationCardType: formData.rationCardTypeFamily
+                                        },
+                                        rationCard: createdMemberData?.rationCard || {
+                                            number: formData.rationCardNumber
+                                        },
+                                        voterId: createdMemberData?.voterId || {
+                                            epicNumber: formData.epicNumber
+                                        }
+                                    }}
                                     lookups={{
                                         districts: districts,
                                         mandals: allMandals,
@@ -3071,7 +3123,24 @@ const MemberRegistration = () => {
                                         };
                                         navigate('/admin/members/generate-id', {
                                             state: {
-                                                newMember: createdMemberData,
+                                                newMember: {
+                                                    ...createdMemberData,
+                                                    name: createdMemberData?.name || formData.name,
+                                                    surname: createdMemberData?.surname || formData.surname,
+                                                    mobileNumber: createdMemberData?.mobileNumber || formData.mobileNumber,
+                                                    fatherName: createdMemberData?.fatherName || formData.fatherName,
+                                                    dob: createdMemberData?.dob || formData.dob,
+                                                    bloodGroup: createdMemberData?.bloodGroup || formData.bloodGroup,
+                                                    photoUrl: createdMemberData?.photoUrl || (files.photo instanceof File ? URL.createObjectURL(files.photo) : (files.photo ? files.photo.url : null)),
+                                                    address: createdMemberData?.address || {
+                                                        houseNumber: formData.presentHouseNo,
+                                                        street: formData.presentStreet,
+                                                        village: formData.presentVillage,
+                                                        mandal: formData.presentMandal,
+                                                        district: formData.presentDistrict,
+                                                        pinCode: formData.presentPincode
+                                                    }
+                                                },
                                                 rawData: formData,
                                                 resolvedNames: resolvedNames
                                             }
@@ -3105,7 +3174,57 @@ const MemberRegistration = () => {
                     <PrintPortal>
                         <div id="print-mount" className="hidden print:block">
                             <MemberDocument
-                                data={createdMemberData}
+                                data={{
+                                    ...createdMemberData,
+                                    // Fallbacks for critical fields
+                                    name: createdMemberData?.name || formData.name,
+                                    surname: createdMemberData?.surname || formData.surname,
+                                    fatherName: createdMemberData?.fatherName || formData.fatherName,
+                                    mobileNumber: createdMemberData?.mobileNumber || formData.mobileNumber,
+                                    dob: createdMemberData?.dob || formData.dob,
+                                    gender: createdMemberData?.gender || formData.gender,
+                                    occupation: createdMemberData?.occupation || formData.occupation,
+                                    bloodGroup: createdMemberData?.bloodGroup || formData.bloodGroup,
+                                    maritalStatus: createdMemberData?.maritalStatus || formData.maritalStatus,
+
+                                    // Ensure local photo preview if backend URL is missing but file is selected
+                                    photoUrl: createdMemberData?.photoUrl || (files.photo instanceof File ? URL.createObjectURL(files.photo) : (files.photo ? files.photo.url : null)),
+
+                                    // Fallbacks for nested objects
+                                    address: createdMemberData?.address || {
+                                        houseNumber: formData.presentHouseNo,
+                                        street: formData.presentStreet,
+                                        village: formData.presentVillage,
+                                        mandal: formData.presentMandal,
+                                        district: formData.presentDistrict,
+                                        pinCode: formData.presentPincode,
+                                        residencyType: formData.residencyType
+                                    },
+                                    permanentAddress: createdMemberData?.permanentAddress || {
+                                        houseNumber: formData.permHouseNo,
+                                        street: formData.permStreet,
+                                        village: formData.permVillage,
+                                        mandal: formData.permMandal,
+                                        district: formData.permDistrict,
+                                        pinCode: formData.permPincode,
+                                        landmark: formData.permLandmark
+                                    },
+                                    casteDetails: createdMemberData?.casteDetails || {
+                                        caste: formData.caste,
+                                        subCaste: formData.subCaste,
+                                        communityCertNumber: formData.communityCertNumber
+                                    },
+                                    familyDetails: createdMemberData?.familyDetails || {
+                                        annualIncome: formData.annualIncome,
+                                        rationCardType: formData.rationCardTypeFamily
+                                    },
+                                    rationCard: createdMemberData?.rationCard || {
+                                        number: formData.rationCardNumber
+                                    },
+                                    voterId: createdMemberData?.voterId || {
+                                        epicNumber: formData.epicNumber
+                                    }
+                                }}
                                 lookups={{
                                     districts: districts,
                                     mandals: allMandals,

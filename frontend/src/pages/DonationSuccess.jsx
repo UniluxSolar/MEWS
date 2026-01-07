@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import {
     FaCheckCircle, FaDownload, FaHeart, FaFacebookF, FaTwitter, FaWhatsapp, FaLinkedinIn,
-    FaFileInvoiceDollar, FaLeaf, FaUserGraduate, FaHandHoldingHeart
+    FaFileInvoiceDollar, FaLeaf, FaUserGraduate, FaHandHoldingHeart, FaArrowLeft
 } from 'react-icons/fa';
 
 const SocialButton = ({ icon: Icon, color, href }) => (
@@ -23,6 +23,13 @@ const DonationSuccess = () => {
 
     return (
         <div className="max-w-7xl mx-auto pb-12">
+
+            {/* Back Nav */}
+            <div className="py-6">
+                <Link to="/dashboard/donations" className="flex items-center gap-2 text-gray-500 hover:text-primary transition font-bold text-sm bg-white w-fit px-4 py-2 rounded-lg shadow-sm border border-gray-100">
+                    <FaArrowLeft size={12} /> Back to Donations
+                </Link>
+            </div>
 
             {/* Celebration Header */}
             <div className="text-center py-12">
