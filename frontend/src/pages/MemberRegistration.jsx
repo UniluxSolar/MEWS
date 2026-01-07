@@ -3133,10 +3133,13 @@ const MemberRegistration = () => {
                                             street: formData.presentStreet || '',
                                             landmark: formData.presentLandmark || ''
                                         };
+                                        console.log("Navigating to ID Card with Data:", createdMemberData);
                                         navigate('/admin/members/generate-id', {
                                             state: {
                                                 newMember: {
                                                     ...createdMemberData,
+                                                    id: createdMemberData._id || createdMemberData.id, // Ensure ID is passed explicitly
+                                                    _id: createdMemberData._id || createdMemberData.id, // Ensure ID is passed explicitly
                                                     name: createdMemberData?.name || formData.name,
                                                     surname: createdMemberData?.surname || formData.surname,
                                                     mobileNumber: createdMemberData?.mobileNumber || formData.mobileNumber,

@@ -159,10 +159,13 @@ const GenerateIDCard = () => {
                     }
                 } else {
                     // Fallback: Fetch from API (Only if ID exists)
-                    if (newMember._id) {
+                    // Check for _id AND id (Mongoose sometimes serializes to id)
+                    const headId = newMember._id || newMember.id;
+
+                    if (headId) {
                         try {
-                            console.log("Fetching dependents for HEAD:", newMember._id);
-                            const { data: dependents } = await API.get(`/members?headOfFamily=${newMember._id}`);
+                            console.log("Fetching dependents for HEAD:", headId);
+                            const { data: dependents } = await API.get(`/members?headOfFamily=${headId}`);
 
                             if (dependents && Array.isArray(dependents) && dependents.length > 0) {
                                 console.log("Found dependents via API:", dependents.length);
@@ -175,7 +178,10 @@ const GenerateIDCard = () => {
                             console.error("Failed to fetch dependents:", err);
                         }
                     } else {
-                        console.warn("Head Member ID missing, skipping dependent fetch. Using embedded data.");
+                        // Only warn if we truly expected dependents but couldn't fetch them
+                        if (newMember.familyMembers && newMember.familyMembers.length > 0) {
+                            console.warn("Head Member ID missing (skipping dependent fetch). Using embedded family data.");
+                        }
                     }
                 }
 
