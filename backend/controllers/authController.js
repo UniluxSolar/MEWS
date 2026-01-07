@@ -187,10 +187,15 @@ const requestOtp = asyncHandler(async (req, res) => {
         console.warn('-----------------------');
 
         // Return success with a clear message
+        // Return success with a clear message (allowing fallback login)
+        // CRITICAL UPDATE: Expose the actual error for debugging GCP issues
+        const errorMsg = smsResult.error || 'Unknown Twilio Error';
+        console.warn(`[OTP Fallback] SMS Failed: ${errorMsg}`);
         res.json({
-            message: `Trial Account: SMS failed. Use OTP ${otp} (View Console)`,
+            message: `SMS Failed (${errorMsg}). Use OTP ${otp} (View Console)`, // Show actual error
             mobile,
-            otp // Explicitly returning OTP to frontend for easy copy-paste in this scenario
+            otp,
+            error: errorMsg // Detailed error field
         });
     }
 });

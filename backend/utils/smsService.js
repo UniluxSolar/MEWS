@@ -7,8 +7,13 @@ const fromNumber = process.env.TWILIO_PHONE_NUMBER;
 const sendSms = async (to, body) => {
     try {
         if (!accountSid || !authToken || !fromNumber) {
-            console.warn('[Twilio] Credentials missing in .env. SMS not sent.');
-            return false;
+            const missing = [];
+            if (!accountSid) missing.push('TWILIO_ACCOUNT_SID');
+            if (!authToken) missing.push('TWILIO_AUTH_TOKEN');
+            if (!fromNumber) missing.push('TWILIO_PHONE_NUMBER');
+
+            console.warn(`[Twilio] Credentials missing in .env (${missing.join(', ')}). SMS not sent.`);
+            return { success: false, error: `Missing config: ${missing.join(', ')}` };
         }
 
         const client = twilio(accountSid, authToken);
