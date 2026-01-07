@@ -163,6 +163,55 @@ const FileUpload = ({ label, name, onChange, onRemove, colSpan = "col-span-1", f
 );
 
 
+
+// Helper: Image Compression
+const compressImage = (file, maxWidth = 1024, quality = 0.7) => {
+    return new Promise((resolve, reject) => {
+        // If not an image, return original
+        if (!file.type.startsWith('image/')) {
+            resolve(file);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Resize logic
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    if (!blob) {
+                        resolve(file); // Fallback
+                        return;
+                    }
+                    const compressedFile = new File([blob], file.name, {
+                        type: file.type,
+                        lastModified: Date.now(),
+                    });
+                    resolve(compressedFile);
+                }, file.type, quality);
+            };
+            img.onerror = (error) => reject(error);
+        };
+        reader.onerror = (error) => reject(error);
+    });
+};
+
 const MemberRegistration = () => {
     const navigate = useNavigate();
     const { id } = useParams();
@@ -348,10 +397,19 @@ const MemberRegistration = () => {
         setFamilyMemberForm(prev => ({ ...prev, ...updatedForm }));
     };
 
-    const handleFamilyFileChange = (e) => {
+    const handleFamilyFileChange = async (e) => {
         const { name, files } = e.target;
         if (files[0]) {
-            setFamilyMemberFiles(prev => ({ ...prev, [name]: files[0] }));
+            let file = files[0];
+            // Compress Image
+            if (file.type.startsWith('image/')) {
+                try {
+                    file = await compressImage(file);
+                } catch (err) {
+                    console.error("Family Member Image compression failed", err);
+                }
+            }
+            setFamilyMemberFiles(prev => ({ ...prev, [name]: file }));
         }
     };
 
@@ -1000,15 +1058,26 @@ const MemberRegistration = () => {
     };
 
     // Handle File Change
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
         const { name, files: selectedFiles } = e.target;
         if (selectedFiles && selectedFiles[0]) {
-            const file = selectedFiles[0];
-            // Check size (5MB = 5 * 1024 * 1024 = 5242880 bytes)
+            let file = selectedFiles[0];
+            // Check size (5MB = 5 * 1024 * 1024Limit initial check)
             if (file.size > 5242880) {
                 alert("File size exceeds 5 MB. Please upload a smaller file.");
                 e.target.value = null; // Clear input
                 return;
+            }
+
+            // Compress Image
+            if (file.type.startsWith('image/')) {
+                try {
+                    const originalSize = file.size;
+                    file = await compressImage(file);
+                    console.log(`[Compression] ${name}: ${(originalSize / 1024).toFixed(2)}KB -> ${(file.size / 1024).toFixed(2)}KB`);
+                } catch (err) {
+                    console.error("Image compression failed, using original:", err);
+                }
             }
 
             setFiles(prev => ({ ...prev, [name]: file }));
