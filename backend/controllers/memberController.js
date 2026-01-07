@@ -479,19 +479,33 @@ const getMembers = asyncHandler(async (req, res) => {
 
         if (req.user.role === 'VILLAGE_ADMIN') {
             // STRICT: Must match the assigned Village ID
-            // Handle duplicate location entries (Resolve by Name)
+            // Handle duplicate location entries (Resolve by Name, Scoped to Parent/Mandal)
             const assignedLoc = await Location.findById(locationId);
             if (assignedLoc) {
                 const escapedName = assignedLoc.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const relatedLocations = await Location.find({
-                    name: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
+
+                // Robust Query: Match Name (Partial OK) AND Same Parent (Mandal)
+                // This handles "Amanagal", "Amanagal (V)", "  Amanagal  " etc. without crossing Mandals
+                const criteria = {
+                    name: { $regex: new RegExp(escapedName, 'i') }, // Unanchored for flexibility
                     type: 'VILLAGE'
-                });
+                };
+
+                // If the assigned location has a parent, restrict duplicates to that parent
+                if (assignedLoc.parent) {
+                    criteria.parent = assignedLoc.parent;
+                }
+
+                const relatedLocations = await Location.find(criteria);
                 const locIds = relatedLocations.map(l => l._id);
+
                 // SAFEGUARD: Explicitly include the assigned ID itself
                 if (!locIds.some(id => id.toString() === locationId.toString())) {
                     locIds.push(locationId);
                 }
+
+                // Add debug log
+                console.log(`[GET MEMBERS] Resolved ${assignedLoc.name} to IDs:`, locIds);
                 query['address.village'] = { $in: locIds };
             } else {
                 query['address.village'] = locationId; // Fallback
