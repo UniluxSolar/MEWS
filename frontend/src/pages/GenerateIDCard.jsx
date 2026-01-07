@@ -148,29 +148,35 @@ const GenerateIDCard = () => {
                     }
                 }
 
-                // 2. Fetch Dependents
-                try {
-                    console.log("Fetching dependents for HEAD:", newMember._id);
-                    const { data: dependents } = await API.get(`/members?headOfFamily=${newMember._id}`);
+                // 2. Fetch Dependents (Optimization: Check if passed from Registration Response first)
+                if (newMember.dependents && Array.isArray(newMember.dependents) && newMember.dependents.length > 0) {
+                    console.log("Using pre-loaded dependents from response:", newMember.dependents.length);
 
-                    if (dependents && Array.isArray(dependents) && dependents.length > 0) {
-                        console.log("Found dependents via API:", dependents.length);
-
-                        // STRICT DEDUPLICATION:
-                        // If API returns dependents, these are the "Single Source of Truth".
-                        // We should REMOVE the temporary embedded cards we added above (except the main member).
-                        // Why? Because API data has the real MewsIDs and is cleaner.
-                        // And fixing 'deduplication' by matching names is risky (typos).
-
-                        // Reset cards to just the Main Member
-                        cards.length = 1;
-
-                        for (const dep of dependents) {
-                            cards.push(processMember(dep, true));
-                        }
+                    // Use these as Source of Truth
+                    cards.length = 1; // Clear embedded
+                    for (const dep of newMember.dependents) {
+                        cards.push(processMember(dep, true));
                     }
-                } catch (err) {
-                    console.error("Failed to fetch dependents:", err);
+                } else {
+                    // Fallback: Fetch from API (Only if ID exists)
+                    if (newMember._id) {
+                        try {
+                            console.log("Fetching dependents for HEAD:", newMember._id);
+                            const { data: dependents } = await API.get(`/members?headOfFamily=${newMember._id}`);
+
+                            if (dependents && Array.isArray(dependents) && dependents.length > 0) {
+                                console.log("Found dependents via API:", dependents.length);
+                                cards.length = 1; // Clear embedded
+                                for (const dep of dependents) {
+                                    cards.push(processMember(dep, true));
+                                }
+                            }
+                        } catch (err) {
+                            console.error("Failed to fetch dependents:", err);
+                        }
+                    } else {
+                        console.warn("Head Member ID missing, skipping dependent fetch. Using embedded data.");
+                    }
                 }
 
                 setAllMembers(cards);

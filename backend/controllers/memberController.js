@@ -335,11 +335,11 @@ const registerMember = asyncHandler(async (req, res) => {
             .populate('address.district')
             .populate('address.mandal')
             .populate('address.village')
-            .populate('permanentAddress.district')
             .populate('permanentAddress.mandal')
             .populate('permanentAddress.village');
 
         // --- CHECKPOINT: CREATE INDIVIDUAL DOCUMENTS FOR FAMILY MEMBERS ---
+        const createdDependents = []; // Store created dependents to return in response
         if (memberData.familyMembers && memberData.familyMembers.length > 0) {
             console.log(`[REG] Creating ${memberData.familyMembers.length} dependent members...`);
 
@@ -373,7 +373,6 @@ const registerMember = asyncHandler(async (req, res) => {
                         // Family Links
                         familyDetails: memberData.familyDetails, // Inherit Income/Counts
                         headOfFamily: member._id, // Use the Created ID
-                        headOfFamily: member._id, // Use the Created ID
                         relationToHead: fm.relation,
                         maritalStatus: fm.maritalStatus,
 
@@ -396,7 +395,8 @@ const registerMember = asyncHandler(async (req, res) => {
                         familyMembers: []
                     };
 
-                    await Member.create(dependentData);
+                    const savedDep = await Member.create(dependentData);
+                    createdDependents.push(savedDep); // Add to list
                     console.log(`[REG] Created Dependent: ${depMewsId} (${fm.name})`);
 
                 } catch (depError) {
@@ -407,6 +407,12 @@ const registerMember = asyncHandler(async (req, res) => {
 
         // SIGN URLs
         const signedMember = await signMemberData(populatedMember);
+
+        // Attach created dependents to response (also signed to be safe? usually not needed for basic ID card data, but let's sign them lightly if needed)
+        // For ID Card, we mainly need Name + Photo. 
+        // Let's sign them properly.
+        const signedDependents = await Promise.all(createdDependents.map(d => signMemberData(d)));
+        signedMember.dependents = signedDependents;
 
         res.status(201).json(signedMember);
     } catch (error) {
