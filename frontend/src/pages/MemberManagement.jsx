@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import API from '../api';
 import { Link, useLocation } from 'react-router-dom';
 import * as XLSX from 'xlsx-js-style';
@@ -286,96 +286,92 @@ const [currentPage, setCurrentPage] = useState(1);
 const [itemsPerPage, setItemsPerPage] = useState(20);
 
 // Filter Logic
-const filteredMembers = members.filter(member => {
-    if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        const safeVillage = getLocationName(member.address?.village).toLowerCase();
-        const text = `${member.name} ${member.surname} ${member.mobileNumber} ${safeVillage}`.toLowerCase();
-        if (!text.includes(term)) return false;
-    }
+const filteredMembers = useMemo(() => {
+    const safeMembers = Array.isArray(members) ? members : [];
+    return safeMembers.filter(member => {
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            const safeVillage = getLocationName(member.address?.village).toLowerCase();
+            const text = `${member.name} ${member.surname} ${member.mobileNumber} ${safeVillage}`.toLowerCase();
+            if (!text.includes(term)) return false;
+        }
 
-    // Multi-Select Filters
-    if (selectedVillages.length > 0) {
-        const villageName = getLocationName(member.address?.village).trim();
-        // Use case-insensitive check
-        if (!selectedVillages.some(v => v.toLowerCase().trim() === villageName.toLowerCase())) return false;
-    }
+        // Multi-Select Filters
+        if (selectedVillages.length > 0) {
+            const villageName = getLocationName(member.address?.village).trim();
+            // Use case-insensitive check
+            if (!selectedVillages.some(v => v.toLowerCase().trim() === villageName.toLowerCase())) return false;
+        }
 
-    if (selectedAgeRanges.length > 0) {
-        // Check if member matches ANY of the selected age ranges
-        const age = parseInt(member.age) || 0;
-        const matchesAnyRange = selectedAgeRanges.some(range => {
-            if (range.includes('+')) {
-                const min = parseInt(range);
-                return age >= min;
-            }
-            const [min, max] = range.split('-').map(Number);
-            return age >= min && age <= max;
-        });
-        if (!matchesAnyRange) return false;
-    }
+        if (selectedAgeRanges.length > 0) {
+            // Check if member matches ANY of the selected age ranges
+            const age = parseInt(member.age) || 0;
+            const matchesAnyRange = selectedAgeRanges.some(range => {
+                if (range.includes('+')) {
+                    const min = parseInt(range);
+                    return age >= min;
+                }
+                const [min, max] = range.split('-').map(Number);
+                return age >= min && age <= max;
+            });
+            if (!matchesAnyRange) return false;
+        }
 
-    if (selectedCategories.length > 0) {
-        const job = (member.occupation || '').toLowerCase().trim();
-        // Check if member matches ANY selected category (case-insensitive strict check)
-        // Exception: 'Private Job' acts as a catch-all category
-        const matchesAnyCategory = selectedCategories.some(cat => {
-            const filterVal = cat.toLowerCase().trim();
-            if (cat === 'Private Job') {
-                return job.includes('private');
-            }
-            return job === filterVal;
-        });
-        if (!matchesAnyCategory) return false;
-    }
+        if (selectedCategories.length > 0) {
+            const job = (member.occupation || '').toLowerCase().trim();
+            // Check if member matches ANY selected category (case-insensitive strict check)
+            const matchesAnyCategory = selectedCategories.some(cat => {
+                const filterVal = cat.toLowerCase().trim();
+                if (cat === 'Private Job') {
+                    return job.includes('private');
+                }
+                return job === filterVal;
+            });
+            if (!matchesAnyCategory) return false;
+        }
 
-    if (selectedBloodGroups.length > 0) {
-        const memberBlood = (member.bloodGroup || 'Unknown');
-        if (!selectedBloodGroups.includes(memberBlood)) return false;
-    }
+        if (selectedBloodGroups.length > 0) {
+            const memberBlood = (member.bloodGroup || 'Unknown');
+            if (!selectedBloodGroups.includes(memberBlood)) return false;
+        }
 
-    if (!selectedGenders.All) {
-        const gender = (member.gender || '').toLowerCase();
-        if (selectedGenders.Male && gender === 'male') return true;
-        if (selectedGenders.Female && gender === 'female') return true;
-        if (selectedGenders.Other && gender !== 'male' && gender !== 'female') return true;
-        return false;
-    }
+        if (!selectedGenders.All) {
+            const gender = (member.gender || '').toLowerCase();
+            if (selectedGenders.Male && gender === 'male') return true;
+            if (selectedGenders.Female && gender === 'female') return true;
+            if (selectedGenders.Other && gender !== 'male' && gender !== 'female') return true;
+            return false;
+        }
 
-    if (selectedMaritalStatuses.length > 0) {
-        const marital = (member.maritalStatus || 'Unmarried');
-        // Simple loose match if necessary, or strict
-        if (!selectedMaritalStatuses.some(s => s.toLowerCase() === marital.toLowerCase())) return false;
-    }
+        if (selectedMaritalStatuses.length > 0) {
+            const marital = (member.maritalStatus || 'Unmarried');
+            if (!selectedMaritalStatuses.some(s => s.toLowerCase() === marital.toLowerCase())) return false;
+        }
 
-    if (selectedSubCaste) {
-        const sub = (member.casteDetails?.subCaste || '').toLowerCase();
-        const caste = (member.casteDetails?.caste || '').toLowerCase();
-        if (!sub.includes(selectedSubCaste.toLowerCase()) && !caste.includes(selectedSubCaste.toLowerCase())) return false;
-    }
+        if (selectedSubCaste) {
+            const sub = (member.casteDetails?.subCaste || '').toLowerCase();
+            const caste = (member.casteDetails?.caste || '').toLowerCase();
+            if (!sub.includes(selectedSubCaste.toLowerCase()) && !caste.includes(selectedSubCaste.toLowerCase())) return false;
+        }
 
-    if (selectedVoterStatus) {
-        const age = Number(member.age) || 0;
-        if (selectedVoterStatus === 'Voter' && age < 18) return false;
-        if (selectedVoterStatus === 'Non-Voter' && age >= 18) return false;
-    }
+        if (selectedVoterStatus) {
+            const age = Number(member.age) || 0;
+            if (selectedVoterStatus === 'Voter' && age < 18) return false;
+            if (selectedVoterStatus === 'Non-Voter' && age >= 18) return false;
+        }
 
-    if (selectedEmploymentStatus) {
-        const job = (member.occupation || '').toLowerCase().trim();
-        const unemployedKeywords = ["student", "house wife", "housewife", "homemaker", "unemployed", "retired", "child", "nil", "none", ""];
-        // Check if exact match or contains? The dashboard bucketed them.
-        // Dashboard bucket logic: $in: [student, house wife...]
-        // Let's use strict check against keywords for consistency, or include check.
-        const isUnemployed = unemployedKeywords.includes(job) || job === '';
+        if (selectedEmploymentStatus) {
+            const job = (member.occupation || '').toLowerCase().trim();
+            const unemployedKeywords = ["student", "house wife", "housewife", "homemaker", "unemployed", "retired", "child", "nil", "none", ""];
+            const isUnemployed = unemployedKeywords.includes(job) || job === '';
 
-        if (selectedEmploymentStatus === 'Unemployed' && !isUnemployed) return false;
-        if (selectedEmploymentStatus === 'Employed' && isUnemployed) return false;
-    }
+            if (selectedEmploymentStatus === 'Unemployed' && !isUnemployed) return false;
+            if (selectedEmploymentStatus === 'Employed' && isUnemployed) return false;
+        }
 
-    return true;
-});
-
-
+        return true;
+    });
+}, [members, searchTerm, selectedVillages, selectedAgeRanges, selectedCategories, selectedBloodGroups, selectedGenders, selectedMaritalStatuses, selectedSubCaste, selectedVoterStatus, selectedEmploymentStatus]);
 
 // Trigger geocoding when switching to map view or filtering
 // Trigger geocoding when switching to map view or filtering
@@ -644,7 +640,11 @@ const exportToPDF = () => {
     setShowExportMenu(false);
 };
 
-const villages = [...new Set(members.map(m => getLocationName(m.address?.village)).filter(Boolean))];
+// Derived Data for Filters
+const villages = useMemo(() => {
+    const safeMembers = Array.isArray(members) ? members : [];
+    return [...new Set(safeMembers.map(m => getLocationName(m.address?.village)).filter(Boolean))];
+}, [members]);
 
 const getOccupationColor = (occupation) => {
     const job = (occupation || '').toLowerCase();
