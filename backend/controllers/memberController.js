@@ -115,10 +115,6 @@ const registerMember = asyncHandler(async (req, res) => {
             if (vLocDoc) {
                 console.log(`Mapping Village '${vLocDoc.name}' -> ${vLocDoc._id}`);
                 // Only update villageId if it wasn't already enforced by Jurisdiction
-                // Wait, if it WAS enforced, it is already an ID.
-                // So vLocDoc matching that ID is fine.
-                // But if vLocDoc was found by NAME from req.body value (which might differ), we must be careful.
-
                 // CRITICAL FIX: If Jurisdiction Enforced, DO NOT ALLOW vLocDoc to change it based on Name Search from body
                 if (req.user && req.user.assignedLocation && req.user.role === 'VILLAGE_ADMIN') {
                     // Keep established ID
@@ -137,7 +133,32 @@ const registerMember = asyncHandler(async (req, res) => {
                 }
             }
         }
-        // (Similarly could do Mandal/District, but Village is the key filter for Village Admin)
+
+        // --- ROBUST FALLBACK FOR MANDAL & DISTRICT ---
+        // If Village lookup failed OR didn't have parents, try to resolve Mandal/District by Name independently.
+        // This ensures visibility for District/State Admins even if village mapping is broken.
+
+        if (mandalId && !mongoose.Types.ObjectId.isValid(mandalId)) {
+            // It's a name string. Try to find ID.
+            const mLoc = await Location.findOne({ name: { $regex: new RegExp(`^${mandalId.trim()}$`, 'i') }, type: 'MANDAL' });
+            if (mLoc) {
+                console.log(`Resolved Mandal Name '${mandalId}' -> ${mLoc._id}`);
+                mandalId = mLoc._id;
+                // If district still unknown, get from Mandal parent
+                if (!mongoose.Types.ObjectId.isValid(districtId) && mLoc.parent) {
+                    districtId = mLoc.parent;
+                }
+            }
+        }
+
+        if (districtId && !mongoose.Types.ObjectId.isValid(districtId)) {
+            // It's a name string. Try to find ID.
+            const dLoc = await Location.findOne({ name: { $regex: new RegExp(`^${districtId.trim()}$`, 'i') }, type: 'DISTRICT' });
+            if (dLoc) {
+                console.log(`Resolved District Name '${districtId}' -> ${dLoc._id}`);
+                districtId = dLoc._id;
+            }
+        }
 
         const memberData = {
             surname: clean(data.surname),
