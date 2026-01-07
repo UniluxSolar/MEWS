@@ -578,8 +578,17 @@ const getMembers = asyncHandler(async (req, res) => {
         .populate('address.district') // Populate to show names
         .sort({ createdAt: -1 });
 
-    // SIGN URLs for all members
-    const signedMembers = await Promise.all(members.map(m => signMemberData(m)));
+    console.log(`[GET MEMBERS] Found ${members.length} records. Signing URLs...`);
+
+    // SIGN URLs for all members (Fault Tolerant)
+    const signedMembers = await Promise.all(members.map(async (m) => {
+        try {
+            return await signMemberData(m);
+        } catch (e) {
+            console.error(`[GET MEMBERS] Signing failed for ${m._id}:`, e.message);
+            return m; // Return unsigned member as fallback
+        }
+    }));
 
     res.json(signedMembers);
 });
