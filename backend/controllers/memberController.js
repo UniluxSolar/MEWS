@@ -893,6 +893,34 @@ const updateMember = asyncHandler(async (req, res) => {
                         // If index is -1, it means 'fm.photo' holds the existing URL or is empty. 
                         // We can just use fm.photo directly as the value if it's not an index string.
 
+                        // Helper to extract clean path from potential signed URL
+                        const extractPathFromUrl = (url) => {
+                            if (!url) return undefined;
+                            try {
+                                // If it's a signed URL (base64 encoded query params etc), strip query
+                                const urlObj = new URL(url);
+                                // Remove leading slash if present in pathname to match storage path format usually
+                                let pathname = urlObj.pathname;
+
+                                // If using GCS public URL or similar, we might need to be careful.
+                                // Our storage paths are usually 'uploads/...'
+                                // If the signed URL path is '/uploads/...' we want 'uploads/...'
+                                if (pathname.startsWith('/')) pathname = pathname.substring(1);
+
+                                // If it's a proxy URL (e.g., /api/proxy-image?url=...), extract the 'url' param
+                                if (pathname.includes('proxy-image')) {
+                                    const params = new URLSearchParams(urlObj.search);
+                                    const originalUrl = params.get('url');
+                                    if (originalUrl) return originalUrl; // Recursively clean if needed, but usually this is the path
+                                }
+
+                                return decodeURIComponent(pathname);
+                            } catch (e) {
+                                // If not a full URL (just a path), return as is
+                                return url;
+                            }
+                        };
+
                         const resolveFile = (fieldVal, fileField, index, existingVal) => {
                             if (index !== -1) {
                                 // New file uploaded
@@ -906,9 +934,12 @@ const updateMember = asyncHandler(async (req, res) => {
                                 return undefined;
                             }
 
-                            // No new file. Use the value passed from frontend (which should be the URL) 
-                            // UNLESS it was the INDEX string and we failed to find file (shouldn't happen).
-                            return (fieldVal && !fieldVal.startsWith('INDEX:')) ? fieldVal : existingVal;
+                            // No new file. Use the value passed from frontend.
+                            // CRITICAL FIX: The frontend might send back a SIGNED URL (with expiration).
+                            // We must extract the original path from it, otherwise we save a temporary URL that expires.
+                            const valToUse = (fieldVal && !fieldVal.startsWith('INDEX:')) ? fieldVal : existingVal;
+
+                            return extractPathFromUrl(valToUse);
                         };
 
                         // Note: 'existingVal' is tricky because we are mapping over new list. 

@@ -1076,6 +1076,17 @@ const MemberRegistration = () => {
         }
     }, [formData.dob]);
 
+    // Auto-sync Member Count with Family Members
+    useEffect(() => {
+        // Count = Applicant (1) + Family Members Count
+        // We only update if not in View Mode to avoid overriding fetched data unnecessarily, 
+        // though strictly it should match.
+        if (!isViewMode) {
+            const count = (familyMembers?.length || 0) + 1;
+            setFormData(prev => ({ ...prev, memberCount: count }));
+        }
+    }, [familyMembers, isViewMode]);
+
     const validateForm = () => {
         const newErrors = {};
 
@@ -3062,6 +3073,7 @@ const MemberRegistration = () => {
                                             annualIncome: formData.annualIncome,
                                             rationCardType: formData.rationCardTypeFamily
                                         },
+                                        familyMembers: createdMemberData?.familyMembers || familyMembers, // Pass family members for preview
                                         rationCard: createdMemberData?.rationCard || {
                                             number: formData.rationCardNumber
                                         },
@@ -3218,6 +3230,7 @@ const MemberRegistration = () => {
                                         annualIncome: formData.annualIncome,
                                         rationCardType: formData.rationCardTypeFamily
                                     },
+                                    familyMembers: createdMemberData?.familyMembers || familyMembers, // Pass family members for preview
                                     rationCard: createdMemberData?.rationCard || {
                                         number: formData.rationCardNumber
                                     },
