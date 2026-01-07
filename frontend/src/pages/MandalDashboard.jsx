@@ -13,7 +13,7 @@ import ActionCard from '../components/common/ActionCard';
 import DashboardHeader from '../components/common/DashboardHeader';
 import {
     PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
-    BarChart, Bar, XAxis, YAxis, CartesianGrid
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList
 } from 'recharts';
 
 // Map Imports
@@ -253,7 +253,9 @@ const MandalDashboard = () => {
                                                         cursor={{ fill: '#f1f5f9' }}
                                                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                                     />
-                                                    <Bar dataKey="members" fill="#1e2a4a" radius={[0, 4, 4, 0]} barSize={20} />
+                                                    <Bar dataKey="members" fill="#1e2a4a" radius={[0, 4, 4, 0]} barSize={20}>
+                                                        <LabelList dataKey="members" position="right" style={{ fill: '#1e2a4a', fontWeight: 'bold', fontSize: '11px' }} />
+                                                    </Bar>
                                                 </BarChart>
                                             </ResponsiveContainer>
                                         </div>
@@ -277,6 +279,7 @@ const MandalDashboard = () => {
                                                         outerRadius={80}
                                                         paddingAngle={5}
                                                         dataKey="value"
+                                                        label={({ value }) => value}
                                                     >
                                                         {genderData.map((entry, index) => (
                                                             <Cell key={`cell-${index}`} fill={entry.color} />

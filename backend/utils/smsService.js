@@ -1,4 +1,3 @@
-```javascript
 const twilio = require('twilio');
 const fs = require('fs');
 const path = require('path');
@@ -31,8 +30,8 @@ const sendSms = async (to, body) => {
             if (!authToken) missing.push('TWILIO_AUTH_TOKEN');
             if (!fromNumber) missing.push('TWILIO_PHONE_NUMBER');
 
-            console.warn(`[Twilio] Credentials missing in .env(${ missing.join(', ') }).SMS not sent.`);
-            return { success: false, error: `Missing config: ${ missing.join(', ') } ` };
+            console.warn(`[Twilio] Credentials missing in .env(${missing.join(', ')}).SMS not sent.`);
+            return { success: false, error: `Missing config: ${missing.join(', ')} ` };
         }
 
         const client = twilio(accountSid, authToken);
@@ -43,10 +42,10 @@ const sendSms = async (to, body) => {
             to: to // Ensure 'to' includes country code (e.g., +91)
         });
 
-        console.log(`[Twilio] SMS sent.SID: ${ message.sid } `);
+        console.log(`[Twilio] SMS sent.SID: ${message.sid} `);
         return { success: true, sid: message.sid };
     } catch (error) {
-        console.error(`[Twilio] Error sending SMS: ${ error.message } `);
+        console.error(`[Twilio] Error sending SMS: ${error.message} `);
         return { success: false, error: error.message };
     }
 };

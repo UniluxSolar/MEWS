@@ -18,6 +18,8 @@ const getDashboardStats = asyncHandler(async (req, res) => {
         const location = await Location.findById(req.user.assignedLocation);
         if (location) {
             locationName = location.name;
+            console.log(`[DASHBOARD] User: ${req.user.email}, Role: ${req.user.role}, LocationID: ${req.user.assignedLocation}`);
+            console.log(`[DASHBOARD] Location Found: ${location.name} (${location._id})`);
 
             // Common regex filter for unstructured address fields (Institution/SOS)
             const locationRegex = { $regex: location.name, $options: 'i' };
@@ -39,12 +41,22 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                 institutionQuery = { fullAddress: locationRegex };
 
             } else if (req.user.role === 'MANDAL_ADMIN') {
-                memberQuery = { 'address.mandal': location._id };
+                // Robust Fix: Handle duplicate Location IDs by Name
+                const escapedName = location.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const matchingMandals = await Location.find({
+                    name: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
+                    type: 'MANDAL'
+                });
+                const mandalIds = matchingMandals.map(m => m._id);
+                console.log(`[DASHBOARD] Mandal Admin - Found ${mandalIds.length} matching Mandal IDs for name "${location.name}"`);
+
+                memberQuery = { 'address.mandal': { $in: mandalIds } };
 
                 institutionQuery = { fullAddress: locationRegex };
 
-                // Fetch child villages for Mandal Dashboard
-                const villages = await Location.find({ parent: location._id, type: 'VILLAGE' });
+                // Fetch child villages for ALL matching mandals
+                const villages = await Location.find({ parent: { $in: mandalIds }, type: 'VILLAGE' });
+                console.log(`[DASHBOARD] Mandal Admin - Found ${villages.length} villages for parents ${mandalIds.join(', ')}`);
 
                 // Aggregate stats per village
                 villagesData = await Promise.all(villages.map(async (village) => {
@@ -87,11 +99,18 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                     const mCount = await Member.countDocuments({
                         'address.mandal': mandal._id
                     });
+                    // For pending, we can add a count if needed, similar to village. Let's populate pending too if useful.
+                    const pCount = await Member.countDocuments({
+                        'address.mandal': mandal._id,
+                        verificationStatus: 'PENDING'
+                    });
+
                     const instCount = await Institution.countDocuments({ fullAddress: { $regex: mandal.name, $options: 'i' } });
                     return {
                         id: mandal._id,
                         name: mandal.name,
                         members: mCount,
+                        pending: pCount, // Added pending count
                         institutions: instCount,
                         sos: 0,
                         status: 'Active'
@@ -99,6 +118,36 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                 }));
                 // Attach to response object
                 req.mandalsData = mandalsData;
+
+            } else if (req.user.role === 'STATE_ADMIN') {
+                memberQuery = { 'address.state': location._id };
+
+                // Get Districts for breakdown
+                const districts = await Location.find({ parent: location._id, type: 'DISTRICT' });
+
+                // Institution Query: regex match state name or district names
+                const locationNames = [location.name, ...districts.map(d => d.name)].map(name =>
+                    name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                ).join('|');
+                const locationRegexExtended = new RegExp(locationNames, 'i');
+                institutionQuery = { fullAddress: locationRegexExtended };
+
+                const districtsData = await Promise.all(districts.map(async (district) => {
+                    const mCount = await Member.countDocuments({ 'address.district': district._id });
+                    const pCount = await Member.countDocuments({ 'address.district': district._id, verificationStatus: 'PENDING' });
+                    const instCount = await Institution.countDocuments({ fullAddress: { $regex: district.name, $options: 'i' } });
+
+                    return {
+                        id: district._id,
+                        name: district.name,
+                        members: mCount,
+                        pending: pCount,
+                        institutions: instCount,
+                        sos: 0,
+                        status: 'Active'
+                    };
+                }));
+                req.districtsData = districtsData;
             }
         }
     }
@@ -139,6 +188,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
         locationName, // Send location name to frontend
         villages: villagesData, // Send breakdown for Mandal Admin
         mandals: req.mandalsData, // Send breakdown for District Admin
+        districts: req.districtsData, // Send breakdown for State Admin
         members: totalMembers,
         families: totalFamilies, // Corrected family count based on households
         pendingMembers,
@@ -175,7 +225,14 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
             const locIds = relatedLocations.map(l => l._id);
             memberQuery = { 'address.village': { $in: locIds } };
         } else if (req.user.role === 'MANDAL_ADMIN') {
-            memberQuery = { 'address.mandal': locationId };
+            // Robust Fix: Handle duplicate Location IDs by Name
+            const escapedName = locationDoc.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const matchingMandals = await Location.find({
+                name: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
+                type: 'MANDAL'
+            });
+            const mandalIds = matchingMandals.map(m => m._id);
+            memberQuery = { 'address.mandal': { $in: mandalIds } };
         } else if (req.user.role === 'DISTRICT_ADMIN') {
             memberQuery = { 'address.district': locationId };
         } else if (req.user.role === 'STATE_ADMIN') {

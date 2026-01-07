@@ -6,6 +6,8 @@ const jwt = require('jsonwebtoken');
 // @access  Public
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const Member = require('../models/Member');
+const { sendSms } = require('../utils/smsService');
 
 // @desc    Auth user & get token
 // @route   POST /api/auth/login
@@ -114,9 +116,6 @@ const generateToken = (id) => {
 // @desc    Request OTP for Member Login
 // @route   POST /api/auth/request-otp
 // @access  Public
-const Member = require('../models/Member');
-const { sendSms } = require('../utils/smsService');
-
 const requestOtp = asyncHandler(async (req, res) => {
     const { mobile } = req.body;
 
