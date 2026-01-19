@@ -29,7 +29,7 @@ const notificationSchema = mongoose.Schema({
     },
     relatedModel: {
         type: String,
-        enum: ['Job', 'Member', 'Institution', 'Announcement']
+        enum: ['Job', 'Member', 'Institution', 'Announcement', 'FundRequest']
     }
 }, {
     timestamps: true

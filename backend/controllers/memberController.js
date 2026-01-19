@@ -6,6 +6,8 @@ const mongoose = require('mongoose');
 const { getSignedUrl } = require('../utils/gcsSigner');
 const { generateMemberId } = require('../utils/idGenerator');
 const { sendRegistrationNotification } = require('../utils/notificationService');
+const { createNotification } = require('./notificationController');
+const User = require('../models/User'); // For finding admins
 
 // Helper to sign all URLs in a member object
 const signMemberData = async (memberDoc) => {
@@ -352,6 +354,32 @@ const registerMember = asyncHandler(async (req, res) => {
         // Notify
         sendRegistrationNotification(member).catch(err => console.error("Notify Warning:", err));
 
+        // In-App Notification to Admins
+        try {
+            // Find relevant admins
+            const adminQuery = {
+                $or: [
+                    { role: 'SUPER_ADMIN' },
+                    { role: 'VILLAGE_ADMIN', assignedLocation: villageId },
+                    { role: 'MANDAL_ADMIN', assignedLocation: mandalId },
+                    { role: 'DISTRICT_ADMIN', assignedLocation: districtId }
+                ]
+            };
+            const admins = await User.find(adminQuery).select('_id');
+            for (const admin of admins) {
+                await createNotification(
+                    admin._id,
+                    'member',
+                    'New Member Registration',
+                    `New member ${member.name} registered in your jurisdiction.`,
+                    member._id,
+                    'Member'
+                );
+            }
+        } catch (notifErr) {
+            console.error("Admin Notification Error:", notifErr);
+        }
+
         res.status(201).json({
             message: 'Member registered successfully',
             member: member,
@@ -668,6 +696,30 @@ const updateMemberStatus = asyncHandler(async (req, res) => {
             if (member.verificationStatus === 'ACTIVE' && member.mewsId) {
                 // Execute async notification without blocking response
                 sendRegistrationNotification(member).catch(err => console.error("Notification Error:", err));
+            }
+
+            // In-App Notification to Member (On any status change)
+            try {
+                // Find User linked to this Member
+                const linkedUser = await User.findOne({
+                    $or: [
+                        { _id: member._id }, // If ID matches (Self Reg)
+                        { username: member.mewsId } // If username is ID
+                    ]
+                });
+
+                if (linkedUser) {
+                    await createNotification(
+                        linkedUser._id,
+                        'info',
+                        'Membership Status Updated',
+                        `Your membership status is now ${member.verificationStatus}.`,
+                        member._id,
+                        'Member'
+                    );
+                }
+            } catch (notifErr) {
+                console.error("Member Notification Error:", notifErr);
             }
 
             // Return signed version for consistency

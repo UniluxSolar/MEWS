@@ -1,5 +1,8 @@
 const asyncHandler = require('express-async-handler');
 const FundRequest = require('../models/FundRequest');
+const User = require('../models/User');
+const Member = require('../models/Member');
+const { createNotification } = require('./notificationController');
 
 // @desc    Create a new fund request (Application)
 // @route   POST /api/fund-requests
@@ -42,6 +45,41 @@ const createFundRequest = asyncHandler(async (req, res) => {
         status: 'PENDING_APPROVAL'
     });
 
+    // Notify Admins
+    try {
+        // Fetch Member to get location
+        const member = await Member.findById(req.user._id);
+        if (member) {
+            const villageId = member.address?.village;
+            const mandalId = member.address?.mandal;
+            const districtId = member.address?.district;
+
+            const adminQuery = {
+                $or: [
+                    { role: 'SUPER_ADMIN' },
+                    { role: 'VILLAGE_ADMIN', assignedLocation: villageId },
+                    { role: 'MANDAL_ADMIN', assignedLocation: mandalId },
+                    { role: 'DISTRICT_ADMIN', assignedLocation: districtId }
+                ]
+            };
+            const admins = await User.find(adminQuery).select('_id');
+            const notifMessage = `New ${purpose} Application request from ${member.name}.`;
+
+            for (const admin of admins) {
+                await createNotification(
+                    admin._id,
+                    'application',
+                    'New Fund Application',
+                    notifMessage,
+                    fundRequest._id,
+                    'FundRequest'
+                );
+            }
+        }
+    } catch (notifErr) {
+        console.error("FundRequest Notification Error:", notifErr);
+    }
+
     res.status(201).json(fundRequest);
 });
 
@@ -80,8 +118,60 @@ const getFundRequestById = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Update fund request status (Approve/Reject)
+// @route   PUT /api/fund-requests/:id/status
+// @access  Private (Admin)
+const updateFundRequestStatus = asyncHandler(async (req, res) => {
+    const { status, remarks } = req.body;
+    const request = await FundRequest.findById(req.params.id);
+
+    if (request) {
+        const oldStatus = request.status;
+        request.status = status;
+
+        // Add to history
+        request.approvalHistory = request.approvalHistory || [];
+        request.approvalHistory.push({
+            actionBy: req.user._id,
+            status,
+            date: Date.now(),
+            remarks
+        });
+
+        const updatedRequest = await request.save();
+
+        // Notify Member
+        if (oldStatus !== status) {
+            try {
+                // Find User linked to beneficiary (Member)
+                // Beneficiary field in FundRequest usually points to Member model
+                // We need to find the User for that Member to notify them.
+                // Assuming simple mapping or self-request where beneficiary == user._id (if Member is User)
+                // In createFundRequest, we set beneficiary = req.user._id. So it IS the user.
+
+                await createNotification(
+                    request.beneficiary,
+                    status === 'ACTIVE' || status === 'COMPLETED' ? 'success' : 'info',
+                    `Application ${status}`,
+                    `Your application for ${request.purpose} has been marked as ${status}.`,
+                    request._id,
+                    'FundRequest'
+                );
+            } catch (notifErr) {
+                console.error("FundRequest Status Notification Error:", notifErr);
+            }
+        }
+
+        res.json(updatedRequest);
+    } else {
+        res.status(404);
+        throw new Error('Fund Request not found');
+    }
+});
+
 module.exports = {
     createFundRequest,
     getFundRequests,
-    getFundRequestById
+    getFundRequestById,
+    updateFundRequestStatus
 };
