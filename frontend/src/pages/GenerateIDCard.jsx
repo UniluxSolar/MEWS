@@ -62,6 +62,11 @@ const GenerateIDCard = () => {
                 const mName = await resolveLocationName(newMember.address?.mandal, rawData.presentMandal, resolvedNames.mandal);
                 const dName = await resolveLocationName(newMember.address?.district, rawData.presentDistrict, resolvedNames.district);
 
+                // FIX: Ensure newMember has the correct ID (mewsId) from the response if it was missing in the object
+                if (location.state.username && !newMember.mewsId) {
+                    newMember.mewsId = location.state.username;
+                }
+
                 const processMember = (member, isDependent = false) => {
                     const generatedId = member.mewsId || `MEW${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`;
                     const pincode = member.address?.pinCode || resolvedNames.pincode || rawData.presentPincode || '';
