@@ -11,6 +11,13 @@ const app = express();
 // Connect to Database
 connectDB();
 
+// Ensure 'uploads' directory exists (Critical for GCP/Containers)
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+    console.log(`[Init] Created uploads directory at ${uploadsDir}`);
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Body parser
