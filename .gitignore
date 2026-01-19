@@ -1,0 +1,62 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# node_modules
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs
+*.njsproj
+*.sln
+*.sw?
+
+# Testing
+coverage
+
+# Environment variables
+.env
+.env.test
+.env.production
+backend/uploads/
+gcs-key.json
+gcp-key.json
+backend/gcp-key.json
+twilio-key.json
+backend/twilio-key.json
+
+# Exclude system files mistakenly installed in frontend
+frontend/mingw64/
+frontend/usr/
+frontend/etc/
+frontend/bin/
+frontend/cmd/
+frontend/dev/
+frontend/nodejs/
+frontend/*.exe
+frontend/*.msi
+frontend/*.zip
+frontend/*.ico
+frontend/*.dll
+frontend/*.dat
+frontend/*.msg
+frontend/unins*
+frontend/*.vbs
+frontend/*.cmd
+frontend/LICENSE*
+frontend/ReleaseNotes.html
+frontend/author-nvm*
+frontend/git-*

@@ -1,0 +1,97 @@
+const twilio = require('twilio');
+const fs = require('fs');
+const path = require('path');
+
+// Initialize credentials from Environment or Fallback JSON
+let accountSid = process.env.TWILIO_ACCOUNT_SID;
+let authToken = process.env.TWILIO_AUTH_TOKEN;
+let fromNumber = process.env.TWILIO_PHONE_NUMBER;
+let whatsappFrom = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886'; // Default Sandbox
+let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+// Attempt to load from twilio-key.json if env vars missing (Backwards compatibility)
+if (!accountSid || !authToken || !fromNumber) {
+    const keyPath = path.join(__dirname, '../twilio-key.json');
+    if (fs.existsSync(keyPath)) {
+        try {
+            const keyConfig = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+            if (!accountSid) accountSid = keyConfig.TWILIO_ACCOUNT_SID || keyConfig.accountSid;
+            if (!authToken) authToken = keyConfig.TWILIO_AUTH_TOKEN || keyConfig.authToken;
+            if (!fromNumber) fromNumber = keyConfig.TWILIO_PHONE_NUMBER || keyConfig.fromNumber;
+            if (keyConfig.TWILIO_WHATSAPP_NUMBER) whatsappFrom = keyConfig.TWILIO_WHATSAPP_NUMBER;
+        } catch (e) {
+            console.error('[Notify] Failed to parse twilio-key.json', e);
+        }
+    }
+}
+
+const client = (accountSid && authToken) ? twilio(accountSid, authToken) : null;
+
+/**
+ * Sends a welcome notification via SMS and WhatsApp.
+ * @param {Object} member - The member document.
+ */
+const sendRegistrationNotification = async (member) => {
+    if (!client) {
+        console.warn('[Notify] Twilio client not initialized - notifications skipped');
+        return;
+    }
+
+    const { mewsId, mobileNumber, name, _id } = member;
+    if (!mobileNumber) {
+        console.warn(`[Notify] Member ${_id} has no mobile number. Skipping.`);
+        return;
+    }
+
+    // Ensure E.164 format (+91 for India default)
+    const formattedMobile = mobileNumber.startsWith('+') ? mobileNumber : `+91${mobileNumber}`;
+
+    // Link to the user's profile or application details in the dashboard
+    // Direct link to download might require a specific route, assuming dashboard profile has the download button
+    const appFormUrl = `${frontendUrl}/dashboard/applications/${_id}`;
+    const idCardUrl = `${frontendUrl}/dashboard/profile`;
+
+    const messageBody = `Dear ${name} ${member.surname || ''},
+
+Thank you for registering with MEWS.
+
+Member ID: ${mewsId}
+
+You can access your details using the links below:
+
+📄 Application Form:
+${appFormUrl}
+
+🪪 Digital ID Card:
+${idCardUrl}
+
+We appreciate your registration with MEWS and welcome you to the community.
+
+– Team MEWS`;
+
+    // 1. Send SMS
+    try {
+        const smsMsg = await client.messages.create({
+            body: messageBody,
+            from: fromNumber,
+            to: formattedMobile
+        });
+        console.log(`[Notify] SMS sent to ${formattedMobile} (SID: ${smsMsg.sid})`);
+    } catch (e) {
+        console.error(`[Notify] SMS failed for ${formattedMobile}: ${e.message}`);
+    }
+
+    // 2. Send WhatsApp
+    try {
+        const waMsg = await client.messages.create({
+            body: messageBody,
+            from: whatsappFrom.startsWith('whatsapp:') ? whatsappFrom : `whatsapp:${whatsappFrom}`,
+            to: `whatsapp:${formattedMobile}`
+        });
+        console.log(`[Notify] WhatsApp sent to ${formattedMobile} (SID: ${waMsg.sid})`);
+    } catch (e) {
+        console.error(`[Notify] WhatsApp failed for ${formattedMobile}: ${e.message}`);
+    }
+};
+
+module.exports = { sendRegistrationNotification };
