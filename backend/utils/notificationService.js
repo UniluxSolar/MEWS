@@ -7,7 +7,16 @@ let accountSid = process.env.TWILIO_ACCOUNT_SID;
 let authToken = process.env.TWILIO_AUTH_TOKEN;
 let fromNumber = process.env.TWILIO_PHONE_NUMBER;
 let whatsappFrom = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886'; // Default Sandbox
-let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+let frontendUrl = process.env.FRONTEND_URL;
+
+if (!frontendUrl) {
+    if (process.env.NODE_ENV === 'production') {
+        console.warn('[Notify] WARN: FRONTEND_URL is not set in production environment variables.');
+        frontendUrl = 'https://YOUR_PRODUCTION_DOMAIN.com'; // Placeholder
+    } else {
+        frontendUrl = 'http://localhost:5173';
+    }
+}
 
 // Attempt to load from twilio-key.json if env vars missing (Backwards compatibility)
 if (!accountSid || !authToken || !fromNumber) {
@@ -54,8 +63,10 @@ const sendRegistrationNotification = async (member) => {
 
     // Link to the user's profile or application details in the dashboard
     // Direct link to download might require a specific route, assuming dashboard profile has the download button
-    const appFormUrl = `${frontendUrl}/dashboard/applications/${_id}`;
-    const idCardUrl = `${frontendUrl}/dashboard/profile`;
+    // Link to the user's profile or application details via Login Redirect
+    // Users must login first to access these protected routes
+    const appFormUrl = `${frontendUrl}/login?redirect=${encodeURIComponent('/dashboard/applications/' + _id)}`;
+    const idCardUrl = `${frontendUrl}/login?redirect=${encodeURIComponent('/dashboard/profile')}`;
 
     const messageBody = `Dear ${name} ${member.surname || ''},
 

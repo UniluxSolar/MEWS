@@ -1072,10 +1072,18 @@ const MemberRegistration = () => {
             return;
         }
 
-        if (name === 'presentPincode' || name === 'permPincode' || name === 'annualIncome' || name === 'memberCount' || name === 'dependentCount') {
+        if (name === 'presentPincode' || name === 'permPincode') {
+            // Only digits, max 6
+            if (!/^\d*$/.test(value)) return;
+            if (value.length > 6) return;
+        }
+
+        if (name === 'annualIncome' || name === 'memberCount' || name === 'dependentCount') {
             // Basic number check for other numeric fields if desired, but strict length only for mobile/aadhar
             // Keeping it simple for now as requested specifically for mobile/aadhar
         }
+
+
 
 
         setFormData(prev => {
@@ -1259,6 +1267,7 @@ const MemberRegistration = () => {
         if (!formData.presentVillage) newErrors.presentVillage = "Village is required";
         if (!formData.presentHouseNo) newErrors.presentHouseNo = "House No is required";
         if (!formData.presentPincode) newErrors.presentPincode = "Pincode is required";
+        else if (formData.presentPincode.length !== 6) newErrors.presentPincode = "Pincode must be 6 digits";
 
         // Permanent Address (if not same)
         if (!sameAsPresent) {
@@ -1268,6 +1277,7 @@ const MemberRegistration = () => {
             if (!formData.permVillage) newErrors.permVillage = "Village is required";
             if (!formData.permHouseNo) newErrors.permHouseNo = "House No is required";
             if (!formData.permPincode) newErrors.permPincode = "Pincode is required";
+            else if (formData.permPincode.length !== 6) newErrors.permPincode = "Pincode must be 6 digits";
         }
 
         // Ration Card

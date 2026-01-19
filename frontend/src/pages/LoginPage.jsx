@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { FaUserCircle, FaLock, FaArrowRight, FaUsers } from 'react-icons/fa';
 import mewsLogo from '../assets/mews_main_logo_new.png';
 import API from '../api';
@@ -41,6 +41,10 @@ const LoginPage = () => {
         setCredentials({ ...credentials, [e.target.name]: e.target.value });
     };
 
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const redirectPath = queryParams.get('redirect') || '/dashboard/profile';
+
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
@@ -50,7 +54,7 @@ const LoginPage = () => {
                 password: credentials.password
             });
             localStorage.setItem('adminInfo', JSON.stringify(data));
-            navigate('/dashboard/profile', { replace: true });
+            navigate(redirectPath, { replace: true });
         } catch (error) {
             alert(error.response?.data?.message || 'Login failed');
         } finally {
@@ -87,7 +91,7 @@ const LoginPage = () => {
             setLoading(true);
             const { data } = await API.post('/auth/verify-otp', { mobile, otp });
             localStorage.setItem('adminInfo', JSON.stringify(data)); // Store member info as adminInfo for compatibility
-            navigate('/dashboard/profile', { replace: true });
+            navigate(redirectPath, { replace: true });
         } catch (error) {
             alert(error.response?.data?.message || 'Invalid OTP');
         } finally {
