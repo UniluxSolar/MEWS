@@ -1,9 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import {
-    FaCamera, FaEdit, FaCheckCircle, FaSave, FaTimes, FaArrowLeft
+    FaCamera, FaEdit, FaCheckCircle, FaSave, FaTimes, FaArrowLeft, FaFileAlt, FaIdCard, FaPrint
 } from 'react-icons/fa';
 import LivePhotoCapture from '../components/LivePhotoCapture';
+import { MemberDocument } from './MemberDocument';
+import MemberIDCard from '../components/MemberIDCard';
+import ReactDOM from 'react-dom';
+
+const PrintPortal = ({ children }) => {
+    const [container] = useState(() => {
+        const el = document.createElement('div');
+        el.id = 'print-mount-root';
+        return el;
+    });
+
+    useEffect(() => {
+        document.body.appendChild(container);
+        return () => {
+            document.body.removeChild(container);
+        }
+    }, [container]);
+
+    return ReactDOM.createPortal(children, container);
+};
 
 const InputField = ({ label, name, value, onChange, type = "text", verified, disabled }) => (
     <div className="flex-1 min-w-[300px]">
@@ -120,6 +140,40 @@ const FamilyMembersTab = ({ members }) => (
     </div>
 );
 
+const DocumentsTab = ({ onOpenApp, onOpenID }) => (
+    <div className="animate-fadeIn space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6 border border-gray-200 rounded-xl bg-white shadow-sm flex flex-col items-center text-center hover:shadow-md transition">
+                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4 text-3xl">
+                    <FaFileAlt />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Application Form</h3>
+                <p className="text-sm text-gray-500 mb-6">View and download your official membership application form.</p>
+                <button
+                    onClick={onOpenApp}
+                    className="w-full py-2.5 bg-[#1e2a4a] text-white font-bold rounded-lg hover:bg-[#2a3b66] transition flex items-center justify-center gap-2"
+                >
+                    <FaPrint /> View Application
+                </button>
+            </div>
+
+            <div className="p-6 border border-gray-200 rounded-xl bg-white shadow-sm flex flex-col items-center text-center hover:shadow-md transition">
+                <div className="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-4 text-3xl">
+                    <FaIdCard />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Member ID Card</h3>
+                <p className="text-sm text-gray-500 mb-6">View and download your digital membership ID card.</p>
+                <button
+                    onClick={onOpenID}
+                    className="w-full py-2.5 bg-[#1e2a4a] text-white font-bold rounded-lg hover:bg-[#2a3b66] transition flex items-center justify-center gap-2"
+                >
+                    <FaIdCard /> View Create ID Card
+                </button>
+            </div>
+        </div>
+    </div>
+);
+
 const SecurityTab = () => (
     <div className="animate-fadeIn space-y-6">
         <div className="p-4 border border-gray-100 rounded-lg bg-blue-50">
@@ -202,11 +256,19 @@ const FamilyMemberModal = ({ isOpen, onClose, onSave, member, isEditing }) => {
 };
 
 const ProfileSettings = () => {
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const viewParam = queryParams.get('view');
+
     const [activeTab, setActiveTab] = useState('Personal Info');
     const [showCamera, setShowCamera] = useState(false);
     const [profileImage, setProfileImage] = useState("/assets/images/user-profile.png");
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+
+    // Document Modal States
+    const [showAppModal, setShowAppModal] = useState(false);
+    const [showIDModal, setShowIDModal] = useState(false);
 
     // Family Member Modal State
     const [showFamilyModal, setShowFamilyModal] = useState(false);
@@ -263,6 +325,15 @@ const ProfileSettings = () => {
                         familyMembers: data.familyMembers || []
                     });
                     if (data.photoUrl) setProfileImage(data.photoUrl);
+
+                    // Handle View Param after data load
+                    if (viewParam === 'application') {
+                        setActiveTab('My Documents');
+                        setShowAppModal(true);
+                    } else if (viewParam === 'idcard') {
+                        setActiveTab('My Documents');
+                        setShowIDModal(true);
+                    }
                 }
             } catch (error) {
                 console.error("Error fetching profile:", error);
@@ -271,7 +342,7 @@ const ProfileSettings = () => {
             }
         };
         fetchProfile();
-    }, []);
+    }, [viewParam]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -416,6 +487,53 @@ const ProfileSettings = () => {
                 isEditing={editingMemberIndex !== null}
             />
 
+            {/* Application Modal */}
+            {showAppModal && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4">
+                    <div className="bg-white rounded-xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden">
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                            <h3 className="font-bold text-lg">Application Form Preview</h3>
+                            <div className="flex gap-4">
+                                <button onClick={() => window.print()} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-700">
+                                    <FaPrint /> Print Form
+                                </button>
+                                <button onClick={() => setShowAppModal(false)} className="text-gray-500 hover:text-red-500">
+                                    <FaTimes size={20} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-auto bg-gray-100 p-8">
+                            {/* Render inside correct print container styles */}
+                            <div className="bg-white shadow-lg mx-auto max-w-[210mm] min-h-[297mm]">
+                                <MemberDocument data={formData} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ID Card Modal */}
+            {showIDModal && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4">
+                    <div className="bg-white rounded-xl w-fit max-w-5xl max-h-[90vh] flex flex-col overflow-hidden p-8 relative">
+                        <button onClick={() => setShowIDModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 z-50">
+                            <FaTimes size={24} />
+                        </button>
+                        <h3 className="font-bold text-2xl text-center mb-8">Generated ID Card</h3>
+                        <div className="overflow-auto scrollbar-hide py-4 px-8">
+                            <MemberIDCard member={formData} />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Hidden Print Portal for direct printing support */}
+            <PrintPortal>
+                <div className="hidden print:block">
+                    <MemberDocument data={formData} />
+                </div>
+            </PrintPortal>
+
             {/* Camera Overlay */}
             {showCamera && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
@@ -498,7 +616,7 @@ const ProfileSettings = () => {
             {/* Navigation Tabs */}
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-2 overflow-x-auto">
                 <div className="flex gap-6 min-w-max">
-                    {['Personal Info', 'Family Members', 'Security', 'Notifications', 'Privacy & Data'].map((tab) => (
+                    {['Personal Info', 'My Documents', 'Family Members', 'Security', 'Notifications', 'Privacy & Data'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -517,6 +635,8 @@ const ProfileSettings = () => {
             <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm min-h-[400px]">
 
                 {activeTab === 'Personal Info' && <PersonalInfoTab formData={formData} handleChange={handleChange} />}
+
+                {activeTab === 'My Documents' && <DocumentsTab onOpenApp={() => setShowAppModal(true)} onOpenID={() => setShowIDModal(true)} />}
 
                 {activeTab === 'Family Members' && (
                     <FamilyMembersTab

@@ -61,12 +61,10 @@ const sendRegistrationNotification = async (member) => {
     // Ensure E.164 format (+91 for India default)
     const formattedMobile = mobileNumber.startsWith('+') ? mobileNumber : `+91${mobileNumber}`;
 
-    // Link to the user's profile or application details in the dashboard
-    // Direct link to download might require a specific route, assuming dashboard profile has the download button
-    // Link to the user's profile or application details via Login Redirect
+    // Link to the user's profile documents via Login Redirect
     // Users must login first to access these protected routes
-    const appFormUrl = `${frontendUrl}/login?redirect=${encodeURIComponent('/dashboard/applications/' + _id)}`;
-    const idCardUrl = `${frontendUrl}/login?redirect=${encodeURIComponent('/dashboard/profile')}`;
+    const appFormUrl = `${frontendUrl}/login?redirect=${encodeURIComponent('/dashboard/profile?view=application')}`;
+    const idCardUrl = `${frontendUrl}/login?redirect=${encodeURIComponent('/dashboard/profile?view=idcard')}`;
 
     const messageBody = `Dear ${name} ${member.surname || ''},
 
