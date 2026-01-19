@@ -107,10 +107,10 @@ const FormSelect = ({ label, options, required = false, colSpan = "col-span-1", 
 
 // File Upload Component
 // File Upload Component
-const FileUpload = ({ label, name, onChange, onRemove, colSpan = "col-span-1", fileName, error, fileUrl }) => (
+const FileUpload = ({ label, name, onChange, onRemove, colSpan = "col-span-1", fileName, error, fileUrl, required = false }) => (
     <div className={colSpan}>
         <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
-            {label}
+            {label} {required && <span className="text-red-500">*</span>}
         </label>
         <div className={`border-2 border-dashed ${error ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-gray-50'} rounded-lg p-2 flex flex-col items-center justify-center hover:bg-gray-100 transition cursor-pointer text-center h-[52px] box-border relative group`}>
 
@@ -3576,7 +3576,7 @@ const MemberRegistration = () => {
 
                                 {/* Documents */}
                                 <div className="md:col-span-2 mt-4"><h3 className="font-bold text-blue-600 border-b pb-1 mb-2">Document Uploads</h3></div>
-                                <FileUpload label="Member Photo" name="photo" onChange={handleFamilyFileChange} onRemove={handleRemoveFamilyFile} fileName={familyMemberFiles.photo?.name} />
+                                <FileUpload label="Member Photo" name="photo" onChange={handleFamilyFileChange} onRemove={handleRemoveFamilyFile} fileName={familyMemberFiles.photo?.name} required />
                                 <FileUpload label="Aadhaar Front" name="aadhaarFront" onChange={handleFamilyFileChange} onRemove={handleRemoveFamilyFile} fileName={familyMemberFiles.aadhaarFront?.name} />
                                 <FileUpload label="Aadhaar Back" name="aadhaarBack" onChange={handleFamilyFileChange} onRemove={handleRemoveFamilyFile} fileName={familyMemberFiles.aadhaarBack?.name} />
 

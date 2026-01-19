@@ -27,6 +27,12 @@ if (!accountSid || !authToken || !fromNumber) {
 
 const client = (accountSid && authToken) ? twilio(accountSid, authToken) : null;
 
+if (client) {
+    console.log('[Notify] Twilio SMS Service initialized successfully.');
+} else {
+    console.warn('[Notify] Twilio SMS Service NOT initialized. Missing credentials in env or twilio-key.json.');
+}
+
 /**
  * Sends a welcome notification via SMS and WhatsApp.
  * @param {Object} member - The member document.
