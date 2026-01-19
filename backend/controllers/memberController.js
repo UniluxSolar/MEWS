@@ -624,7 +624,7 @@ const getMemberStats = asyncHandler(async (req, res) => {
     });
 });
 
-const { sendRegistrationNotification } = require('../utils/notificationService');
+
 
 const updateMemberStatus = asyncHandler(async (req, res) => {
     const session = await mongoose.startSession();
