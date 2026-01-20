@@ -24,7 +24,10 @@ const API = axios.create({
 API.interceptors.request.use((req) => {
     if (localStorage.getItem('adminInfo')) {
         const { token } = JSON.parse(localStorage.getItem('adminInfo'));
-        req.headers.Authorization = `Bearer ${token}`;
+        // Only add header if token is actually present and valid
+        if (token) {
+            req.headers.Authorization = `Bearer ${token}`;
+        }
     }
     return req;
 });
