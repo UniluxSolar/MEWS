@@ -25,6 +25,7 @@ COPY frontend ./frontend
 
 # Build Frontend
 RUN cd frontend && npm run build
+RUN echo "Checking frontend build output:" && ls -la frontend/dist
 
 # Expose Port
 ENV PORT=8080
