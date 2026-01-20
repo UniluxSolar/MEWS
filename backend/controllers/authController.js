@@ -54,7 +54,7 @@ const loginUser = asyncHandler(async (req, res) => {
             res.cookie('jwt', generateToken(user._id), {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
+                sameSite: 'lax', // Relaxed for better compatibility with redirections/initial loads
                 maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
             });
 
@@ -283,7 +283,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
     res.cookie('jwt', generateToken(member._id), {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax',
         maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 
