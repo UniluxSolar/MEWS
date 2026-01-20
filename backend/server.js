@@ -174,11 +174,30 @@ if (process.env.NODE_ENV === 'production') {
         }
 
         const indexFile = path.resolve(__dirname, '../frontend/dist', 'index.html');
+
+        // Debugging: Log path checks
+        // console.log(`[Static] Checking for frontend build at: ${indexFile}`);
+
         if (fs.existsSync(indexFile)) {
             res.sendFile(indexFile);
         } else {
             console.error('[Static] index.html not found:', indexFile);
-            res.status(500).send('Application Error: Frontend build missing');
+
+            // Recursive directory listing to debug where the files actually are
+            try {
+                const frontendPath = path.resolve(__dirname, '../frontend');
+                console.log(`[Diagnostic] Listing ${frontendPath}:`, fs.readdirSync(frontendPath));
+                const distPath = path.resolve(__dirname, '../frontend/dist');
+                if (fs.existsSync(distPath)) {
+                    console.log(`[Diagnostic] Listing ${distPath}:`, fs.readdirSync(distPath));
+                } else {
+                    console.log(`[Diagnostic] ${distPath} does not exist.`);
+                }
+            } catch (e) {
+                console.error('[Diagnostic] Error listing dirs:', e.message);
+            }
+
+            res.status(500).send('Application Error: Frontend build missing. Check logs.');
         }
     });
 } else {
