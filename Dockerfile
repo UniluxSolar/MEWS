@@ -3,7 +3,7 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
-ENV NODE_ENV=production
+
 
 # Copy root package files
 COPY package*.json ./
@@ -31,4 +31,6 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Start Application
+# Start Application
+ENV NODE_ENV=production
 CMD ["node", "backend/server.js"]
