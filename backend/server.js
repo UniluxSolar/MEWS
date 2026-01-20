@@ -11,13 +11,19 @@ const cookieParser = require('cookie-parser');
 const app = express();
 
 // Connect to Database
-connectDB();
+// Connect to Database
+// Non-blocking connection to allow server to bind port even if DB fails initially (Cloud Run Health Check Strategy)
+connectDB().catch(err => console.error('[DB] Connection Failure:', err.message));
 
 // Ensure 'uploads' directory exists (Critical for GCP/Containers)
 const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
-    console.log(`[Init] Created uploads directory at ${uploadsDir}`);
+try {
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir);
+        console.log(`[Init] Created uploads directory at ${uploadsDir}`);
+    }
+} catch (err) {
+    console.warn(`[Init] Warning: Could not create uploads directory: ${err.message}`);
 }
 
 // Middleware
@@ -161,7 +167,14 @@ if (process.env.NODE_ENV === 'production') {
         if (req.path.startsWith('/api')) {
             return res.status(404).json({ message: 'API endpoint not found' });
         }
-        res.sendFile(path.resolve(__dirname, '../frontend/dist', 'index.html'));
+
+        const indexFile = path.resolve(__dirname, '../frontend/dist', 'index.html');
+        if (fs.existsSync(indexFile)) {
+            res.sendFile(indexFile);
+        } else {
+            console.error('[Static] index.html not found:', indexFile);
+            res.status(500).send('Application Error: Frontend build missing');
+        }
     });
 } else {
     // Basic Route for Dev
@@ -172,6 +185,22 @@ if (process.env.NODE_ENV === 'production') {
 
 const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+const startServer = async () => {
+    // Log Environment Checks
+    console.log('--- Server Startup Checks ---');
+    console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+    console.log(`PORT: ${PORT}`);
+    console.log(`MONGO_URI Provided: ${!!process.env.MONGO_URI}`);
+    console.log(`GCS_CREDENTIALS Provided: ${!!process.env.GCS_CREDENTIALS}`);
+    console.log('-----------------------------');
+
+    try {
+        await app.listen(PORT, '0.0.0.0');
+        console.log(`Server running on port ${PORT}`);
+    } catch (err) {
+        console.error('Failed to bind to port:', err);
+        process.exit(1);
+    }
+};
+
+startServer();

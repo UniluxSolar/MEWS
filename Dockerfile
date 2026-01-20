@@ -3,6 +3,8 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
+ENV NODE_ENV=production
+
 # Copy root package files
 COPY package*.json ./
 
