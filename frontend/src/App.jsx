@@ -14,6 +14,7 @@ import InstitutionManagement from './pages/InstitutionManagement';
 import InstitutionRegistration from './pages/InstitutionRegistration';
 import InstitutionDetail from './pages/InstitutionDetail';
 import EditInstitution from './pages/EditInstitution';
+import ProtectedRoute from './components/ProtectedRoute';
 
 import FundingRequests from './pages/FundingRequests';
 import AdminAnnouncements from './pages/AdminAnnouncements';
@@ -64,52 +65,56 @@ function App() {
                 <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/admin/login" element={<AdminLoginPage />} />
-                <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                <Route path="/admin/management" element={<AdminManagement />} />
-                <Route path="/admin/members" element={<MemberManagement />} />
-                <Route path="/admin/members/new" element={<MemberRegistration />} />
-                <Route path="/admin/members/generate-id" element={<GenerateIDCard />} />
-                <Route path="/admin/institutions" element={<InstitutionManagement />} />
-                <Route path="/admin/institutions/new" element={<InstitutionRegistration />} />
-                <Route path="/admin/institutions/:id" element={<InstitutionDetail />} />
-                <Route path="/admin/institutions/edit/:id" element={<EditInstitution />} />
 
-                <Route path="/admin/funding" element={<FundingRequests />} />
-                <Route path="/admin/funding" element={<FundingRequests />} />
-                <Route path="/admin/announcements" element={<AdminAnnouncements />} />
-                <Route path="/admin/activity-log" element={<AdminActivityLog />} />
-                <Route path="/admin/settings" element={<AdminVillageSettings />} />
-                <Route path="/admin/help" element={<AdminHelpSupport />} />
-                <Route path="/admin/help" element={<AdminHelpSupport />} />
-                <Route path="/admin/notifications" element={<AdminNotifications />} />
-                <Route path="/admin/members/:id" element={<MemberRegistration />} />
-                <Route path="/admin/members/:id" element={<MemberRegistration />} />
-                <Route path="/admin/members/edit/:id" element={<MemberRegistration />} />
+                {/* Protected Admin Routes */}
+                <Route element={<ProtectedRoute />}>
+                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="/admin/management" element={<AdminManagement />} />
+                    <Route path="/admin/members" element={<MemberManagement />} />
+                    <Route path="/admin/members/new" element={<MemberRegistration />} />
+                    <Route path="/admin/members/generate-id" element={<GenerateIDCard />} />
+                    <Route path="/admin/institutions" element={<InstitutionManagement />} />
+                    <Route path="/admin/institutions/new" element={<InstitutionRegistration />} />
+                    <Route path="/admin/institutions/:id" element={<InstitutionDetail />} />
+                    <Route path="/admin/institutions/edit/:id" element={<EditInstitution />} />
+
+                    <Route path="/admin/funding" element={<FundingRequests />} />
+                    <Route path="/admin/announcements" element={<AdminAnnouncements />} />
+                    <Route path="/admin/activity-log" element={<AdminActivityLog />} />
+                    <Route path="/admin/settings" element={<AdminVillageSettings />} />
+                    <Route path="/admin/help" element={<AdminHelpSupport />} />
+                    <Route path="/admin/notifications" element={<AdminNotifications />} />
+                    <Route path="/admin/members/:id" element={<MemberRegistration />} />
+                    <Route path="/admin/members/edit/:id" element={<MemberRegistration />} />
+                </Route>
+
                 <Route path="/about" element={<div className="p-10 text-center">About Page Coming Soon</div>} />
                 <Route path="/benefits" element={<div className="p-10 text-center">Benefits Page Coming Soon</div>} />
                 <Route path="/donate" element={<div className="p-10 text-center">Donate Page Coming Soon</div>} />
 
-                {/* Dashboard Area */}
-                <Route path="/dashboard" element={<DashboardLayout />}>
-                    <Route index element={<DashboardHome />} />
-                    <Route path="applications" element={<MyApplications />} />
-                    <Route path="applications/new" element={<NewApplication />} />
-                    <Route path="services" element={<MEWSServices />} />
+                {/* Dashboard Area - Protected */}
+                <Route path="/dashboard" element={<ProtectedRoute />}>
+                    <Route element={<DashboardLayout />}>
+                        <Route index element={<DashboardHome />} />
+                        <Route path="applications" element={<MyApplications />} />
+                        <Route path="applications/new" element={<NewApplication />} />
+                        <Route path="services" element={<MEWSServices />} />
 
-                    <Route path="jobs" element={<JobsEvents />} />
-                    <Route path="jobs/:id" element={<EventDetail />} />
-                    <Route path="applications/:id" element={<ApplicationDetails />} />
-                    <Route path="donate" element={<Donate />} />
-                    <Route path="profile" element={<ProfileSettings />} />
-                    <Route path="health" element={<HealthAssistance />} />
-                    <Route path="legal" element={<LegalAid />} />
-                    <Route path="sponsor/student/:id" element={<StudentProfile />} />
-                    <Route path="donations" element={<MyDonations />} />
-                    <Route path="donate/checkout" element={<DonationCheckout />} />
-                    <Route path="donate/success" element={<DonationSuccess />} />
-                    <Route path="helpdesk" element={<Helpdesk />} />
-                    <Route path="support" element={<HelpSupport />} />
-                    <Route path="notifications" element={<Notifications />} />
+                        <Route path="jobs" element={<JobsEvents />} />
+                        <Route path="jobs/:id" element={<EventDetail />} />
+                        <Route path="applications/:id" element={<ApplicationDetails />} />
+                        <Route path="donate" element={<Donate />} />
+                        <Route path="profile" element={<ProfileSettings />} />
+                        <Route path="health" element={<HealthAssistance />} />
+                        <Route path="legal" element={<LegalAid />} />
+                        <Route path="sponsor/student/:id" element={<StudentProfile />} />
+                        <Route path="donations" element={<MyDonations />} />
+                        <Route path="donate/checkout" element={<DonationCheckout />} />
+                        <Route path="donate/success" element={<DonationSuccess />} />
+                        <Route path="helpdesk" element={<Helpdesk />} />
+                        <Route path="support" element={<HelpSupport />} />
+                        <Route path="notifications" element={<Notifications />} />
+                    </Route>
                 </Route>
             </Routes>
         </BrowserRouter>

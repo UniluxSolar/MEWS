@@ -4,17 +4,19 @@ const User = require('../models/User');
 const protect = async (req, res, next) => {
     let token;
 
-    if (
-        req.headers.authorization &&
-        req.headers.authorization.startsWith('Bearer')
-    ) {
-        try {
-            // Get token from header
-            token = req.headers.authorization.split(' ')[1];
+    // Check Header
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        token = req.headers.authorization.split(' ')[1];
+    }
+    // Check Cookie (Preferred)
+    else if (req.cookies.jwt) {
+        token = req.cookies.jwt;
+    }
 
+    if (token) {
+        try {
             // Verify token
             const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-            console.log("[AuthMiddleware] Decoded ID:", decoded.id);
 
             // Get user from the token
             req.user = await User.findById(decoded.id).select('-passwordHash');
@@ -23,12 +25,7 @@ const protect = async (req, res, next) => {
                 // If not found in User, check Member (for Member Login)
                 const Member = require('../models/Member');
                 req.user = await Member.findById(decoded.id);
-                console.log("[AuthMiddleware] Found in Member?", !!req.user);
-
-                if (req.user) {
-                    // Add a flag or ensure role is set to differentiate, though schema handles it
-                    if (!req.user.role) req.user.role = 'MEMBER';
-                }
+                if (req.user && !req.user.role) req.user.role = 'MEMBER';
             }
 
             if (!req.user) {
@@ -38,11 +35,9 @@ const protect = async (req, res, next) => {
             next();
         } catch (error) {
             console.error(error);
-            res.status(401).json({ message: 'Not authorized' });
+            res.status(401).json({ message: 'Not authorized, token failed' });
         }
-    }
-
-    if (!token) {
+    } else {
         res.status(401).json({ message: 'Not authorized, no token' });
     }
 };

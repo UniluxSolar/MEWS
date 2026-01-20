@@ -17,6 +17,7 @@ if (baseURL && !baseURL.endsWith('/api')) {
 
 const API = axios.create({
     baseURL: baseURL,
+    withCredentials: true, // Send Cookies
 });
 
 // Add a request interceptor to include the token

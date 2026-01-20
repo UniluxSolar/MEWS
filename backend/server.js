@@ -3,7 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const path = require('path');
+const path = require('path');
 const fs = require('fs');
+const cookieParser = require('cookie-parser');
 
 // Initialize Express App
 const app = express();
@@ -22,6 +24,7 @@ if (!fs.existsSync(uploadsDir)) {
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Body parser
 app.use(express.urlencoded({ extended: true, limit: '50mb' })); // Form data parser
+app.use(cookieParser()); // Cookie parser
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Enabled for local files with absolute path
 
 // Basic Route
