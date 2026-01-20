@@ -163,6 +163,41 @@ app.use(errorHandler);
 
 // Serve Frontend in Production
 if (process.env.NODE_ENV === 'production') {
+    // Debug Endpoint (Temporary)
+    app.get('/api/debug-files', (req, res) => {
+        const diagnostics = {
+            currentDir: __dirname,
+            frontendPath: path.resolve(__dirname, '../frontend'),
+            distPath: path.resolve(__dirname, '../frontend/dist'),
+            uploadsPath: path.resolve(__dirname, 'uploads'),
+            files: {},
+            error: null
+        };
+
+        try {
+            if (fs.existsSync(diagnostics.frontendPath)) {
+                diagnostics.files.frontend = fs.readdirSync(diagnostics.frontendPath);
+            } else {
+                diagnostics.files.frontend = 'DIRECTORY_NOT_FOUND';
+            }
+
+            if (fs.existsSync(diagnostics.distPath)) {
+                diagnostics.files.dist = fs.readdirSync(diagnostics.distPath);
+            } else {
+                diagnostics.files.dist = 'DIRECTORY_NOT_FOUND';
+            }
+
+            if (fs.existsSync(diagnostics.uploadsPath)) {
+                diagnostics.files.uploads = fs.readdirSync(diagnostics.uploadsPath);
+            }
+
+            res.json(diagnostics);
+        } catch (e) {
+            diagnostics.error = e.message;
+            res.status(500).json(diagnostics);
+        }
+    });
+
     // Set static folder
     const frontendDist = path.join(__dirname, '../frontend/dist');
     app.use(express.static(frontendDist));
