@@ -164,7 +164,8 @@ app.use(errorHandler);
 // Serve Frontend in Production
 if (process.env.NODE_ENV === 'production') {
     // Set static folder
-    app.use(express.static(path.join(__dirname, '../frontend/dist')));
+    const frontendDist = path.join(__dirname, '../frontend/dist');
+    app.use(express.static(frontendDist));
 
     // Handle React routing, return all requests to React app
     app.get('*', (req, res) => {
@@ -173,31 +174,29 @@ if (process.env.NODE_ENV === 'production') {
             return res.status(404).json({ message: 'API endpoint not found' });
         }
 
-        const indexFile = path.resolve(__dirname, '../frontend/dist', 'index.html');
-
-        // Debugging: Log path checks
-        // console.log(`[Static] Checking for frontend build at: ${indexFile}`);
+        const indexFile = path.resolve(frontendDist, 'index.html');
 
         if (fs.existsSync(indexFile)) {
             res.sendFile(indexFile);
         } else {
             console.error('[Static] index.html not found:', indexFile);
 
-            // Recursive directory listing to debug where the files actually are
+            // Diagnostic logging for debugging
+            let debugInfo = `Application Error: Frontend build missing.\nexpected: ${indexFile}\n`;
+
             try {
                 const frontendPath = path.resolve(__dirname, '../frontend');
-                console.log(`[Diagnostic] Listing ${frontendPath}:`, fs.readdirSync(frontendPath));
+                debugInfo += `\nListing ${frontendPath}:\n` + (fs.existsSync(frontendPath) ? fs.readdirSync(frontendPath).join(', ') : 'Directory not found');
+
                 const distPath = path.resolve(__dirname, '../frontend/dist');
-                if (fs.existsSync(distPath)) {
-                    console.log(`[Diagnostic] Listing ${distPath}:`, fs.readdirSync(distPath));
-                } else {
-                    console.log(`[Diagnostic] ${distPath} does not exist.`);
-                }
+                debugInfo += `\nListing ${distPath}:\n` + (fs.existsSync(distPath) ? fs.readdirSync(distPath).join(', ') : 'Directory not found');
+
+                debugInfo += `\n\nCurrent __dirname: ${__dirname}`;
             } catch (e) {
-                console.error('[Diagnostic] Error listing dirs:', e.message);
+                debugInfo += `\nError getting diagnostics: ${e.message}`;
             }
 
-            res.status(500).send('Application Error: Frontend build missing. Check logs.');
+            res.status(500).set('Content-Type', 'text/plain').send(debugInfo);
         }
     });
 } else {
