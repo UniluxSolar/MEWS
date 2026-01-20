@@ -25,9 +25,10 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' })); // Form data par
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Enabled for local files with absolute path
 
 // Basic Route
-app.get('/', (req, res) => {
-    res.send('MEWS API is running...');
-});
+// Basic Route (handled in production block below)
+// app.get('/', (req, res) => {
+//     res.send('MEWS API is running...');
+// });
 
 // Define Routes
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -145,6 +146,26 @@ app.get('/api/proxy-image', async (req, res) => {
 
 const { errorHandler } = require('./middleware/errorMiddleware');
 app.use(errorHandler);
+
+// Serve Frontend in Production
+if (process.env.NODE_ENV === 'production') {
+    // Set static folder
+    app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+    // Handle React routing, return all requests to React app
+    app.get('*', (req, res) => {
+        // Check if the request is for an API endpoint
+        if (req.path.startsWith('/api')) {
+            return res.status(404).json({ message: 'API endpoint not found' });
+        }
+        res.sendFile(path.resolve(__dirname, '../frontend/dist', 'index.html'));
+    });
+} else {
+    // Basic Route for Dev
+    app.get('/', (req, res) => {
+        res.send('MEWS API is running...');
+    });
+}
 
 const PORT = process.env.PORT || 8080;
 
