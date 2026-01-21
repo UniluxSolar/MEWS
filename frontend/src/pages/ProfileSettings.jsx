@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
     FaCamera, FaEdit, FaCheckCircle, FaSave, FaTimes, FaArrowLeft, FaFileAlt, FaIdCard, FaPrint
 } from 'react-icons/fa';
+import API from '../api';
 import LivePhotoCapture from '../components/LivePhotoCapture';
 import { MemberDocument } from './MemberDocument';
 import MemberIDCard from '../components/MemberIDCard';
@@ -297,18 +298,19 @@ const ProfileSettings = () => {
     });
 
     // Fetch User Data
+    // Fetch User Data
     useEffect(() => {
         const fetchProfile = async () => {
             try {
                 const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
-                if (!adminInfo?.token) return;
+                // Use adminInfo._id to target specific member if needed, or rely on /auth/me or /members/me
+                // Since this component uses /members/:id, we need the ID. Login provides it.
+                if (!adminInfo?._id) return;
 
-                const response = await fetch(`/api/members/${adminInfo._id}`, {
-                    headers: { 'Authorization': `Bearer ${adminInfo.token}` }
-                });
+                const response = await API.get(`/members/${adminInfo._id}`);
 
-                if (response.ok) {
-                    const data = await response.json();
+                if (response.data) {
+                    const data = response.data;
                     setFormData({
                         ...data,
                         // Ensure nested objects exist to prevent errors
@@ -407,27 +409,23 @@ const ProfileSettings = () => {
                 }
             }
 
-            const response = await fetch(`/api/members/${adminInfo._id}`, {
-                method: 'PUT',
-                headers: {
-                    // 'Content-Type': 'multipart/form-data', // Browser sets this automatically with boundary
-                    'Authorization': `Bearer ${adminInfo.token}`
-                },
-                body: submitData
-            });
+            // Using API utility automatically handles cookies and FormData content-type usually
+            const response = await API.put(`/members/${adminInfo._id}`, submitData);
 
-            if (response.ok) {
+            if (response.data) {
                 const storedAdmin = JSON.parse(localStorage.getItem('adminInfo'));
 
                 // If backend returns the updated member, we can update local storage logic if needed
                 // But usually we just re-fetch in useEffect or update photo displayed
                 // Let's see if we can get the new photo URL from response if needed
-                const updatedMember = await response.json();
+                const updatedMember = response.data;
                 if (updatedMember.photoUrl) {
                     setProfileImage(updatedMember.photoUrl);
                     // Update adminInfo in localStorage if photo changed?
-                    storedAdmin.photoUrl = updatedMember.photoUrl;
-                    localStorage.setItem('adminInfo', JSON.stringify(storedAdmin));
+                    if (storedAdmin) {
+                        storedAdmin.photoUrl = updatedMember.photoUrl;
+                        localStorage.setItem('adminInfo', JSON.stringify(storedAdmin));
+                    }
                 }
 
                 alert("Profile Updated Successfully!");

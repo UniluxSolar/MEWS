@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import API from '../api';
 import {
     FaCheckCircle, FaUserGraduate, FaRunning, FaChalkboardTeacher,
     FaHeartbeat, FaBalanceScale, FaHandHoldingHeart, FaBriefcase,
@@ -71,14 +72,12 @@ const NewApplication = () => {
         const fetchMemberDetails = async () => {
             try {
                 const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
-                if (!adminInfo || !adminInfo.token) return;
+                if (!adminInfo?._id) return;
 
-                const response = await fetch(`/api/members/${adminInfo._id}`, {
-                    headers: { 'Authorization': `Bearer ${adminInfo.token}` }
-                });
+                const response = await API.get(`/members/${adminInfo._id}`);
 
-                if (response.ok) {
-                    const memberData = await response.json();
+                if (response.data) {
+                    const memberData = response.data;
                     setApplicationDetails(prev => ({
                         ...prev,
                         beneficiaryName: (memberData.name + ' ' + memberData.surname).trim(),
@@ -231,8 +230,8 @@ const NewApplication = () => {
 
         setIsSubmitting(true);
         try {
-            const token = JSON.parse(localStorage.getItem('adminInfo'))?.token;
-            if (!token) { alert("You are not logged in!"); return; }
+            // No token check needed in frontend, cookie is handled automatically. 
+            // If 401, interceptor will handle or request will fail.
 
             // Construct Payload based on type
             let description = applicationDetails.reason;
@@ -269,22 +268,17 @@ const NewApplication = () => {
                 status: 'SUBMITTED'
             };
 
-            const response = await fetch('/api/fund-requests', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(payload)
-            });
+            const response = await API.post('/fund-requests', payload);
 
-            if (response.ok) {
+            if (response.status === 200 || response.status === 201) {
                 alert("Application Submitted Successfully!");
                 navigate('/dashboard/applications');
             } else {
-                const errorData = await response.json();
-                alert(`Submission Failed: ${errorData.message}`);
+                alert(`Submission Failed: ${response.data.message || 'Unknown Error'}`);
             }
         } catch (error) {
             console.error(error);
-            alert("An error occurred.");
+            alert(error.response?.data?.message || "An error occurred.");
         } finally {
             setIsSubmitting(false);
         }

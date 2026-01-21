@@ -1420,25 +1420,25 @@ const MemberRegistration = () => {
 
             dataPayload.append('familyMembers', JSON.stringify(finalFamilyMembers));
 
-            // Get token for authorization
-            const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
-            const token = adminInfo?.token;
-
+            // API instance handles cookies automatically.
+            // Axios automatically sets Content-Type to multipart/form-data when passing FormData
+            // so we don't strictly need to set it, but we can explicit if we want.
+            // HOWEVER, manually setting 'Content-Type': 'multipart/form-data' without the boundary
+            // often CAUSES errors. It's safer to let Axios/Browser set it.
             const config = {
                 headers: {
-                    'Content-Type': 'multipart/form-data',
-                    Authorization: `Bearer ${token} `
+                    // Let browser set content type with boundary
                 }
             };
 
             if (isEditMode) {
-                const { data } = await axios.put(`${import.meta.env.VITE_API_URL || '/api'}/members/${id}`, dataPayload, config);
+                const { data } = await API.put(`/members/${id}`, dataPayload, config);
                 setCreatedMemberData(data);
                 alert("Member details updated successfully!");
                 navigate('/admin/members');
                 return;
             } else {
-                const { data } = await axios.post(`${import.meta.env.VITE_API_URL || '/api'}/members`, dataPayload, config);
+                const { data } = await API.post(`/members`, dataPayload, config);
                 // Show Success Modal instead of immediate navigate
                 setCreatedMemberData(data);
                 setShowPreview(false);
@@ -1475,16 +1475,7 @@ const MemberRegistration = () => {
                     }
                 }
 
-                const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
-                const token = adminInfo?.token;
-
-                const config = {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                };
-
-                const { data } = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/members/${id}`, config);
+                const { data } = await API.get(`/members/${id}`);
 
                 // Flatten and Map Data to Form State
                 // Helper to normalize gender case

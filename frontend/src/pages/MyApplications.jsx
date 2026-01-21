@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import API from '../api';
 import { FaPlus, FaDownload, FaFilter, FaCalendarAlt, FaCheckCircle, FaTimesCircle, FaClock, FaEye, FaUniversity, FaHeartbeat, FaBalanceScale, FaRunning, FaSearch, FaChevronDown, FaArrowLeft } from 'react-icons/fa';
 
 const StatCard = ({ icon: Icon, value, label, subtext, color, iconBg }) => (
@@ -62,24 +63,11 @@ const MyApplications = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                // Token is stored in 'adminInfo' object in localStorage
-                const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
-                const token = adminInfo?.token;
+                // Token is handled via cookie now
+                const response = await API.get('/members/stats');
 
-                if (!token) {
-                    console.error("No token found");
-                    setIsLoading(false);
-                    return;
-                }
-
-                const response = await fetch('/api/members/stats', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
+                if (response.data) {
+                    const data = response.data;
                     setStats(data);
                     setFilteredApplications(data.applications); // Initialize filtered list
                 } else {

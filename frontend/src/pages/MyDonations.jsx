@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import API from '../api';
 import {
     FaHeart, FaDownload, FaSearch, FaFilter, FaChevronLeft, FaChevronRight,
     FaCalendarAlt, FaFileInvoiceDollar, FaHandHoldingHeart, FaUserFriends, FaMedal, FaArrowLeft
@@ -80,17 +81,14 @@ const MyDonations = () => {
     useEffect(() => {
         const fetchDonationData = async () => {
             try {
-                const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
-                const token = adminInfo?.token;
-                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-
+                // Using API utility automatically handles cookies
                 const [donationsRes, statsRes] = await Promise.all([
-                    fetch('/api/donations/my-donations', { headers }),
-                    fetch('/api/donations/stats', { headers })
+                    API.get('/donations/my-donations'),
+                    API.get('/donations/stats')
                 ]);
 
-                if (donationsRes.ok) {
-                    const data = await donationsRes.json();
+                if (donationsRes.data) {
+                    const data = donationsRes.data;
                     // Map backend data to frontend structure
                     const formattedData = data.map(d => ({
                         date: new Date(d.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, ' '),
@@ -125,9 +123,8 @@ const MyDonations = () => {
                     setDonationsList(finalData);
                 }
 
-                if (statsRes.ok) {
-                    const data = await statsRes.json();
-                    setStats(data);
+                if (statsRes.data) {
+                    setStats(statsRes.data);
                 }
             } catch (error) {
                 console.error("Failed to fetch donation data", error);

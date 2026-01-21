@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import API from '../api';
 import {
     FaCalendarAlt, FaChevronRight, FaGraduationCap, FaHeartbeat,
     FaBalanceScale, FaHandHoldingHeart, FaBullhorn, FaCheckCircle,
@@ -51,30 +52,30 @@ const DashboardHome = () => {
         const fetchData = async () => {
             try {
                 const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
-                if (!adminInfo) {
-                    navigate('/login');
-                    return;
+                // adminInfo allows us to greet the user immediately, but auth is handled via cookie
+                if (adminInfo) {
+                    setUserName(adminInfo.name || 'User');
                 }
-                setUserName(adminInfo.name || 'User');
 
-                if (adminInfo.token) {
-                    const headers = { 'Authorization': `Bearer ${adminInfo.token}` };
-                    const [statsResponse, donationsResponse] = await Promise.all([
-                        fetch('/api/members/stats', { headers }),
-                        fetch('/api/donations/my-donations', { headers })
-                    ]);
+                // API calls automatically send cookies
+                const [statsResponse, donationsResponse] = await Promise.all([
+                    API.get('/members/stats'),
+                    API.get('/donations/my-donations')
+                ]);
 
-                    if (statsResponse.ok) {
-                        const data = await statsResponse.json();
-                        setStats(data);
-                    }
-                    if (donationsResponse.ok) {
-                        const donations = await donationsResponse.json();
-                        setDonations(donations);
-                    }
+                if (statsResponse.data) {
+                    setStats(statsResponse.data);
                 }
+                if (donationsResponse.data) {
+                    setDonations(donationsResponse.data);
+                }
+
             } catch (error) {
                 console.error("Error fetching dashboard data:", error);
+                // If API returns 401, interceptor might not handle redirection for all cases, so can add optional logic here
+                if (error.response && error.response.status === 401) {
+                    navigate('/login');
+                }
             } finally {
                 setLoading(false);
             }

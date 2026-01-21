@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import API from '../api';
 import { FaArrowLeft, FaUniversity, FaUser, FaClock, FaCheckCircle, FaFileAlt, FaMapMarkerAlt } from 'react-icons/fa';
 
 const ApplicationDetails = () => {
@@ -11,18 +12,11 @@ const ApplicationDetails = () => {
     useEffect(() => {
         const fetchApplication = async () => {
             try {
-                const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
-                const token = adminInfo?.token;
+                // Token is handled via cookie
+                const response = await API.get(`/fund-requests/${id}`);
 
-                if (!token) return;
-
-                const response = await fetch(`/api/fund-requests/${id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    setApplication(data);
+                if (response.data) {
+                    setApplication(response.data);
                 } else {
                     setError('Application not found');
                 }
