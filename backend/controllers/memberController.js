@@ -344,6 +344,17 @@ const registerMember = asyncHandler(async (req, res) => {
                         pollingBooth: fm.pollingBooth
                     }
                 };
+
+                // GENERATE ID FOR DEPENDENT IMMEDIATELY
+                try {
+                    dependentData.mewsId = await generateMemberId(dependentData);
+                    console.log(`[REG-DEP] Generated ID for Dependent ${dependentData.name}: ${dependentData.mewsId}`);
+                } catch (depIdErr) {
+                    console.error("Failed to generate dependent ID:", depIdErr);
+                    // Decide: Fail whole tx or continue? User wants "Ensure ID generated". Fail is safer to ensure consistency.
+                    throw new Error('Failed to generate Dependent ID: ' + depIdErr.message);
+                }
+
                 const [savedDep] = await Member.create([dependentData], opts);
                 createdDependents.push(savedDep);
             }
