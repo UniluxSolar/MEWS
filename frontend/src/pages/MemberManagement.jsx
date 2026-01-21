@@ -927,7 +927,7 @@ const MemberManagement = () => {
                                                                     const timestamp = member.updatedAt ? new Date(member.updatedAt).getTime() : '';
 
                                                                     if (photo.startsWith('http')) {
-                                                                        return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(photo)}&t=${timestamp}`;
+                                                                        return photo;
                                                                     }
                                                                     // Local file: Prepend BaseURL
                                                                     const cleanPath = photo.replace(/\\/g, '/').replace(/^\//, '');
