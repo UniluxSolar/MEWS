@@ -1,12 +1,19 @@
 import React from 'react';
 import { FaCheckCircle, FaHeart, FaShare } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
 import AnushaImg from '../assets/anusha.png'; // Reuse existing assets
 import SrinivasImg from '../assets/srinivas.png';
 import PadmaImg from '../assets/padma.png';
 
-const CampaignCard = ({ title, category, raised, goal, daysLeft, supporters, image, colorBadge }) => {
+const CampaignCard = ({ campaign }) => {
+    const { id, title, category, raised, goal, supporters, image, colorBadge } = campaign;
     const percentage = Math.min((parseInt(raised.replace(/,/g, '')) / parseInt(goal.replace(/,/g, ''))) * 100, 100);
+    const navigate = useNavigate();
+
+    const handleViewDetails = () => {
+        navigate(`/campaigns/${id}`, { state: { campaign } });
+    };
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow">
@@ -35,7 +42,10 @@ const CampaignCard = ({ title, category, raised, goal, daysLeft, supporters, ima
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <button className="flex-1 bg-[#1e2a4a] text-white py-2 rounded text-xs font-bold uppercase hover:bg-opacity-90 transition">
+                    <button
+                        onClick={handleViewDetails}
+                        className="flex-1 bg-[#1e2a4a] text-white py-2 rounded text-xs font-bold uppercase hover:bg-opacity-90 transition"
+                    >
                         View Details
                     </button>
                     <button className="px-3 py-2 border border-gray-200 text-gray-500 rounded hover:bg-gray-50 transition">
@@ -51,6 +61,42 @@ const CampaignCard = ({ title, category, raised, goal, daysLeft, supporters, ima
 };
 
 const Campaigns = () => {
+    const campaigns = [
+        {
+            id: 1,
+            title: "Books & Fees for Priya's Engineering",
+            category: "Education Support",
+            raised: "75,000",
+            goal: "1,20,000",
+            supporters: "142",
+            daysLeft: "15",
+            image: AnushaImg,
+            colorBadge: "text-blue-600"
+        },
+        {
+            id: 2,
+            title: "Urgent: Heart Surgery Fund",
+            category: "Medical Emergency",
+            raised: "3,40,000",
+            goal: "5,00,000",
+            supporters: "890",
+            daysLeft: "3",
+            image: SrinivasImg,
+            colorBadge: "text-red-500"
+        },
+        {
+            id: 3,
+            title: "Flood Relief for 50 Families",
+            category: "Disaster Relief",
+            raised: "2,10,000",
+            goal: "5,00,000",
+            supporters: "465",
+            daysLeft: "12",
+            image: PadmaImg,
+            colorBadge: "text-orange-500"
+        }
+    ];
+
     return (
         <section className="py-16 bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -63,33 +109,9 @@ const Campaigns = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <CampaignCard
-                        title="Books & Fees for Priya's Engineering"
-                        category="Education Support"
-                        raised="75,000"
-                        goal="1,20,000"
-                        supporters="142"
-                        image={AnushaImg} // Reusing image
-                        colorBadge="text-blue-600"
-                    />
-                    <CampaignCard
-                        title="Urgent: Heart Surgery Fund"
-                        category="Medical Emergency"
-                        raised="3,40,000"
-                        goal="5,00,000"
-                        supporters="890"
-                        image={SrinivasImg} // Reusing image
-                        colorBadge="text-red-500"
-                    />
-                    <CampaignCard
-                        title="Flood Relief for 50 Families"
-                        category="Disaster Relief"
-                        raised="2,10,000"
-                        goal="5,00,000"
-                        supporters="465"
-                        image={PadmaImg} // Reusing image
-                        colorBadge="text-orange-500"
-                    />
+                    {campaigns.map((campaign) => (
+                        <CampaignCard key={campaign.id} campaign={campaign} />
+                    ))}
                 </div>
             </div>
         </section>
