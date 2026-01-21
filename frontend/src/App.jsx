@@ -45,6 +45,8 @@ import DonationCheckout from './pages/DonationCheckout';
 import DonationSuccess from './pages/DonationSuccess';
 import TermsAndConditions from './pages/TermsAndConditions';
 import CampaignDetails from './pages/CampaignDetails';
+import MemberApplicationView from './pages/MemberApplicationView';
+import MemberIDCardView from './pages/MemberIDCardView';
 
 const ThemeInitializer = () => {
     useEffect(() => {
@@ -109,6 +111,8 @@ function App() {
                         <Route path="applications/:id" element={<ApplicationDetails />} />
                         <Route path="donate" element={<Donate />} />
                         <Route path="profile" element={<ProfileSettings />} />
+                        <Route path="member/application/:id" element={<MemberApplicationView />} />
+                        <Route path="member/id-card/:id" element={<MemberIDCardView />} />
                         <Route path="health" element={<HealthAssistance />} />
                         <Route path="legal" element={<LegalAid />} />
                         <Route path="sponsor/student/:id" element={<StudentProfile />} />

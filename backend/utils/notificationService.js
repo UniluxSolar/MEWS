@@ -63,8 +63,9 @@ const sendRegistrationNotification = async (member) => {
 
     // Link to the user's profile documents via Login Redirect
     // Users must login first to access these protected routes
-    const appFormUrl = `${frontendUrl}/login?redirect=${encodeURIComponent('/dashboard/profile?view=application')}`;
-    const idCardUrl = `${frontendUrl}/login?redirect=${encodeURIComponent('/dashboard/profile?view=idcard')}`;
+    // Link to the user's secure documents
+    const appFormUrl = `${frontendUrl}/dashboard/member/application/${_id}`;
+    const idCardUrl = `${frontendUrl}/dashboard/member/id-card/${_id}`;
 
     const messageBody = `Dear ${name} ${member.surname || ''},
 
