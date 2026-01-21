@@ -1,8 +1,4 @@
 steps:
-  # Debug: verify workspace content
-  - name: 'ubuntu'
-    args: ['bash', '-c', 'ls -laR']
-
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     dir: 'backend'
