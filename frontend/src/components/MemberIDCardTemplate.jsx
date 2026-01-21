@@ -65,7 +65,7 @@ const MemberIDCardTemplate = ({ member, idPrefix = "single-card" }) => {
                             {designation}
                         </h2>
                         <div className="text-[10px] font-bold text-white tracking-wide bg-white/10 px-2 py-0.5 rounded">
-                            ID: <span className="font-mono">{member.mewsId || member.id || member._id}</span>
+                            ID: <span className="font-mono">{member.mewsId || "PENDING"}</span>
                         </div>
                     </div>
                     <div className="absolute top-1 left-2 w-[55px] h-[65px] bg-white rounded-b-lg shadow-md p-0.5 border-t-0 border-x border-b border-gray-200 z-30">
