@@ -50,15 +50,23 @@ const loginUser = asyncHandler(async (req, res) => {
                 if (loc) locationName = loc.name;
             }
 
+            // Send Token in HttpOnly Cookie
+            res.cookie('jwt', generateToken(user._id), {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax', // Relaxed for better compatibility with redirections/initial loads
+                maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+            });
+
             res.json({
                 _id: user.id,
                 name: user.username,
                 email: user.email,
                 role: user.role,
                 assignedLocation: user.assignedLocation,
-                locationName, // Include in response
+                locationName,
                 institutionId: user.institutionId,
-                token: generateToken(user._id)
+                // token: generateToken(user._id) // Token is now in cookie, optional to send back but safer not to
             });
             return;
         }
@@ -67,6 +75,34 @@ const loginUser = asyncHandler(async (req, res) => {
     console.log("--- DEBUG FAILURE: Invalid Credentials ---");
     res.status(401);
     throw new Error('Invalid Credentials');
+});
+
+// @desc    Logout user / clear cookie
+// @route   POST /api/auth/logout
+// @access  Public
+const logoutUser = asyncHandler(async (req, res) => {
+    res.cookie('jwt', '', {
+        httpOnly: true,
+        expires: new Date(0)
+    });
+    res.status(200).json({ message: 'Logged out successfully' });
+});
+
+// @desc    Get current user profile (for auth check)
+// @route   GET /api/auth/me
+// @access  Private
+const getMe = asyncHandler(async (req, res) => {
+    const user = {
+        _id: req.user._id,
+        name: req.user.username || req.user.name, // Handle User vs Member
+        email: req.user.email,
+        role: req.user.role,
+        assignedLocation: req.user.assignedLocation,
+        institutionId: req.user.institutionId,
+        // photoUrl for frontend
+        photoUrl: req.user.photoUrl
+    };
+    res.status(200).json(user);
 });
 
 // @desc    Change user password
@@ -243,14 +279,22 @@ const verifyOtp = asyncHandler(async (req, res) => {
     // We keep otpLastSent for rate limiting context if needed, or can just leave it.
     await member.save();
 
+    // Send Token in HttpOnly Cookie
+    res.cookie('jwt', generateToken(member._id), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+
     res.json({
         _id: member.id,
         name: member.name,
         surname: member.surname,
         mobileNumber: member.mobileNumber,
-        role: 'MEMBER', // Explicitly set role for frontend handling
-        token: generateToken(member._id)
+        role: 'MEMBER',
+        // token: generateToken(member._id)
     });
 });
 
-module.exports = { loginUser, changePassword, toggleTwoFactor, requestOtp, verifyOtp };
+module.exports = { loginUser, changePassword, toggleTwoFactor, requestOtp, verifyOtp, logoutUser, getMe };

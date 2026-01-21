@@ -32,19 +32,31 @@ const bucketName = process.env.GCS_BUCKET_NAME || 'mews-uploads';
 let storageClient;
 let bucket;
 
-if (projectId && keyFilename) {
-    try {
-        storageClient = new Storage({
-            projectId: projectId,
-            keyFilename: keyFilename
-        });
+try {
+    let storageOptions = { projectId: projectId || process.env.GCS_PROJECT_ID };
+    let initialized = false;
+
+    if (process.env.GCS_CREDENTIALS) {
+        // Production: Use Env Var
+        storageOptions.credentials = JSON.parse(process.env.GCS_CREDENTIALS);
+        console.log('[UPLOAD] Using GCS_CREDENTIALS from env');
+        initialized = true;
+    } else if (keyFilename && fs.existsSync(keyFilename)) {
+        // Development: Use Key File
+        storageOptions.keyFilename = keyFilename;
+        console.log(`[UPLOAD] Using key file: ${keyFilename}`);
+        initialized = true;
+    }
+
+    if (initialized) {
+        storageClient = new Storage(storageOptions);
         bucket = storageClient.bucket(bucketName);
         console.log(`[UPLOAD] Initialized GCS Bucket: ${bucketName}`);
-    } catch (e) {
-        console.error('[UPLOAD] Failed to initialize GCS:', e.message);
+    } else {
+        console.warn('[UPLOAD] GCS Credentials missing (No GCS_CREDENTIALS or key file). Falling back to local storage.');
     }
-} else {
-    // console.warn('[UPLOAD] GCS Credentials missing. Falling back to local storage (if not forced).');
+} catch (e) {
+    console.error('[UPLOAD] Failed to initialize GCS:', e.message);
 }
 
 // Custom Multer Storage Engine for GCS

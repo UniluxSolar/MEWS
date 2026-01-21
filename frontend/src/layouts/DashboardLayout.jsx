@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import axios from '../api';
 import {
     FaThLarge, FaFileAlt, FaUserCheck, FaBriefcase, FaHeart, FaNotesMedical,
     FaBalanceScale, FaHandHoldingUsd, FaHeadset, FaQuestionCircle, FaBars,
@@ -24,9 +25,16 @@ const DashboardLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const handleLogout = () => {
-        localStorage.removeItem('adminInfo');
-        navigate('/login');
+    const handleLogout = async () => {
+        try {
+            await axios.post('/auth/logout');
+            localStorage.removeItem('adminInfo');
+            navigate('/login');
+        } catch (error) {
+            console.error('Logout failed:', error);
+            localStorage.removeItem('adminInfo');
+            navigate('/login');
+        }
     };
 
     const isActive = (path) => location.pathname.includes(path);

@@ -4,30 +4,45 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const path = require('path');
 const fs = require('fs');
+const cookieParser = require('cookie-parser');
 
 // Initialize Express App
 const app = express();
 
+// Trust Proxy (Required for Cloud Run / Heroku to correctly identify HTTPS)
+app.set('trust proxy', 1);
+
 // Connect to Database
-connectDB();
+// Connect to Database
+// Non-blocking connection to allow server to bind port even if DB fails initially (Cloud Run Health Check Strategy)
+connectDB().catch(err => console.error('[DB] Connection Failure:', err.message));
 
 // Ensure 'uploads' directory exists (Critical for GCP/Containers)
 const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
-    console.log(`[Init] Created uploads directory at ${uploadsDir}`);
+try {
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir);
+        // console.log(`[Init] Created uploads directory at ${uploadsDir}`);
+    }
+} catch (err) {
+    console.warn(`[Init] Warning: Could not create uploads directory: ${err.message}`);
 }
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: true, // Allow requests from any origin that matches (useful for dev/staging)
+    credentials: true // Allow cookies to be sent
+}));
 app.use(express.json({ limit: '50mb' })); // Body parser
 app.use(express.urlencoded({ extended: true, limit: '50mb' })); // Form data parser
+app.use(cookieParser()); // Cookie parser
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Enabled for local files with absolute path
 
 // Basic Route
-app.get('/', (req, res) => {
-    res.send('MEWS API is running...');
-});
+// Basic Route (handled in production block below)
+// app.get('/', (req, res) => {
+//     res.send('MEWS API is running...');
+// });
 
 // Define Routes
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -46,6 +61,7 @@ const axios = require('axios');
 const { Storage } = require('@google-cloud/storage');
 
 // Initialize GCS for Proxy with Auto-detection
+// Initialize GCS for Proxy with Auto-detection
 let keyFilename = process.env.GCS_KEYFILE_PATH;
 const localKeyPath = path.join(__dirname, 'gcp-key.json');
 const altLocalKeyPath = path.join(__dirname, 'gcs-key.json');
@@ -55,10 +71,22 @@ if (!keyFilename) {
     else if (fs.existsSync(altLocalKeyPath)) keyFilename = altLocalKeyPath;
 }
 
-const storage = new Storage({
-    projectId: process.env.GCS_PROJECT_ID,
-    keyFilename: keyFilename
-});
+// Storage Configuration
+let storageOptions = { projectId: process.env.GCS_PROJECT_ID };
+
+if (process.env.GCS_CREDENTIALS) {
+    try {
+        storageOptions.credentials = JSON.parse(process.env.GCS_CREDENTIALS);
+        // console.log('[Proxy] Using GCS_CREDENTIALS from env');
+    } catch (e) {
+        console.error('[Proxy] Failed to parse GCS_CREDENTIALS:', e);
+    }
+} else if (keyFilename && fs.existsSync(keyFilename)) {
+    storageOptions.keyFilename = keyFilename;
+    // console.log(`[Proxy] Using key file: ${keyFilename}`);
+}
+
+const storage = new Storage(storageOptions);
 const bucketName = process.env.GCS_BUCKET_NAME || 'mews-uploads';
 const bucket = storage.bucket(bucketName);
 
@@ -133,8 +161,104 @@ app.get('/api/proxy-image', async (req, res) => {
 const { errorHandler } = require('./middleware/errorMiddleware');
 app.use(errorHandler);
 
+// Serve Frontend in Production
+if (process.env.NODE_ENV === 'production') {
+    // Debug Endpoint (Temporary)
+    app.get('/api/debug-files', (req, res) => {
+        const diagnostics = {
+            currentDir: __dirname,
+            frontendPath: path.resolve(__dirname, '../frontend'),
+            distPath: path.resolve(__dirname, '../frontend/dist'),
+            uploadsPath: path.resolve(__dirname, 'uploads'),
+            files: {},
+            error: null
+        };
+
+        try {
+            if (fs.existsSync(diagnostics.frontendPath)) {
+                diagnostics.files.frontend = fs.readdirSync(diagnostics.frontendPath);
+            } else {
+                diagnostics.files.frontend = 'DIRECTORY_NOT_FOUND';
+            }
+
+            if (fs.existsSync(diagnostics.distPath)) {
+                diagnostics.files.dist = fs.readdirSync(diagnostics.distPath);
+            } else {
+                diagnostics.files.dist = 'DIRECTORY_NOT_FOUND';
+            }
+
+            if (fs.existsSync(diagnostics.uploadsPath)) {
+                diagnostics.files.uploads = fs.readdirSync(diagnostics.uploadsPath);
+            }
+
+            res.json(diagnostics);
+        } catch (e) {
+            diagnostics.error = e.message;
+            res.status(500).json(diagnostics);
+        }
+    });
+
+    // Set static folder
+    const frontendDist = path.join(__dirname, '../frontend/dist');
+    app.use(express.static(frontendDist));
+
+    // Handle React routing, return all requests to React app
+    app.get('*', (req, res) => {
+        // Check if the request is for an API endpoint
+        if (req.path.startsWith('/api')) {
+            return res.status(404).json({ message: 'API endpoint not found' });
+        }
+
+        const indexFile = path.resolve(frontendDist, 'index.html');
+
+        if (fs.existsSync(indexFile)) {
+            res.sendFile(indexFile);
+        } else {
+            console.error('[Static] index.html not found:', indexFile);
+
+            // Diagnostic logging for debugging
+            let debugInfo = `Application Error: Frontend build missing.\nexpected: ${indexFile}\n`;
+
+            try {
+                const frontendPath = path.resolve(__dirname, '../frontend');
+                debugInfo += `\nListing ${frontendPath}:\n` + (fs.existsSync(frontendPath) ? fs.readdirSync(frontendPath).join(', ') : 'Directory not found');
+
+                const distPath = path.resolve(__dirname, '../frontend/dist');
+                debugInfo += `\nListing ${distPath}:\n` + (fs.existsSync(distPath) ? fs.readdirSync(distPath).join(', ') : 'Directory not found');
+
+                debugInfo += `\n\nCurrent __dirname: ${__dirname}`;
+            } catch (e) {
+                debugInfo += `\nError getting diagnostics: ${e.message}`;
+            }
+
+            res.status(500).set('Content-Type', 'text/plain').send(debugInfo);
+        }
+    });
+} else {
+    // Basic Route for Dev
+    app.get('/', (req, res) => {
+        res.send('MEWS API is running...');
+    });
+}
+
 const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+const startServer = async () => {
+    // Log Environment Checks
+    console.log('--- Server Startup Checks ---');
+    console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+    console.log(`PORT: ${PORT}`);
+    console.log(`MONGO_URI Provided: ${!!process.env.MONGO_URI}`);
+    console.log(`GCS_CREDENTIALS Provided: ${!!process.env.GCS_CREDENTIALS}`);
+    console.log('-----------------------------');
+
+    try {
+        await app.listen(PORT, '0.0.0.0');
+        console.log(`Server running on port ${PORT}`);
+    } catch (err) {
+        console.error('Failed to bind to port:', err);
+        process.exit(1);
+    }
+};
+
+startServer();

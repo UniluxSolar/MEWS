@@ -18,19 +18,27 @@ let bucket;
 const bucketName = process.env.GCS_BUCKET_NAME || 'mews-uploads';
 
 // Graceful Init
-if (keyFilename && fs.existsSync(keyFilename)) {
-    try {
-        storage = new Storage({
-            projectId: process.env.GCS_PROJECT_ID,
-            keyFilename: keyFilename,
-        });
-        bucket = storage.bucket(bucketName);
+try {
+    let storageOptions = { projectId: process.env.GCS_PROJECT_ID };
+
+    if (process.env.GCS_CREDENTIALS) {
+        // Production: Use Env Var with JSON content
+        const credentials = JSON.parse(process.env.GCS_CREDENTIALS);
+        storageOptions.credentials = credentials;
+        console.log(`[GCS] Initialized with GCS_CREDENTIALS env var`);
+    } else if (keyFilename && fs.existsSync(keyFilename)) {
+        // Development: Use Key File
+        storageOptions.keyFilename = keyFilename;
         console.log(`[GCS] Initialized with key: ${keyFilename}`);
-    } catch (e) {
-        console.error("[GCS] Failed to initialize storage:", e.message);
+    } else {
+        throw new Error("No GCS credentials found (GCS_CREDENTIALS or key file)");
     }
-} else {
-    console.warn(`[GCS] Key file not found at ${keyFilename || 'default locations'}. Image signing disabled. URLs will be returned as-is.`);
+
+    storage = new Storage(storageOptions);
+    bucket = storage.bucket(bucketName);
+} catch (e) {
+    console.warn(`[GCS] Initialization Warning: ${e.message}. Image signing disabled.`);
+    // Leave bucket undefined so we fail safely later
 }
 
 /**

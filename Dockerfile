@@ -3,6 +3,8 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
+
+
 # Copy root package files
 COPY package*.json ./
 
@@ -29,6 +31,7 @@ RUN echo "Checking frontend build output:" && ls -la frontend/dist
 ENV PORT=8080
 EXPOSE 8080
 
+# Start Application
 # Start Application
 ENV NODE_ENV=production
 CMD ["node", "backend/server.js"]

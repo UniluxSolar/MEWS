@@ -71,7 +71,8 @@ const Campaigns = () => {
             supporters: "142",
             daysLeft: "15",
             image: AnushaImg,
-            colorBadge: "text-blue-600"
+            colorBadge: "text-blue-600",
+            description: "Priya is a brilliant student who has secured admission in a top engineering college but struggles to pay the tuition fees. Help her achieve her dreams."
         },
         {
             id: 2,
@@ -82,7 +83,8 @@ const Campaigns = () => {
             supporters: "890",
             daysLeft: "3",
             image: SrinivasImg,
-            colorBadge: "text-red-500"
+            colorBadge: "text-red-500",
+            description: "A 45-year-old father of three needs urgent heart surgery. The family has exhausted their savings and needs community support to save his life."
         },
         {
             id: 3,
@@ -93,7 +95,8 @@ const Campaigns = () => {
             supporters: "465",
             daysLeft: "12",
             image: PadmaImg,
-            colorBadge: "text-orange-500"
+            colorBadge: "text-orange-500",
+            description: "Recent floods have devastated 50 families in our neighboring village. We are collecting funds for food, shelter, and basic necessities."
         }
     ];
 
