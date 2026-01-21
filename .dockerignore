@@ -14,3 +14,5 @@ logs
 
 !backend/.env
 !backend/gcp-key.json
+!backend/package.json
+!backend/package-lock.json
