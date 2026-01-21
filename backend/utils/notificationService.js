@@ -12,10 +12,15 @@ let frontendUrl = process.env.FRONTEND_URL;
 if (!frontendUrl) {
     if (process.env.NODE_ENV === 'production') {
         console.warn('[Notify] WARN: FRONTEND_URL is not set in production environment variables.');
-        frontendUrl = 'https://YOUR_PRODUCTION_DOMAIN.com'; // Placeholder
+        frontendUrl = 'https://mews-145033922870.us-central1.run.app'; // Known Production URL
     } else {
         frontendUrl = 'http://localhost:5173';
     }
+}
+
+// Remove trailing slash if present to avoid double slashes
+if (frontendUrl.endsWith('/')) {
+    frontendUrl = frontendUrl.slice(0, -1);
 }
 
 // Attempt to load from twilio-key.json if env vars missing (Backwards compatibility)
