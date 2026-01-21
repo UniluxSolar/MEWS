@@ -20,6 +20,11 @@ const InstitutionSchema = new mongoose.Schema({
 
     institutionPhotos: [String], // Array of URLs or paths
 
+    // OTP Fields for Login
+    otpHash: { type: String },
+    otpExpires: { type: Date },
+    otpLastSent: { type: Date },
+
     // Verification
     verificationStatus: {
         type: String,

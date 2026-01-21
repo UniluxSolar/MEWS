@@ -62,6 +62,48 @@ const CommunitySupportHub = () => {
             {/* Background Decorative Elements - Removed for cleaner look */}
             {/* <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">...</div> */}
 
+            {/* Business Advertisement Scroller */}
+            <section className="w-full bg-[#f8fafc] py-12 border-y border-gray-200 overflow-hidden">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 text-center">
+                    <span className="inline-block px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold uppercase tracking-wide mb-2">Support Local</span>
+                    <h2 className="text-2xl font-bold text-[#1e2a4a]">Community Market Place</h2>
+                </div>
+
+                <div className="relative w-full overflow-hidden group">
+                    {/* Gradient Masks */}
+                    <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#f8fafc] to-transparent z-10"></div>
+                    <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#f8fafc] to-transparent z-10"></div>
+
+                    <div className="flex gap-6 animate-marquee hover:[animation-play-state:paused] w-max px-4">
+                        {/* Render twice for infinite scroll effect */}
+                        {[...Array(2)].map((_, i) => (
+                            <React.Fragment key={i}>
+                                {[
+                                    { name: "Ravi General Stores", type: "Retail", offer: "10% Off for Students", color: "bg-blue-600" },
+                                    { name: "Mala Tech Solutions", type: "Services", offer: "Websites & Branding", color: "bg-purple-600" },
+                                    { name: "Jyothi Textiles", type: "Fashion", offer: "Saree & Dress Material", color: "bg-pink-600" },
+                                    { name: "Ambedkar Constructions", type: "Real Estate", offer: "Affordable Housing", color: "bg-amber-600" },
+                                    { name: "Community Dairy Farm", type: "Agriculture", offer: "Fresh Milk Daily", color: "bg-green-600" },
+                                    { name: "New Era Coaching", type: "Education", offer: "Entrance Exam Prep", color: "bg-indigo-600" },
+                                    { name: "Suresh Auto Works", type: "Automotive", offer: "Complete Car Care", color: "bg-red-600" }
+                                ].map((biz, idx) => (
+                                    <div key={`${i}-${idx}`} className="flex-shrink-0 w-72 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group/card cursor-pointer">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className={`w-10 h-10 rounded-lg ${biz.color} text-white flex items-center justify-center font-bold text-lg`}>
+                                                {biz.name.charAt(0)}
+                                            </div>
+                                            <span className="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] font-bold uppercase tracking-wider rounded border border-gray-100">{biz.type}</span>
+                                        </div>
+                                        <h4 className="font-bold text-[#1e2a4a] text-lg mb-1 group-hover/card:text-blue-600 transition">{biz.name}</h4>
+                                        <p className="text-sm text-gray-500">{biz.offer}</p>
+                                    </div>
+                                ))}
+                            </React.Fragment>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
             {/* 1. How Community Funding Works */}
             <section className="text-center max-w-7xl mx-auto relative z-10">
                 <div className="mb-16">
@@ -148,70 +190,14 @@ const CommunitySupportHub = () => {
                 </div>
             </section>
 
-            {/* 4. Donation Ticker */}
-            <section className="w-full">
-                <div className="bg-white border-y border-gray-100 py-6 px-8 shadow-sm flex items-center gap-8">
-                    <span className="bg-red-50 text-red-600 px-5 py-2 rounded-full text-base font-extrabold tracking-wide uppercase shrink-0 shadow-sm border border-red-100">Live Updates</span>
-                    <div className="flex-1 overflow-hidden relative h-10">
-                        <div className="animate-marquee-fast absolute whitespace-nowrap flex gap-16 text-xl font-medium text-gray-700 items-center h-full">
-                            <span className="flex items-center gap-3"><FaHeart className="text-red-500 text-lg" /> Anonymous gave ₹500 to Ravi's surgery</span>
-                            <span className="flex items-center gap-3"><div className="w-2 h-2 bg-gray-300 rounded-full"></div></span>
-                            <span className="flex items-center gap-3"><FaHeart className="text-blue-500 text-lg" /> Priya M. donated ₹200 for flood relief</span>
-                            <span className="flex items-center gap-3"><div className="w-2 h-2 bg-gray-300 rounded-full"></div></span>
-                            <span className="flex items-center gap-3"><FaHeart className="text-green-500 text-lg" /> Ram Singh donated ₹1000 to Education Fund</span>
-                            <span className="flex items-center gap-3"><div className="w-2 h-2 bg-gray-300 rounded-full"></div></span>
-                            <span className="flex items-center gap-3"><FaHeart className="text-purple-500 text-lg" /> New Campaign "Clean Water for School" verified</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
+
 
             {/* 5. Success Stories Highlights */}
 
 
 
 
-            {/* Business Advertisement Scroller */}
-            <section className="w-full bg-[#f8fafc] py-12 border-y border-gray-200 overflow-hidden">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 text-center">
-                    <span className="inline-block px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold uppercase tracking-wide mb-2">Support Local</span>
-                    <h2 className="text-2xl font-bold text-[#1e2a4a]">Community Market Place</h2>
-                </div>
 
-                <div className="relative w-full overflow-hidden group">
-                    {/* Gradient Masks */}
-                    <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#f8fafc] to-transparent z-10"></div>
-                    <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#f8fafc] to-transparent z-10"></div>
-
-                    <div className="flex gap-6 animate-marquee hover:[animation-play-state:paused] w-max px-4">
-                        {/* Render twice for infinite scroll effect */}
-                        {[...Array(2)].map((_, i) => (
-                            <React.Fragment key={i}>
-                                {[
-                                    { name: "Ravi General Stores", type: "Retail", offer: "10% Off for Students", color: "bg-blue-600" },
-                                    { name: "Mala Tech Solutions", type: "Services", offer: "Websites & Branding", color: "bg-purple-600" },
-                                    { name: "Jyothi Textiles", type: "Fashion", offer: "Saree & Dress Material", color: "bg-pink-600" },
-                                    { name: "Ambedkar Constructions", type: "Real Estate", offer: "Affordable Housing", color: "bg-amber-600" },
-                                    { name: "Community Dairy Farm", type: "Agriculture", offer: "Fresh Milk Daily", color: "bg-green-600" },
-                                    { name: "New Era Coaching", type: "Education", offer: "Entrance Exam Prep", color: "bg-indigo-600" },
-                                    { name: "Suresh Auto Works", type: "Automotive", offer: "Complete Car Care", color: "bg-red-600" }
-                                ].map((biz, idx) => (
-                                    <div key={`${i}-${idx}`} className="flex-shrink-0 w-72 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group/card cursor-pointer">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className={`w-10 h-10 rounded-lg ${biz.color} text-white flex items-center justify-center font-bold text-lg`}>
-                                                {biz.name.charAt(0)}
-                                            </div>
-                                            <span className="px-2 py-1 bg-gray-50 text-gray-500 text-[10px] font-bold uppercase tracking-wider rounded border border-gray-100">{biz.type}</span>
-                                        </div>
-                                        <h4 className="font-bold text-[#1e2a4a] text-lg mb-1 group-hover/card:text-blue-600 transition">{biz.name}</h4>
-                                        <p className="text-sm text-gray-500">{biz.offer}</p>
-                                    </div>
-                                ))}
-                            </React.Fragment>
-                        ))}
-                    </div>
-                </div>
-            </section>
 
             {/* 7. Categories Pucks */}
             <section className="text-center max-w-5xl mx-auto">
@@ -292,10 +278,13 @@ const CommunitySupportHub = () => {
     );
 };
 
+import LiveUpdates from '../components/LiveUpdates';
+
 const UserLandingPage = () => {
     return (
         <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-secondary selection:text-white">
             <ConnectNavbar />
+            <LiveUpdates />
             <main className="space-y-0">
                 <ConnectHero />
                 <ImpactDashboard />

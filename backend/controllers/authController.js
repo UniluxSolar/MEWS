@@ -149,28 +149,48 @@ const generateToken = (id) => {
     });
 };
 
-// @desc    Request OTP for Member Login
+// @desc    Request OTP for Member/Institution Login
 // @route   POST /api/auth/request-otp
 // @access  Public
 const requestOtp = asyncHandler(async (req, res) => {
-    const { mobile } = req.body;
+    const { mobile, userType } = req.body;
 
     if (!mobile) {
         res.status(400);
         throw new Error('Mobile number is required');
     }
 
-    // Find member by mobile
-    const member = await Member.findOne({ mobileNumber: mobile });
+    let user = null;
+    let foundUserType = '';
 
-    if (!member) {
-        res.status(404);
-        throw new Error('Member not found with this mobile number');
+    // STRICT CHECKING BASED ON userType
+    if (userType === 'MEMBER') {
+        user = await Member.findOne({ mobileNumber: mobile });
+        foundUserType = 'MEMBER';
+    } else if (userType === 'INSTITUTION') {
+        const Institution = require('../models/Institution');
+        user = await Institution.findOne({ mobileNumber: mobile });
+        foundUserType = 'INSTITUTION';
+    } else {
+        // Fallback: Check Member first, then Institution (Legacy behavior)
+        user = await Member.findOne({ mobileNumber: mobile });
+        foundUserType = 'MEMBER';
+
+        if (!user) {
+            const Institution = require('../models/Institution');
+            user = await Institution.findOne({ mobileNumber: mobile });
+            foundUserType = 'INSTITUTION';
+        }
     }
 
-    // 1. Rate Limiting Check
-    if (member.otpLastSent) {
-        const timeSinceLastSent = Date.now() - new Date(member.otpLastSent).getTime();
+    if (!user) {
+        res.status(404);
+        throw new Error(`No ${userType ? (userType === 'MEMBER' ? 'Member' : 'Institution') : 'User'} found with this mobile number`);
+    }
+
+    // 3. Rate Limiting Check
+    if (user.otpLastSent) {
+        const timeSinceLastSent = Date.now() - new Date(user.otpLastSent).getTime();
         const waitTime = 60 * 1000; // 60 seconds
         if (timeSinceLastSent < waitTime) {
             res.status(429); // Too Many Requests
@@ -178,94 +198,109 @@ const requestOtp = asyncHandler(async (req, res) => {
         }
     }
 
-    // 2. Generate 6-digit OTP
+    // 4. Generate 6-digit OTP
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
-    // 3. Hash OTP
+    // 5. Hash OTP
     const salt = await bcrypt.genSalt(10);
     const otpHash = await bcrypt.hash(otp, salt);
 
-    // 4. Update Member with OTP Hash, Expiry (5 mins), and Last Sent
-    member.otpHash = otpHash;
-    member.otpExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
-    member.otpLastSent = Date.now();
+    // 6. Update User with OTP Hash, Expiry (5 mins), and Last Sent
+    user.otpHash = otpHash;
+    user.otpExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
+    user.otpLastSent = Date.now();
 
     // Clear any previous plain text OTP if it exists (migration cleanup)
-    member.otp = undefined;
+    if (user.otp) user.otp = undefined;
 
-    await member.save();
+    await user.save();
 
-    // 5. Send SMS via Twilio
+    // 7. Send SMS via Twilio
     // Format Mobile Number for Twilio (Ensure +91 for India if missing)
     let formattedMobile = mobile.trim();
     if (!formattedMobile.startsWith('+')) {
         formattedMobile = `+91${formattedMobile}`;
     }
 
-    const smsResult = await sendSms(formattedMobile, `Your MEWS Login OTP is: ${otp}. Valid for 5 minutes.`);
+    const smsResult = await sendSms(formattedMobile, `Your MEWS ${userType === 'INSTITUTION' ? 'Institution' : 'Member'} Login OTP is: ${otp}. Valid for 5 minutes.`);
 
-    console.log(`[OTP] Generated for ${mobile}: ${otp} | SMS Result:`, smsResult);
+    console.log(`[OTP] Generated for ${mobile} (${userType}): ${otp} | SMS Result:`, smsResult);
 
     if (smsResult.success) {
         res.json({
             message: 'OTP sent successfully to your mobile number',
-            mobile
+            mobile,
+            userType // Optional: let frontend know what type was found
         });
     } else {
         // Fallback for Trial Accounts / Dev Mode
-        // If the error relates to unverified numbers (Code 21608) or general send failures in dev, 
-        // we allow the user to proceed by logging the OTP.
-
         console.warn('--- TWILIO FALLBACK ---');
-        console.warn('SMS failed (likely Trial Account). allowing Login via Console OTP.');
-        console.warn(`OTP for ${mobile} is: ${otp}`);
+        console.warn(`SMS failed. Use OTP ${otp} (View Console)`);
         console.warn('-----------------------');
 
-        // Return success with a clear message
-        // Return success with a clear message (allowing fallback login)
-        // CRITICAL UPDATE: Expose the actual error for debugging GCP issues
         const errorMsg = smsResult.error || 'Unknown Twilio Error';
-        console.warn(`[OTP Fallback] SMS Failed: ${errorMsg}`);
         res.json({
-            message: `SMS Failed (${errorMsg}). Use OTP ${otp} (View Console)`, // Show actual error
+            message: `SMS Failed (${errorMsg}). Use OTP ${otp} (View Console)`,
             mobile,
             otp,
-            error: errorMsg // Detailed error field
+            userType,
+            error: errorMsg
         });
     }
 });
 
-// @desc    Verify OTP and Login Member
+// @desc    Verify OTP and Login Member/Institution
 // @route   POST /api/auth/verify-otp
 // @access  Public
 const verifyOtp = asyncHandler(async (req, res) => {
-    const { mobile, otp } = req.body;
+    const { mobile, otp, userType } = req.body;
 
     if (!mobile || !otp) {
         res.status(400);
         throw new Error('Mobile and OTP are required');
     }
 
-    const member = await Member.findOne({ mobileNumber: mobile });
+    let user = null;
+    let foundUserType = '';
 
-    if (!member) {
+    // STRICT CHECKING BASED ON userType
+    if (userType === 'MEMBER') {
+        user = await Member.findOne({ mobileNumber: mobile });
+        foundUserType = 'MEMBER';
+    } else if (userType === 'INSTITUTION') {
+        const Institution = require('../models/Institution');
+        user = await Institution.findOne({ mobileNumber: mobile });
+        foundUserType = 'INSTITUTION';
+    } else {
+        // Fallback
+        user = await Member.findOne({ mobileNumber: mobile });
+        foundUserType = 'MEMBER';
+
+        if (!user) {
+            const Institution = require('../models/Institution');
+            user = await Institution.findOne({ mobileNumber: mobile });
+            foundUserType = 'INSTITUTION';
+        }
+    }
+
+    if (!user) {
         res.status(404);
-        throw new Error('Member not found');
+        throw new Error('User not found');
     }
 
     // Check if OTP exists and is not expired
-    if (!member.otpHash || !member.otpExpires) {
+    if (!user.otpHash || !user.otpExpires) {
         res.status(400);
         throw new Error('No OTP requested or access expired. Please request a new OTP.');
     }
 
-    if (member.otpExpires < Date.now()) {
+    if (user.otpExpires < Date.now()) {
         res.status(400);
         throw new Error('OTP has expired. Please request a new one.');
     }
 
     // Verify Hash
-    const isMatch = await bcrypt.compare(otp, member.otpHash);
+    const isMatch = await bcrypt.compare(otp, user.otpHash);
 
     if (!isMatch) {
         res.status(400);
@@ -273,14 +308,18 @@ const verifyOtp = asyncHandler(async (req, res) => {
     }
 
     // Verification Successful
-    member.isPhoneVerified = true;
-    member.otpHash = undefined;
-    member.otpExpires = undefined;
-    // We keep otpLastSent for rate limiting context if needed, or can just leave it.
-    await member.save();
+    // user.isPhoneVerified = true; // Institution might not have this field or might need it added. 
+    // Ideally we should double check schema but typically good to set if exists.
+    if (userType === 'MEMBER' || user.isPhoneVerified !== undefined) {
+        user.isPhoneVerified = true;
+    }
+
+    user.otpHash = undefined;
+    user.otpExpires = undefined;
+    await user.save();
 
     // Send Token in HttpOnly Cookie
-    res.cookie('jwt', generateToken(member._id), {
+    res.cookie('jwt', generateToken(user._id), {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -288,12 +327,12 @@ const verifyOtp = asyncHandler(async (req, res) => {
     });
 
     res.json({
-        _id: member.id,
-        name: member.name,
-        surname: member.surname,
-        mobileNumber: member.mobileNumber,
-        role: 'MEMBER',
-        // token: generateToken(member._id)
+        _id: user.id,
+        name: user.name, // Institution also has 'name'
+        surname: user.surname, // Only Member has surname, undefined for Institution
+        mobileNumber: user.mobileNumber,
+        role: userType, // 'MEMBER' or 'INSTITUTION'
+        institutionType: user.type // Optional: if Institution, send type
     });
 });
 

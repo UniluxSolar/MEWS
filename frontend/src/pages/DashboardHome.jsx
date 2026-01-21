@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import API from '../api';
 import {
     FaCalendarAlt, FaChevronRight, FaGraduationCap, FaHeartbeat,
-    FaBalanceScale, FaHandHoldingHeart, FaBullhorn, FaCheckCircle,
+    FaBalanceScale, FaHandHoldingHeart, FaCheckCircle,
     FaClock, FaMapMarkerAlt, FaUserCircle, FaExclamationCircle, FaHeart
 } from 'react-icons/fa';
 import {
@@ -205,11 +205,6 @@ const DashboardHome = () => {
                     <h1 className="text-2xl md:text-3xl font-bold text-[#1e2a4a]">Welcome back, {userName}!</h1>
                     <p className="text-gray-500 text-sm mt-1">Last login: Today at {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Link to="/dashboard/profile" className="bg-[#1e2a4a] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#2a3b66] transition shadow-sm">
-                        Complete Profile
-                    </Link>
-                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -383,25 +378,7 @@ const DashboardHome = () => {
                 </div>
             </div>
 
-            {/* Latest Announcements */}
-            <div className="bg-[#1e2a4a] rounded-xl p-8 text-white shadow-lg relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
 
-                <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-4 text-[#f59e0b]">
-                        <FaBullhorn />
-                        <span className="text-sm font-bold uppercase tracking-widest">Latest Announcement</span>
-                    </div>
-                    <h3 className="text-2xl font-bold mb-3">New Scholarship Program Launch</h3>
-                    <p className="text-gray-300 max-w-3xl mb-6 leading-relaxed">
-                        We're excited to announce our new Merit-based Scholarship Program for engineering students.
-                        Applications open next month with enhanced benefits.
-                    </p>
-                    <button className="text-sm font-bold text-[#f59e0b] hover:text-white transition flex items-center gap-2">
-                        Read More <FaChevronRight size={10} />
-                    </button>
-                </div>
-            </div>
         </div>
     );
 };

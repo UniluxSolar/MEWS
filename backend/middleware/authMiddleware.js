@@ -18,20 +18,35 @@ const protect = async (req, res, next) => {
             // Verify token
             const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
 
-            // Get user from the token
-            req.user = await User.findById(decoded.id).select('-passwordHash');
+            // 1. Check User (Admin) Collection
+            let user = await User.findById(decoded.id).select('-passwordHash');
 
-            if (!req.user) {
-                // If not found in User, check Member (for Member Login)
+            // 2. If not found in User, check Member (Member Login)
+            if (!user) {
                 const Member = require('../models/Member');
-                req.user = await Member.findById(decoded.id);
-                if (req.user && !req.user.role) req.user.role = 'MEMBER';
+                user = await Member.findById(decoded.id);
+                if (user) {
+                    user.role = 'MEMBER'; // Ensure role is set
+                    // Mongoose document to object hack if needed, but usually redundant if we just assign property
+                    // If strict schema, we might need to use .toObject() or just rely on virtuals if defined.
+                    // For now, attaching to the mongoose document instance usually works in memory.
+                }
             }
 
-            if (!req.user) {
+            // 3. If not found in Member, check Institution (Institution Login)
+            if (!user) {
+                const Institution = require('../models/Institution');
+                user = await Institution.findById(decoded.id);
+                if (user) {
+                    user.role = 'INSTITUTION'; // Ensure role is set
+                }
+            }
+
+            if (!user) {
                 return res.status(401).json({ message: 'Not authorized, user not found' });
             }
 
+            req.user = user;
             next();
         } catch (error) {
             console.error(error);

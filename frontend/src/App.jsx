@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import UserLandingPage from './pages/UserLandingPage';
 import LoginPage from './pages/LoginPage';
+import InstitutionLoginPage from './pages/InstitutionLoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminManagement from './pages/AdminManagement';
@@ -66,10 +67,11 @@ function App() {
                 <Route path="/campaigns/:id" element={<CampaignDetails />} />
                 <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/institution/login" element={<InstitutionLoginPage />} />
                 <Route path="/admin/login" element={<AdminLoginPage />} />
 
                 {/* Protected Admin Routes */}
-                <Route element={<ProtectedRoute />}>
+                <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'VILLAGE_ADMIN', 'MANDAL_ADMIN', 'DISTRICT_ADMIN', 'STATE_ADMIN']} />}>
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
                     <Route path="/admin/management" element={<AdminManagement />} />
                     <Route path="/admin/members" element={<MemberManagement />} />
@@ -94,8 +96,8 @@ function App() {
                 <Route path="/benefits" element={<div className="p-10 text-center">Benefits Page Coming Soon</div>} />
                 <Route path="/donate" element={<div className="p-10 text-center">Donate Page Coming Soon</div>} />
 
-                {/* Dashboard Area - Protected */}
-                <Route path="/dashboard" element={<ProtectedRoute />}>
+                {/* Dashboard Area - Protected (Member & Institution) */}
+                <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['MEMBER', 'INSTITUTION']} />}>
                     <Route element={<DashboardLayout />}>
                         <Route index element={<DashboardHome />} />
                         <Route path="applications" element={<MyApplications />} />

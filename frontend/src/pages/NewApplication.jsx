@@ -181,6 +181,16 @@ const NewApplication = () => {
     ];
 
     const handleNext = () => {
+        if (currentStep === 1 && !selectedType) {
+            alert("Please select a type of assistance.");
+            return;
+        }
+        if (currentStep === 2) {
+            if (!validateForm()) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
+        }
         if (currentStep < 4) setCurrentStep(currentStep + 1);
     };
 

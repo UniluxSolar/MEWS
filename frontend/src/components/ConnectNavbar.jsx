@@ -22,17 +22,15 @@ const ConnectNavbar = () => {
 
                     {/* Desktop Links */}
                     <div className="hidden md:flex items-center gap-4 text-sm font-medium">
-                        <Link to="/" className="text-gray-300 hover:text-white transition">Home</Link>
-
                         <div className="flex items-center gap-2 ml-4">
                             <Link to="/login" className="px-3 py-1.5 border border-white rounded font-bold hover:bg-white hover:text-[#1e2a4a] transition text-white">
                                 Member Login
                             </Link>
-                            <Link to="/register" className="px-3 py-1.5 bg-[#f59e0b] text-white rounded font-bold hover:bg-amber-600 transition shadow-sm">
-                                Institution Login
-                            </Link>
-                            <Link to="/admin/login" className="px-3 py-1.5 bg-gray-700 text-white rounded font-bold hover:bg-gray-600 transition shadow-sm">
+                            <Link to="/admin/login" className="px-3 py-1.5 border border-white rounded font-bold hover:bg-white hover:text-[#1e2a4a] transition text-white">
                                 Admin Login
+                            </Link>
+                            <Link to="/institution/login" className="px-3 py-1.5 border border-white rounded font-bold hover:bg-white hover:text-[#1e2a4a] transition text-white">
+                                Institution Login
                             </Link>
                         </div>
                     </div>

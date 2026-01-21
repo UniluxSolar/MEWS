@@ -327,13 +327,13 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
                 ageGroup: {
                     $switch: {
                         branches: [
-                            { case: { $lte: [{ $toInt: "$age" }, 10] }, then: "1-10" },
-                            { case: { $lte: [{ $toInt: "$age" }, 20] }, then: "11-20" },
-                            { case: { $lte: [{ $toInt: "$age" }, 30] }, then: "21-30" },
-                            { case: { $lte: [{ $toInt: "$age" }, 40] }, then: "31-40" },
-                            { case: { $lte: [{ $toInt: "$age" }, 50] }, then: "41-50" },
+                            { case: { $lte: [{ $toInt: "$age" }, 14] }, then: "Children" },
+                            { case: { $lte: [{ $toInt: "$age" }, 24] }, then: "Youth" },
+                            { case: { $lte: [{ $toInt: "$age" }, 44] }, then: "Young Adults" },
+                            { case: { $lte: [{ $toInt: "$age" }, 59] }, then: "Middle Age" },
+                            { case: { $lte: [{ $toInt: "$age" }, 74] }, then: "Elderly" },
                         ],
-                        default: "50+"
+                        default: "Senior"
                     }
                 }
             }

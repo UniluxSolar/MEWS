@@ -78,13 +78,21 @@ const PersonalInfoTab = ({ formData, handleChange }) => (
         </div>
 
         <div className="flex flex-wrap gap-6">
-            <InputField label="Email Address" name="email" value={formData.email} onChange={handleChange} />
+            <InputField label="Email Address" name="email" value={formData.email} onChange={handleChange} disabled={true} />
             <InputField label="Mobile Number" name="mobileNumber" value={formData.mobileNumber} onChange={handleChange} verified={true} disabled={true} />
         </div>
 
         <div className="flex flex-wrap gap-6">
-            <InputField label="Date of Birth" name="dob" value={formData.dob} onChange={handleChange} type="date" />
-            <SelectField label="Gender" name="gender" options={['Male', 'Female', 'Other']} value={formData.gender} onChange={handleChange} />
+            <InputField label="Date of Birth" name="dob" value={formData.dob} onChange={handleChange} type="date" disabled={true} />
+            <div className="flex-1 min-w-[300px]">
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">Gender</label>
+                <input
+                    type="text"
+                    value={formData.gender}
+                    disabled={true}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-800 bg-gray-100 text-gray-500"
+                />
+            </div>
         </div>
 
         <div className="border-t border-gray-100 pt-8">
@@ -98,12 +106,12 @@ const PersonalInfoTab = ({ formData, handleChange }) => (
 
             <div className="flex flex-wrap gap-6 mb-6">
                 <InputField label="Village" name="address.village" value={formData.address?.village} onChange={handleChange} disabled={true} />
-                <InputField label="Pincode" name="address.pinCode" value={formData.address?.pinCode} onChange={handleChange} />
+                <InputField label="Pincode" name="address.pinCode" value={formData.address?.pinCode} onChange={handleChange} disabled={true} />
             </div>
 
             <div className="flex flex-wrap gap-6">
-                <InputField label="House Number" name="address.houseNumber" value={formData.address?.houseNumber} onChange={handleChange} />
-                <InputField label="Street" name="address.street" value={formData.address?.street} onChange={handleChange} />
+                <InputField label="House Number" name="address.houseNumber" value={formData.address?.houseNumber} onChange={handleChange} disabled={true} />
+                <InputField label="Street" name="address.street" value={formData.address?.street} onChange={handleChange} disabled={true} />
             </div>
         </div>
     </div>
@@ -175,49 +183,72 @@ const DocumentsTab = ({ onOpenApp, onOpenID }) => (
     </div>
 );
 
-const SecurityTab = () => (
-    <div className="animate-fadeIn space-y-6">
-        <div className="p-4 border border-gray-100 rounded-lg bg-blue-50">
-            <h3 className="font-bold text-gray-800 text-sm mb-2">Login Method</h3>
-            <p className="text-xs text-gray-600 mb-4">You are currently logging in using Mobile OTP.</p>
-            <button className="text-primary text-xs font-bold hover:underline">Manage Trusted Devices</button>
-        </div>
-        <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
-            <div>
-                <h3 className="font-bold text-gray-800 text-sm">Two-Factor Authentication</h3>
-                <p className="text-xs text-gray-500">Enhanced security is enabled by default.</p>
-            </div>
-            <div className="w-10 h-6 bg-green-500 rounded-full relative flex items-center px-1">
-                <div className="w-4 h-4 bg-white rounded-full translate-x-4 transition-transform"></div>
-            </div>
-        </div>
-    </div>
-);
+const MOCK_NOTIFICATIONS_HISTORY = [
+    {
+        id: 1,
+        title: "Application Approved",
+        description: "Your membership application has been successfully verified and approved by the admin.",
+        date: "Jan 15, 2026 • 10:30 AM",
+        isUnread: true,
+        type: 'success'
+    },
+    {
+        id: 2,
+        title: "New Scholarship Available",
+        description: "Applications are now open for the 'Merit Excellence Scholarship 2026'. Apply before Feb 28.",
+        date: "Jan 12, 2026 • 09:15 AM",
+        isUnread: false,
+        type: 'info'
+    },
+    {
+        id: 3,
+        title: "Profile Update Reminder",
+        description: "Please verify your current address and family member details for the annual census.",
+        date: "Jan 05, 2026 • 02:00 PM",
+        isUnread: false,
+        type: 'warning'
+    },
+    {
+        id: 4,
+        title: "Donation Receipt Generated",
+        description: "Thank you for your donation! Your 80G tax receipt is now available for download.",
+        date: "Dec 28, 2025 • 04:45 PM",
+        isUnread: false,
+        type: 'success'
+    }
+];
 
 const NotificationsTab = () => (
-    <div className="animate-fadeIn space-y-4">
-        {['Application Updates', 'New Scholarship Alerts', 'Membership Renewal Reminders', 'News & Events'].map((item, i) => (
-            <div key={i} className="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
-                <span className="text-sm font-bold text-gray-700">{item}</span>
-                <div className={`w-10 h-6 ${i < 2 ? 'bg-green-500' : 'bg-gray-300'} rounded-full relative flex items-center px-1 cursor-pointer`}>
-                    <div className={`w-4 h-4 bg-white rounded-full ${i < 2 ? 'translate-x-4' : 'translate-x-0'} transition-transform shadow-sm`}></div>
-                </div>
-            </div>
-        ))}
-    </div>
-);
-
-const PrivacyTab = () => (
-    <div className="animate-fadeIn space-y-6">
-        <div className="p-6 border border-gray-200 rounded-lg text-center">
-            <h3 className="font-bold text-gray-800 mb-2">Download Your Data</h3>
-            <p className="text-xs text-gray-500 mb-4 mx-auto max-w-xs">Get a copy of your personal data, applications, and history stored in our system.</p>
-            <button className="px-6 py-2 border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50">Download JSON</button>
+    <div className="animate-fadeIn">
+        <div className="flex justify-between items-center mb-6">
+            <h3 className="font-bold text-gray-900">Recent Notifications</h3>
+            <button className="text-xs font-bold text-secondary hover:underline">Mark all as read</button>
         </div>
-        <div className="p-6 border border-red-100 bg-red-50 rounded-lg">
-            <h3 className="font-bold text-red-800 mb-2">Delete Account</h3>
-            <p className="text-xs text-red-600 mb-4">Permanently remove your account and all associated data. This action cannot be undone.</p>
-            <button className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700">Request Account Deletion</button>
+
+        <div className="space-y-4">
+            {MOCK_NOTIFICATIONS_HISTORY.map((notification) => (
+                <div
+                    key={notification.id}
+                    className={`flex items-start gap-4 p-4 rounded-xl border transition-all hover:bg-gray-50 ${notification.isUnread ? 'bg-blue-50/50 border-blue-100' : 'bg-white border-gray-100'}`}
+                >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 
+                        ${notification.type === 'success' ? 'bg-green-100 text-green-600' :
+                            notification.type === 'warning' ? 'bg-amber-100 text-amber-600' :
+                                'bg-blue-100 text-blue-600'}`}>
+                        <FaCheckCircle size={16} />
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                            <h4 className={`text-sm font-bold mb-1 ${notification.isUnread ? 'text-gray-900' : 'text-gray-700'}`}>
+                                {notification.title}
+                                {notification.isUnread && <span className="ml-2 w-2 h-2 bg-red-500 rounded-full inline-block"></span>}
+                            </h4>
+                            <span className="text-xs text-gray-400 whitespace-nowrap">{notification.date}</span>
+                        </div>
+                        <p className="text-sm text-gray-600 leading-relaxed">{notification.description}</p>
+                    </div>
+                </div>
+            ))}
         </div>
     </div>
 );
@@ -472,6 +503,16 @@ const ProfileSettings = () => {
         }
     };
 
+    const getImageUrl = (url) => {
+        if (!url) return "/assets/images/user-profile.png";
+        if (url.startsWith('http') || url.startsWith('data:')) return url;
+
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const baseUrl = apiUrl.replace(/\/api$/, '');
+        const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+        return `${baseUrl}${cleanUrl}`;
+    };
+
     if (loading) return <div className="p-8 text-center">Loading Profile...</div>;
 
     return (
@@ -575,18 +616,11 @@ const ProfileSettings = () => {
                 <div className="relative">
                     <div className="w-32 h-32 rounded-full p-1 border-2 border-dashed border-gray-300 overflow-hidden">
                         <img
-                            src={formData.photoUrl || profileImage}
+                            src={getImageUrl(formData.photoUrl || profileImage)}
                             alt="Profile"
                             className="w-full h-full object-cover rounded-full bg-gray-50"
                         />
                     </div>
-                    <button
-                        onClick={() => setShowCamera(true)}
-                        className="absolute bottom-1 right-1 w-8 h-8 bg-[#1e2a4a] text-white rounded-full flex items-center justify-center border-2 border-white shadow-sm hover:bg-[#2a3b66] transition"
-                        title="Change Photo"
-                    >
-                        <FaCamera size={12} />
-                    </button>
                 </div>
 
                 <div className="flex-1 text-center md:text-left">
@@ -605,16 +639,13 @@ const ProfileSettings = () => {
                             </span>
                         </div>
                     </div>
-                    <button className="px-4 py-2 bg-[#1e2a4a] text-white text-sm font-bold rounded-lg hover:bg-[#2a3b66] transition flex items-center gap-2 mx-auto md:mx-0 shadow-sm">
-                        <FaEdit /> Edit Profile
-                    </button>
                 </div>
             </div>
 
             {/* Navigation Tabs */}
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-2 overflow-x-auto">
                 <div className="flex gap-6 min-w-max">
-                    {['Personal Info', 'My Documents', 'Family Members', 'Security', 'Notifications', 'Privacy & Data'].map((tab) => (
+                    {['Personal Info', 'My Documents', 'Family Members', 'Notifications'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -642,25 +673,9 @@ const ProfileSettings = () => {
                     />
                 )}
 
-                {activeTab === 'Security' && <SecurityTab />}
                 {activeTab === 'Notifications' && <NotificationsTab />}
-                {activeTab === 'Privacy & Data' && <PrivacyTab />}
 
-                {/* Save Button for relevant tabs */}
-                {(activeTab === 'Personal Info' || activeTab === 'Family Members') && (
-                    <div className="flex items-center gap-4 mt-8 pt-8 border-t border-gray-100">
-                        <button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="px-6 py-2.5 bg-[#1e2a4a] text-white text-sm font-bold rounded-lg hover:bg-[#2a3b66] transition shadow-md flex items-center gap-2"
-                        >
-                            {saving ? 'Saving...' : <><FaSave /> Save Changes</>}
-                        </button>
-                        <button className="px-6 py-2.5 bg-white border border-gray-300 text-gray-600 text-sm font-bold rounded-lg hover:bg-gray-50 transition flex items-center gap-2">
-                            <FaTimes /> Cancel
-                        </button>
-                    </div>
-                )}
+
 
             </div>
         </div>

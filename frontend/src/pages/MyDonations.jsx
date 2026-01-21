@@ -160,16 +160,13 @@ const MyDonations = () => {
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-[#1e2a4a]">My Donations & Impact</h1>
+                    <div className="flex flex-col md:flex-row items-center gap-6 mb-1">
+                        <h1 className="text-3xl font-bold text-[#1e2a4a]">My Donations & Impact</h1>
+                        <Link to="/dashboard/donate" className="bg-[#1e2a4a] text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-[#2a3b66] transition shadow-lg hover:shadow-xl flex items-center gap-2">
+                            <FaHeart className="text-rose-400" /> Donate / Sponsor
+                        </Link>
+                    </div>
                     <p className="text-gray-500 mt-1">Track your contributions, download tax receipts, and see the impact you've made.</p>
-                </div>
-                <div className="flex gap-3">
-                    <span className="bg-white border border-gray-200 px-4 py-2.5 rounded-xl text-sm font-bold text-gray-600 shadow-sm">
-                        Financial Year 2024-25
-                    </span>
-                    <Link to="/dashboard/donate" className="bg-[#1e2a4a] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#2a3b66] transition shadow-lg hover:shadow-xl flex items-center gap-2">
-                        <FaHeart className="text-rose-400" /> Donate / Sponsor
-                    </Link>
                 </div>
             </div>
 

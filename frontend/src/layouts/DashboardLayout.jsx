@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from '../api';
 import {
@@ -22,8 +22,50 @@ const SidebarItem = ({ to, icon: Icon, label, active, collapsed }) => (
 
 const DashboardLayout = () => {
     const [collapsed, setCollapsed] = useState(false);
+    const [notificationCount, setNotificationCount] = useState(0);
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [userInfo, setUserInfo] = useState(null);
     const location = useLocation();
     const navigate = useNavigate();
+
+    // Fetch User Info (Dynamic Photo)
+    useEffect(() => {
+        const fetchUserInfo = async () => {
+            try {
+                const { data } = await axios.get('/auth/me');
+                setUserInfo(data);
+
+                // Keep localStorage in sync if needed
+                const stored = JSON.parse(localStorage.getItem('adminInfo'));
+                if (stored && data.photoUrl && stored.photoUrl !== data.photoUrl) {
+                    stored.photoUrl = data.photoUrl;
+                    localStorage.setItem('adminInfo', JSON.stringify(stored));
+                }
+            } catch (error) {
+                console.warn('Failed to fetch user info', error);
+            }
+        };
+        fetchUserInfo();
+    }, [location.pathname]);
+
+    // Fetch Notifications for Badge
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            try {
+                const { data } = await axios.get('/notifications');
+                const unread = data.filter(n => !n.isRead).length;
+                setNotificationCount(unread);
+            } catch (error) {
+                console.warn('Failed to fetch notifications count', error);
+            }
+        };
+
+        fetchUnreadCount();
+
+        // Optional: Poll every 60 seconds or invoke on navigation if needed
+        const interval = setInterval(fetchUnreadCount, 60000);
+        return () => clearInterval(interval);
+    }, [location.pathname]); // Re-fetch on navigation changes (e.g. coming back from read)
 
     const handleLogout = async () => {
         try {
@@ -53,8 +95,8 @@ const DashboardLayout = () => {
             const segment = pathSegments[1];
 
             if (segment === 'applications') {
-                breadcrumbs.push({ label: 'Funding Request', path: '/dashboard/applications' });
-                if (pathSegments.includes('new')) breadcrumbs.push({ label: 'New Application', path: '' });
+                breadcrumbs.push({ label: 'My Fund Requests', path: '/dashboard/applications' });
+                if (pathSegments.includes('new')) breadcrumbs.push({ label: 'Create A Fund Request', path: '' });
                 else if (pathSegments.length > 2) breadcrumbs.push({ label: 'Application Details', path: '' });
             }
 
@@ -72,15 +114,30 @@ const DashboardLayout = () => {
             else if (segment === 'donations') breadcrumbs.push({ label: 'My Donations', path: '/dashboard/donations' });
             else if (segment === 'health') breadcrumbs.push({ label: 'Health Assistance', path: '/dashboard/health' });
             else if (segment === 'legal') breadcrumbs.push({ label: 'Legal Aid', path: '/dashboard/legal' });
-            else if (segment === 'helpdesk') breadcrumbs.push({ label: 'Helpdesk', path: '/dashboard/helpdesk' });
+            else if (segment === 'helpdesk') breadcrumbs.push({ label: 'Need Help?', path: '/dashboard/helpdesk' });
             else if (segment === 'support') breadcrumbs.push({ label: 'Help & Support', path: '/dashboard/support' });
-            else if (segment === 'profile') breadcrumbs.push({ label: 'Profile Settings', path: '/dashboard/profile' });
+            else if (segment === 'profile') breadcrumbs.push({ label: 'My Profile', path: '/dashboard/profile' });
         }
 
         return breadcrumbs;
     };
 
     const breadcrumbs = getBreadcrumbs();
+
+    const getImageUrl = (url) => {
+        if (!url) return "/assets/images/user-profile.png";
+        if (url.startsWith('http') || url.startsWith('data:')) return url;
+
+        // If relative path from backend (e.g., 'uploads/...')
+        // We need to resolve it against the backend URL, not frontend.
+        // Assuming VITE_API_URL includes '/api', we strip it.
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const baseUrl = apiUrl.replace(/\/api$/, '');
+
+        // Ensure url has leading slash if needed, or handle if baseUrl has trailing
+        const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+        return `${baseUrl}${cleanUrl}`;
+    };
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
@@ -96,11 +153,11 @@ const DashboardLayout = () => {
                 <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1 scrollbar-thin scrollbar-thumb-gray-600">
                     <SidebarItem to="/dashboard/profile" icon={FaUserCircle} label="My Profile" active={isActive('profile')} collapsed={collapsed} />
                     <SidebarItem to="/dashboard" icon={FaThLarge} label="Dashboard" active={location.pathname === '/dashboard'} collapsed={collapsed} />
-                    <SidebarItem to="/dashboard/applications" icon={FaFileAlt} label="Funding Request" active={isActive('applications')} collapsed={collapsed} />
+                    <SidebarItem to="/dashboard/applications" icon={FaFileAlt} label="My Fund Requests" active={isActive('applications')} collapsed={collapsed} />
                     <SidebarItem to="/dashboard/donations" icon={FaHandHoldingUsd} label="My Donations" active={isActive('donations')} collapsed={collapsed} />
                     <SidebarItem to="/dashboard/services" icon={FaThLarge} label="MEWS Services" active={isActive('services')} collapsed={collapsed} />
                     <SidebarItem to="/dashboard/jobs" icon={FaBriefcase} label="Jobs & Events" active={isActive('jobs')} collapsed={collapsed} />
-                    <SidebarItem to="/dashboard/helpdesk" icon={FaHeadset} label="Helpdesk" active={isActive('helpdesk')} collapsed={collapsed} />
+                    <SidebarItem to="/dashboard/helpdesk" icon={FaHeadset} label="Need Help?" active={isActive('helpdesk')} collapsed={collapsed} />
 
                     <div className="my-4 border-t border-gray-700 mx-2"></div>
                     <SidebarItem to="/dashboard/support" icon={FaQuestionCircle} label="Help & Support" active={isActive('support')} collapsed={collapsed} />
@@ -166,16 +223,52 @@ const DashboardLayout = () => {
                     <div className="flex items-center gap-6">
                         <Link to="/dashboard/notifications" className="relative text-gray-300 hover:text-white">
                             <FaBell size={18} />
-                            <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-primary">4</span>
+                            {notificationCount > 0 && (
+                                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-primary">
+                                    {notificationCount > 9 ? '9+' : notificationCount}
+                                </span>
+                            )}
                         </Link>
-                        <Link to="/dashboard/profile" className="flex items-center gap-2 cursor-pointer border-l border-gray-600 pl-6 group">
-                            <img
-                                src={JSON.parse(localStorage.getItem('adminInfo'))?.photoUrl || "/assets/images/user-profile.png"}
-                                alt="Profile"
-                                className="w-8 h-8 rounded-full border border-gray-500 group-hover:border-white transition object-cover"
-                            />
-                            <FaChevronDown size={12} className="text-gray-400 group-hover:text-white transition" />
-                        </Link>
+
+                        <div className="relative">
+                            <button
+                                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                                className="flex items-center gap-2 cursor-pointer border-l border-gray-600 pl-6 group focus:outline-none"
+                            >
+                                <img
+                                    src={getImageUrl(userInfo?.photoUrl || JSON.parse(localStorage.getItem('adminInfo'))?.photoUrl)}
+                                    alt="Profile"
+                                    className="w-8 h-8 rounded-full border border-gray-500 group-hover:border-white transition object-cover"
+                                />
+                                <FaChevronDown size={12} className={`text-gray-400 group-hover:text-white transition ${userMenuOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* User Dropdown Menu */}
+                            {userMenuOpen && (
+                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 z-50 animate-fadeIn border border-gray-100">
+                                    <div className="px-4 py-3 border-b border-gray-100 mb-1">
+                                        <p className="text-sm font-bold text-gray-800 truncate">{userInfo?.name || JSON.parse(localStorage.getItem('adminInfo'))?.name || 'User'}</p>
+                                        <p className="text-xs text-gray-500 truncate">{userInfo?.email || 'Member'}</p>
+                                    </div>
+                                    <Link
+                                        to="/dashboard/profile"
+                                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary font-medium"
+                                        onClick={() => setUserMenuOpen(false)}
+                                    >
+                                        <FaUserCircle className="inline mr-2" /> My Profile
+                                    </Link>
+                                    <button
+                                        onClick={() => {
+                                            setUserMenuOpen(false);
+                                            handleLogout();
+                                        }}
+                                        className="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium"
+                                    >
+                                        <FaSignOutAlt className="inline mr-2" /> Logout
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </header>
 

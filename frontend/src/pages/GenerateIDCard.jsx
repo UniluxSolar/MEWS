@@ -34,13 +34,15 @@ const GenerateIDCard = () => {
     // Effect to load data from navigation state (Registration -> Generate ID)
     useEffect(() => {
         const loadMemberData = async () => {
-            if (location.state && location.state.newMember) {
-                console.log("GenerateIDCard State:", location.state);
-                const newMember = location.state.newMember;
-                const rawData = location.state.rawData || {};
-                const resolvedNames = location.state.resolvedNames || {};
+            const stateData = location.state;
+            if (stateData && (stateData.newMember || stateData.member)) {
+                console.log("GenerateIDCard State:", stateData);
+                // Support both keys: newMember (Registration) or member (Management)
+                const newMember = stateData.newMember || stateData.member;
+                const rawData = stateData.rawData || {};
+                const resolvedNames = stateData.resolvedNames || {};
 
-                // Helper to resolve name (string ID -> fetch, Object -> use name)
+                // ... resolveLocationName function ...
                 const resolveLocationName = async (loc, fallbackId, preResolvedName) => {
                     if (preResolvedName) return preResolvedName;
                     if (typeof loc === 'object' && loc && loc.name) return loc.name;
@@ -57,18 +59,18 @@ const GenerateIDCard = () => {
                     return loc || '';
                 };
 
-                // Common Location Data (Usually same for family)
                 const vName = await resolveLocationName(newMember.address?.village, rawData.presentVillage, resolvedNames.village);
                 const mName = await resolveLocationName(newMember.address?.mandal, rawData.presentMandal, resolvedNames.mandal);
                 const dName = await resolveLocationName(newMember.address?.district, rawData.presentDistrict, resolvedNames.district);
 
-                // FIX: Ensure newMember has the correct ID (mewsId) from the response if it was missing in the object
-                if (location.state.username && !newMember.mewsId) {
-                    newMember.mewsId = location.state.username;
+                // FIX: Force set ID from state username if available (Source of Truth)
+                if (stateData.username) {
+                    newMember.mewsId = stateData.username;
                 }
 
                 const processMember = (member, isDependent = false) => {
-                    const generatedId = member.mewsId || `MEW${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`;
+                    // Use state username as primary fallback if member.mewsId is missing
+                    const generatedId = member.mewsId || stateData.username || `MEW${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`;
                     const pincode = member.address?.pinCode || resolvedNames.pincode || rawData.presentPincode || '';
                     const houseNo = member.address?.houseNumber || resolvedNames.houseNo || rawData.presentHouseNo || '';
                     const street = member.address?.street || resolvedNames.street || rawData.presentStreet || '';

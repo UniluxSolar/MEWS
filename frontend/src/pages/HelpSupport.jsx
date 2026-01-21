@@ -5,12 +5,16 @@ import {
     FaDesktop, FaEnvelope, FaPhoneAlt, FaCommentDots, FaChevronDown, FaChevronUp, FaArrowLeft
 } from 'react-icons/fa';
 
-const SupportCategory = ({ icon: Icon, title, desc, color }) => (
-    <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col items-start h-full">
+const SupportCategory = ({ icon: Icon, title, desc, color, onClick, isActive }) => (
+    <div
+        onClick={onClick}
+        className={`bg-white p-8 rounded-2xl border shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col items-start h-full
+        ${isActive ? 'border-primary ring-1 ring-primary' : 'border-gray-100 hover:border-gray-200'}`}
+    >
         <div className={`w-14 h-14 rounded-xl ${color} text-white flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
             <Icon size={24} />
         </div>
-        <h3 className="font-bold text-xl text-[#0f172a] mb-3">{title}</h3>
+        <h3 className={`font-bold text-xl mb-3 ${isActive ? 'text-primary' : 'text-[#0f172a]'}`}>{title}</h3>
         <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
     </div>
 );
@@ -48,9 +52,53 @@ const ContactCard = ({ icon: Icon, title, value, btnText, color }) => (
     </div>
 );
 
+const FAQS_DATA = [
+    {
+        category: 'Scholarships',
+        question: "How do I track my scholarship application status?",
+        answer: "You can track your application status directly from the 'Funding Request' dashboard. The status indicators (Under Review, Approved, Disbursed) are updated in real-time."
+    },
+    {
+        category: 'Scholarships',
+        question: "What documents are required for the application?",
+        answer: "Typically, you need proof of identity, academic transcripts, income certificate, and admission proof. Specific requirements may vary by scholarship type."
+    },
+    {
+        category: 'Payments',
+        question: "How can I download my 80G tax receipt for donations?",
+        answer: "Go to the 'My Donations' page in the dashboard. You will find a 'Download Receipt' button next to each successful transaction in your history."
+    },
+    {
+        category: 'Payments',
+        question: "My transaction failed but money was deducted. What should I do?",
+        answer: "Please wait 24-48 hours for an auto-refund. If not received, contact our support with your transaction ID for assistance."
+    },
+    {
+        category: 'Technical',
+        question: "Can I edit my profile details after submission?",
+        answer: "Basic details can be edited from 'Profile Settings'. However, sensitive fields like Name and Date of Birth require admin approval or re-verification if KYC is already completed."
+    },
+    {
+        category: 'Technical',
+        question: "I forgot my password. How can I reset it?",
+        answer: "Click on 'Forgot Password' at the login screen. You will receive a reset link on your registered email address."
+    }
+];
+
 const HelpSupport = () => {
+    const [activeCategory, setActiveCategory] = useState(null);
+
+    const filteredFAQs = activeCategory
+        ? FAQS_DATA.filter(faq => faq.category === activeCategory)
+        : FAQS_DATA;
+
+    const handleCategoryClick = (category) => {
+        // Toggle if already active
+        setActiveCategory(activeCategory === category ? null : category);
+    };
+
     return (
-        <div className="w-full space-y-10 pb-12 max-w-5xl mx-auto">
+        <div className="w-full space-y-10 pb-12">
             {/* Back Button */}
             <div className="">
                 <Link to="/dashboard" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
@@ -59,9 +107,9 @@ const HelpSupport = () => {
             </div>
 
             {/* Hero Search */}
-            <div className="text-center space-y-8 py-12">
+            <div className="space-y-8 py-12">
                 <h1 className="text-4xl font-extrabold text-[#111827]">How can we help you today?</h1>
-                <div className="max-w-3xl mx-auto relative group">
+                <div className="w-full max-w-xl relative group">
                     <span className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-secondary transition-colors">
                         <FaSearch size={20} />
                     </span>
@@ -82,6 +130,8 @@ const HelpSupport = () => {
                         color="bg-[#3b82f6]"
                         title="Scholarships"
                         desc="Application process, eligibility criteria, and disbursement details."
+                        onClick={() => handleCategoryClick('Scholarships')}
+                        isActive={activeCategory === 'Scholarships'}
                     />
 
                     <SupportCategory
@@ -89,12 +139,16 @@ const HelpSupport = () => {
                         color="bg-[#a855f7]"
                         title="Payments"
                         desc="Donations, receipts, refund policies, and transaction failures."
+                        onClick={() => handleCategoryClick('Payments')}
+                        isActive={activeCategory === 'Payments'}
                     />
                     <SupportCategory
                         icon={FaDesktop}
                         color="bg-[#f97316]"
                         title="Technical"
                         desc="Login issues, account recovery, and platform troubleshooting."
+                        onClick={() => handleCategoryClick('Technical')}
+                        isActive={activeCategory === 'Technical'}
                     />
                 </div>
             </div>
@@ -102,23 +156,24 @@ const HelpSupport = () => {
             {/* Popular FAQs */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-lg font-bold text-gray-800">Popular Questions</h2>
-                    <Link to="#" className="text-sm font-bold text-secondary hover:underline">View All FAQs</Link>
+                    <h2 className="text-lg font-bold text-gray-800">
+                        {activeCategory ? `${activeCategory} Questions` : 'Popular Questions'}
+                    </h2>
+                    <button onClick={() => setActiveCategory(null)} className="text-sm font-bold text-secondary hover:underline">
+                        {activeCategory ? 'View All FAQs' : 'View All FAQs'}
+                    </button>
                 </div>
                 <div className="divide-y divide-gray-100">
-                    <FAQItem
-                        question="How do I track my scholarship application status?"
-                        answer="You can track your application status directly from the 'Funding Request' dashboard. The status indicators (Under Review, Approved, Disbursed) are updated in real-time."
-                    />
-
-                    <FAQItem
-                        question="How can I download my 80G tax receipt for donations?"
-                        answer="Go to the 'My Donations' page in the dashboard. You will find a 'Download Receipt' button next to each successful transaction in your history."
-                    />
-                    <FAQItem
-                        question="Can I edit my profile details after submission?"
-                        answer="Basic details can be edited from 'Profile Settings'. However, sensitive fields like Name and Date of Birth require admin approval or re-verification if KYC is already completed."
-                    />
+                    {filteredFAQs.map((faq, index) => (
+                        <FAQItem
+                            key={index}
+                            question={faq.question}
+                            answer={faq.answer}
+                        />
+                    ))}
+                    {filteredFAQs.length === 0 && (
+                        <p className="text-gray-500 text-sm py-4">No FAQs found for this category.</p>
+                    )}
                 </div>
             </div>
 

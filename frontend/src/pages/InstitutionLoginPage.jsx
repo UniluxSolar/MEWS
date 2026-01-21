@@ -5,7 +5,7 @@ import { FaUsers } from 'react-icons/fa';
 import mewsLogo from '../assets/mews_main_logo_new.png';
 import API from '../api';
 
-const LoginPage = () => {
+const InstitutionLoginPage = () => {
     const navigate = useNavigate();
 
     // State
@@ -47,7 +47,7 @@ const LoginPage = () => {
             setLoading(true);
             if (timer > 0) return;
 
-            const { data } = await API.post('/auth/request-otp', { mobile, userType: 'MEMBER' });
+            const { data } = await API.post('/auth/request-otp', { mobile, userType: 'INSTITUTION' });
             setOtpSent(true);
             setTimer(60); // Start 60s timer
 
@@ -67,7 +67,7 @@ const LoginPage = () => {
         e.preventDefault();
         try {
             setLoading(true);
-            const { data } = await API.post('/auth/verify-otp', { mobile, otp, userType: 'MEMBER' });
+            const { data } = await API.post('/auth/verify-otp', { mobile, otp, userType: 'INSTITUTION' });
             localStorage.setItem('adminInfo', JSON.stringify(data)); // Store member info as adminInfo for compatibility
             navigate(redirectPath, { replace: true });
         } catch (error) {
@@ -98,9 +98,9 @@ const LoginPage = () => {
 
                 {/* Form Section */}
                 <div className="w-full space-y-5">
-                    {/* Member Login Header */}
+                    {/* Institution Login Header */}
                     <div className="text-center mb-2">
-                        <h2 className="text-xl font-bold text-[#1e2a4a]">Member Login</h2>
+                        <h2 className="text-xl font-bold text-[#1e2a4a]">Institution Login</h2>
                     </div>
 
                     {!otpSent ? (
@@ -219,4 +219,4 @@ const LoginPage = () => {
     );
 };
 
-export default LoginPage;
+export default InstitutionLoginPage;

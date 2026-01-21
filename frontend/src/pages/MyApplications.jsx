@@ -151,14 +151,14 @@ const MyApplications = () => {
             </div>
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-primary">Funding Request</h1>
-                    <p className="text-gray-500 text-sm">{stats.totalApplications} Applications found</p>
+            <div className="mb-8">
+                <div className="flex flex-col md:flex-row items-center gap-6 mb-1">
+                    <h1 className="text-2xl font-bold text-primary">My Fund Requests</h1>
+                    <Link to="/dashboard/applications/new" className="bg-primary text-white text-sm font-bold px-5 py-2.5 rounded-lg flex items-center gap-2 hover:bg-[#151f38] transition shadow-md">
+                        <FaPlus size={12} /> Create A Fund Request
+                    </Link>
                 </div>
-                <Link to="/dashboard/applications/new" className="bg-primary text-white text-sm font-bold px-5 py-2.5 rounded-lg flex items-center gap-2 hover:bg-[#151f38] transition shadow-md">
-                    <FaPlus size={12} /> New Application
-                </Link>
+                <p className="text-gray-500 text-sm">{stats.totalApplications} Applications found</p>
             </div>
 
             {/* Stats Grid */}

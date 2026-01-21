@@ -5,7 +5,7 @@ import {
 } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 
-const TicketRow = ({ id, subject, category, date, status, hasAttachment }) => {
+const TicketRow = ({ id, subject, category, date, status, hasAttachment, onClick }) => {
     const statusColors = {
         'Open': 'bg-green-100 text-green-700',
         'In Progress': 'bg-blue-100 text-blue-700',
@@ -14,7 +14,7 @@ const TicketRow = ({ id, subject, category, date, status, hasAttachment }) => {
     };
 
     return (
-        <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:shadow-md transition bg-white mb-3 group cursor-pointer">
+        <div onClick={onClick} className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:shadow-md transition bg-white mb-3 group cursor-pointer">
             <div className="flex items-center gap-4">
                 <div className={`p-3 rounded-full ${status === 'Open' ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
                     <FaTicketAlt />
@@ -39,6 +39,105 @@ const TicketRow = ({ id, subject, category, date, status, hasAttachment }) => {
                     {status}
                 </span>
                 <FaChevronRight className="text-gray-300 group-hover:text-secondary" />
+            </div>
+        </div>
+    );
+};
+
+const TicketDetailModal = ({ ticket, onClose }) => {
+    if (!ticket) return null;
+
+    const statusColors = {
+        'Open': 'bg-green-100 text-green-700',
+        'In Progress': 'bg-blue-100 text-blue-700',
+        'Pending': 'bg-yellow-100 text-yellow-700',
+        'Closed': 'bg-gray-100 text-gray-600'
+    };
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fadeIn">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                {/* Header */}
+                <div className="bg-[#1e2a4a] p-5 flex justify-between items-start text-white flex-shrink-0">
+                    <div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <span className="font-mono text-xs opacity-70 bg-white/10 px-2 py-0.5 rounded">{ticket.id}</span>
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold bg-white/20 text-white`}>
+                                {ticket.status}
+                            </span>
+                        </div>
+                        <h3 className="font-bold text-xl leading-tight">{ticket.subject}</h3>
+                    </div>
+                    <button onClick={onClose} className="hover:text-red-300 transition bg-white/10 p-2 rounded-full"><FaTimes size={16} /></button>
+                </div>
+
+                {/* Content - Scrollable */}
+                <div className="p-6 overflow-y-auto flex-1 space-y-6">
+                    {/* Meta Info */}
+                    <div className="flex flex-wrap gap-6 text-sm p-4 bg-gray-50 rounded-lg border border-gray-100">
+                        <div>
+                            <span className="block text-xs font-bold text-gray-500 uppercase mb-1">Category</span>
+                            <span className="font-semibold text-gray-800">{ticket.category}</span>
+                        </div>
+                        <div>
+                            <span className="block text-xs font-bold text-gray-500 uppercase mb-1">Date Created</span>
+                            <span className="font-semibold text-gray-800">{ticket.date}</span>
+                        </div>
+                        <div>
+                            <span className="block text-xs font-bold text-gray-500 uppercase mb-1">Priority</span>
+                            <span className="font-semibold text-gray-800 flex items-center gap-1">
+                                <span className={`w-2 h-2 rounded-full ${ticket.priority === 'High' ? 'bg-red-500' : 'bg-yellow-500'}`}></span>
+                                {ticket.priority || 'Medium'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                        <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                            <FaFileAlt className="text-gray-400" /> Description
+                        </h4>
+                        <div className="text-gray-600 leading-relaxed bg-white border border-gray-100 p-4 rounded-lg shadow-sm text-sm">
+                            <p>Here is the detailed description of the issue regarding {ticket.subject}. It seems there is a need for clarification or action.</p>
+                            <p className="mt-2 text-xs text-gray-400 text-right">Attached: {ticket.hasAttachment ? 'Screenshot.png' : 'None'}</p>
+                        </div>
+                    </div>
+
+                    {/* Conversation History (Mock) */}
+                    <div>
+                        <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <FaCommentAlt className="text-gray-400" /> Activity Log
+                        </h4>
+                        <div className="space-y-4">
+                            <div className="flex gap-3">
+                                <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs flex-shrink-0">You</div>
+                                <div className="bg-blue-50 p-3 rounded-lg rounded-tl-none text-sm text-gray-700 flex-1 border border-blue-100">
+                                    <p>Ticket created. Awaiting support response.</p>
+                                    <p className="text-[10px] text-gray-400 mt-1">{ticket.date} • 10:30 AM</p>
+                                </div>
+                            </div>
+                            {ticket.status === 'Closed' && (
+                                <div className="flex gap-3 flex-row-reverse">
+                                    <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">SP</div>
+                                    <div className="bg-green-50 p-3 rounded-lg rounded-tr-none text-sm text-gray-700 flex-1 border border-green-100 text-right">
+                                        <p>This issue has been resolved. Closing the ticket. Feel free to reopen if needed.</p>
+                                        <p className="text-[10px] text-gray-400 mt-1">Jan 12, 2025 • 02:15 PM</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer input */}
+                {ticket.status !== 'Closed' && (
+                    <div className="p-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+                        <div className="flex gap-2">
+                            <input type="text" placeholder="Type a reply..." className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+                            <button className="bg-primary text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#151f38] transition">Reply</button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -193,16 +292,17 @@ const CreateTicketModal = ({ isOpen, onClose, onCreate }) => {
             </div>
         </div>
     );
-}
+};
 
 const Helpdesk = () => {
     const [activeFilter, setActiveFilter] = useState('All');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [tickets, setTickets] = useState([
-        { id: 'TKT-2025-8921', subject: 'Scholarship Application Status Inquiry', category: 'Scholarship', date: 'Jan 10, 2025', status: 'Open', hasAttachment: false },
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // Renamed for clarity
+    const [selectedTicket, setSelectedTicket] = useState(null); // New state for details modal
 
-        { id: 'TKT-2024-7655', subject: 'Bank Account Update Request', category: 'Profile Update', date: 'Dec 15, 2024', status: 'Closed', hasAttachment: true },
-        { id: 'TKT-2024-7100', subject: 'Login Issues on Mobile', category: 'Technical Issue', date: 'Nov 22, 2024', status: 'Closed', hasAttachment: false },
+    const [tickets, setTickets] = useState([
+        { id: 'TKT-2025-8921', subject: 'Scholarship Application Status Inquiry', category: 'Scholarship', date: 'Jan 10, 2025', status: 'Open', hasAttachment: false, priority: 'High' },
+        { id: 'TKT-2024-7655', subject: 'Bank Account Update Request', category: 'Profile Update', date: 'Dec 15, 2024', status: 'Closed', hasAttachment: true, priority: 'Medium' },
+        { id: 'TKT-2024-7100', subject: 'Login Issues on Mobile', category: 'Technical Issue', date: 'Nov 22, 2024', status: 'Closed', hasAttachment: false, priority: 'High' },
     ]);
 
     const handleCreateTicket = (newTicketData) => {
@@ -212,10 +312,11 @@ const Helpdesk = () => {
             category: newTicketData.category,
             status: 'Open',
             date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-            hasAttachment: !!newTicketData.attachment
+            hasAttachment: !!newTicketData.attachment,
+            priority: newTicketData.priority
         };
         setTickets([newTicket, ...tickets]);
-        setIsModalOpen(false);
+        setIsCreateModalOpen(false);
     };
 
     const filteredTickets = activeFilter === 'All'
@@ -234,10 +335,17 @@ const Helpdesk = () => {
         <div className="w-full space-y-6 pb-12 relative">
 
             <CreateTicketModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
                 onCreate={handleCreateTicket}
             />
+
+            {selectedTicket && (
+                <TicketDetailModal
+                    ticket={selectedTicket}
+                    onClose={() => setSelectedTicket(null)}
+                />
+            )}
 
             {/* Back Button */}
             <div className="">
@@ -249,11 +357,11 @@ const Helpdesk = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#1e2a4a]">Helpdesk & Tickets</h1>
+                    <h1 className="text-2xl font-bold text-[#1e2a4a]">Need Help?</h1>
                     <p className="text-gray-500 text-sm mt-1">Track and manage your support requests</p>
                 </div>
                 <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => setIsCreateModalOpen(true)}
                     className="bg-secondary text-white px-6 py-2.5 rounded-lg font-bold text-sm hover:bg-amber-600 transition shadow-lg flex items-center gap-2"
                 >
                     <FaPlus size={12} /> Create New Ticket
@@ -299,7 +407,11 @@ const Helpdesk = () => {
             {/* Ticket List */}
             <div>
                 {filteredTickets.map(ticket => (
-                    <TicketRow key={ticket.id} {...ticket} />
+                    <TicketRow
+                        key={ticket.id}
+                        {...ticket}
+                        onClick={() => setSelectedTicket(ticket)}
+                    />
                 ))}
             </div>
 
