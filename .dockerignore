@@ -11,3 +11,6 @@ frontend/dist
 backend/uploads
 logs
 *.log
+
+!backend/.env
+!backend/gcp-key.json
