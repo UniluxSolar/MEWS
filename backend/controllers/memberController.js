@@ -357,13 +357,51 @@ const registerMember = asyncHandler(async (req, res) => {
 
                 const [savedDep] = await Member.create([dependentData], opts);
                 createdDependents.push(savedDep);
+
+                // SYNC ID BACK TO EMBEDDED FAMILY MEMBER
+                // We assume the order in member.familyMembers matches memberData.familyMembers
+                // But better to match by name/dob or index if possible.
+                // Since Mongoose pushes in order, we can try to match by index i.
+                // However, 'for...of' doesn't give index easily without counter.
+                // Let's rely on finding the matching embedded subdoc.
+                if (member.familyMembers && member.familyMembers.length > 0) {
+                    // Try to match by some unique fields (Name + Relation) or just update by index if we used loop counter
+                    // Since we are inside a loop over memberData.familyMembers, we correspond to the same index 'i' if we had one.
+                    // But we are using 'for of'. Let's assume order is preserved.
+                    // Actually, we can use the loop index if we used memberData.familyMembers.entries()
+                    // But let's just find it by name/relation which should be unique enough for this tx
+                    const embeddedMember = member.familyMembers.find(em =>
+                        em.name === fm.name &&
+                        em.relation === fm.relation &&
+                        (!em.mewsId || em.mewsId !== savedDep.mewsId)
+                    );
+
+                    if (embeddedMember) {
+                        embeddedMember.mewsId = savedDep.mewsId;
+                    }
+                }
             }
         }
 
         if (transactionStarted) await session.commitTransaction();
 
-        // Notify
+        // Notify Head
         sendRegistrationNotification(member).catch(err => console.error("Notify Warning:", err));
+
+        // Notify Dependents (if they have a different mobile number)
+        if (createdDependents.length > 0) {
+            // Use a Set to avoid duplicate notifications if multiple dependents share a number (optional, but good practice? 
+            // Request said "if the person is different from the head". 
+            // Usually if 2 kids share a phone, maybe send 2 msgs? Or 1? 
+            // "send text message for member and family members" implies individual messages.
+            for (const dep of createdDependents) {
+                if (dep.mobileNumber && dep.mobileNumber !== member.mobileNumber) {
+                    sendRegistrationNotification(dep).catch(err =>
+                        console.error(`[Notify] Warning: Failed to notify dependent ${dep.name}:`, err)
+                    );
+                }
+            }
+        }
 
         // In-App Notification to Admins
         try {

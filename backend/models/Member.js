@@ -131,6 +131,7 @@ const MemberSchema = new mongoose.Schema({
         occupation: String,
         mobileNumber: String,
         aadhaarNumber: String,
+        mewsId: { type: String, sparse: true }, // Added mewsId for family members
         annualIncome: String, // Propagated from Head
         memberCount: Number,  // Propagated from Head
         dependentCount: Number, // Propagated from Head

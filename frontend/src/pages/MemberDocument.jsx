@@ -66,7 +66,7 @@ const MemberDocument = ({ data, lookups }) => {
     };
 
     return (
-        <div className="print-page bg-white font-sans text-gray-800 p-[10mm] max-w-[210mm] mx-auto relative">
+        <div className="print-page bg-white font-sans text-gray-800 p-4 md:p-[10mm] w-full md:max-w-[210mm] mx-auto relative shadow-md md:shadow-none my-4 md:my-0">
             <style>
                 {`
                     @media print {
@@ -148,7 +148,7 @@ const MemberDocument = ({ data, lookups }) => {
 
             <Separator />
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Present Address */}
                 <div>
                     <SectionHeader title="Present Address" />
@@ -183,7 +183,7 @@ const MemberDocument = ({ data, lookups }) => {
 
             <Separator />
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <SectionHeader title="Caste & Community" />
                     <div className="border border-gray-200 rounded-sm overflow-hidden">
@@ -233,23 +233,35 @@ const MemberDocument = ({ data, lookups }) => {
                         <table className="w-full text-[10px]">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-200">
-                                    <th className="py-2 px-3 text-left font-bold text-gray-700">#</th>
-                                    <th className="py-2 px-3 text-left font-bold text-gray-700">Name & Relation</th>
-                                    <th className="py-2 px-3 text-left font-bold text-gray-700">Age / Gen</th>
-                                    <th className="py-2 px-3 text-left font-bold text-gray-700">Occupation</th>
-                                    <th className="py-2 px-3 text-left font-bold text-gray-700">Aadhaar</th>
+                                    <th className="py-2 px-2 text-left font-bold text-gray-700 w-8">#</th>
+                                    <th className="py-2 px-2 text-left font-bold text-gray-700">Name & Relation</th>
+                                    <th className="py-2 px-2 text-left font-bold text-gray-700">Personal Info</th>
+                                    <th className="py-2 px-2 text-left font-bold text-gray-700">Education & Work</th>
+                                    <th className="py-2 px-2 text-left font-bold text-gray-700">IDs & Contact</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {data.familyMembers.map((fm, i) => (
                                     <tr key={i}>
-                                        <td className="py-2 px-3 text-gray-500 border-r border-gray-100">{i + 1}</td>
-                                        <td className="py-2 px-3 text-gray-900 border-r border-gray-100 font-bold uppercase">
-                                            {fm.name} {fm.surname} <span className="text-[9px] text-gray-500 font-normal">({fm.relation})</span>
+                                        <td className="py-2 px-2 text-gray-500 border-r border-gray-100 align-top">{i + 1}</td>
+                                        <td className="py-2 px-2 text-gray-900 border-r border-gray-100 align-top">
+                                            <div className="font-bold uppercase">{fm.name} {fm.surname}</div>
+                                            <div className="text-[9px] text-gray-500">({fm.relation})</div>
+                                            {fm.maritalStatus && <div className="text-[9px] text-gray-500 italic mt-0.5">{fm.maritalStatus}</div>}
                                         </td>
-                                        <td className="py-2 px-3 text-gray-700 border-r border-gray-100">{fm.age} / {fm.gender ? fm.gender.charAt(0) : '-'}</td>
-                                        <td className="py-2 px-3 text-gray-700 border-r border-gray-100">{fm.occupation}</td>
-                                        <td className="py-2 px-3 text-gray-700 font-mono">{fm.aadhaarNumber}</td>
+                                        <td className="py-2 px-2 text-gray-700 border-r border-gray-100 align-top">
+                                            <div>{fm.age} Yrs / {fm.gender ? fm.gender.charAt(0) : '-'}</div>
+                                            {fm.dob && <div className="text-[9px] text-gray-400">{new Date(fm.dob).toLocaleDateString('en-GB')}</div>}
+                                        </td>
+                                        <td className="py-2 px-2 text-gray-700 border-r border-gray-100 align-top">
+                                            <div className="font-semibold">{fm.occupation || '-'}</div>
+                                            {fm.educationLevel && <div className="text-[9px] text-gray-500">{fm.educationLevel}</div>}
+                                        </td>
+                                        <td className="py-2 px-2 text-gray-700 align-top">
+                                            <div className="font-mono text-[9px]">Aadhaar: {fm.aadhaarNumber || '-'}</div>
+                                            {fm.mobileNumber && <div className="font-mono text-[9px]">Ph: {fm.mobileNumber}</div>}
+                                            {fm.epicNumber && <div className="font-mono text-[9px]">Voter: {fm.epicNumber}</div>}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

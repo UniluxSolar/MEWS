@@ -51,7 +51,7 @@ const loginUser = asyncHandler(async (req, res) => {
             }
 
             // Send Token in HttpOnly Cookie
-            res.cookie('jwt', generateToken(user._id), {
+            res.cookie('jwt', generateToken(user._id, user._id), {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax', // Relaxed for better compatibility with redirections/initial loads
@@ -92,7 +92,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 // @route   GET /api/auth/me
 // @access  Private
 const getMe = asyncHandler(async (req, res) => {
-    const user = {
+    let user = {
         _id: req.user._id,
         name: req.user.username || req.user.name, // Handle User vs Member
         email: req.user.email,
@@ -100,8 +100,34 @@ const getMe = asyncHandler(async (req, res) => {
         assignedLocation: req.user.assignedLocation,
         institutionId: req.user.institutionId,
         // photoUrl for frontend
-        photoUrl: req.user.photoUrl
+        photoUrl: req.user.photoUrl,
+        headPhotoUrl: req.user.photoUrl,
+        memberType: 'HEAD'
     };
+
+    // If logged in as a dependent, override details
+    if (req.loggedInMemberId && req.loggedInMemberId !== req.user._id.toString()) {
+        if (req.user.familyMembers) {
+            const dependent = req.user.familyMembers.find(fm =>
+                (fm._id && fm._id.toString() === req.loggedInMemberId) ||
+                (fm.mewsId && fm.mewsId === req.loggedInMemberId)
+            );
+
+            if (dependent) {
+                user = {
+                    ...user,
+                    memberId: dependent._id || dependent.mewsId,
+                    name: dependent.name,
+                    surname: dependent.surname || user.surname,
+                    mobileNumber: dependent.mobileNumber,
+                    photoUrl: dependent.photo,
+                    memberType: 'DEPENDENT',
+                    relation: dependent.relation
+                };
+            }
+        }
+    }
+
     res.status(200).json(user);
 });
 
@@ -143,8 +169,8 @@ const toggleTwoFactor = asyncHandler(async (req, res) => {
 });
 
 
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET || 'secret', {
+const generateToken = (id, memberId) => {
+    return jwt.sign({ id, memberId }, process.env.JWT_SECRET || 'secret', {
         expiresIn: '30d',
     });
 };
@@ -165,7 +191,12 @@ const requestOtp = asyncHandler(async (req, res) => {
 
     // STRICT CHECKING BASED ON userType
     if (userType === 'MEMBER') {
-        user = await Member.findOne({ mobileNumber: mobile });
+        user = await Member.findOne({
+            $or: [
+                { mobileNumber: mobile },
+                { "familyMembers.mobileNumber": mobile }
+            ]
+        });
         foundUserType = 'MEMBER';
     } else if (userType === 'INSTITUTION') {
         const Institution = require('../models/Institution');
@@ -173,7 +204,12 @@ const requestOtp = asyncHandler(async (req, res) => {
         foundUserType = 'INSTITUTION';
     } else {
         // Fallback: Check Member first, then Institution (Legacy behavior)
-        user = await Member.findOne({ mobileNumber: mobile });
+        user = await Member.findOne({
+            $or: [
+                { mobileNumber: mobile },
+                { "familyMembers.mobileNumber": mobile }
+            ]
+        });
         foundUserType = 'MEMBER';
 
         if (!user) {
@@ -265,7 +301,12 @@ const verifyOtp = asyncHandler(async (req, res) => {
 
     // STRICT CHECKING BASED ON userType
     if (userType === 'MEMBER') {
-        user = await Member.findOne({ mobileNumber: mobile });
+        user = await Member.findOne({
+            $or: [
+                { mobileNumber: mobile },
+                { "familyMembers.mobileNumber": mobile }
+            ]
+        });
         foundUserType = 'MEMBER';
     } else if (userType === 'INSTITUTION') {
         const Institution = require('../models/Institution');
@@ -273,7 +314,12 @@ const verifyOtp = asyncHandler(async (req, res) => {
         foundUserType = 'INSTITUTION';
     } else {
         // Fallback
-        user = await Member.findOne({ mobileNumber: mobile });
+        user = await Member.findOne({
+            $or: [
+                { mobileNumber: mobile },
+                { "familyMembers.mobileNumber": mobile }
+            ]
+        });
         foundUserType = 'MEMBER';
 
         if (!user) {
@@ -318,8 +364,40 @@ const verifyOtp = asyncHandler(async (req, res) => {
     user.otpExpires = undefined;
     await user.save();
 
+    // Identify who is logging in (Head or Dependent)
+    let loggedInMember = {
+        _id: user._id, // Default to Head
+        name: user.name,
+        surname: user.surname,
+        mobileNumber: user.mobileNumber,
+        photoUrl: user.photoUrl,
+        memberType: 'HEAD'
+    };
+
+    if (userType === 'MEMBER') {
+        if (user.mobileNumber === mobile) {
+            // Head is logging in
+            loggedInMember.memberType = 'HEAD';
+        } else if (user.familyMembers && user.familyMembers.length > 0) {
+            // Check dependents
+            const dependent = user.familyMembers.find(fm => fm.mobileNumber === mobile);
+            if (dependent) {
+                loggedInMember = {
+                    _id: user._id, // Main Document ID (for API calls)
+                    memberId: dependent._id || dependent.mewsId, // Specific Member ID
+                    name: dependent.name,
+                    surname: dependent.surname || user.surname, // Fallback to family surname
+                    mobileNumber: dependent.mobileNumber,
+                    photoUrl: dependent.photo,
+                    memberType: 'DEPENDENT',
+                    relation: dependent.relation
+                };
+            }
+        }
+    }
+
     // Send Token in HttpOnly Cookie
-    res.cookie('jwt', generateToken(user._id), {
+    res.cookie('jwt', generateToken(user._id, loggedInMember.memberId || loggedInMember._id), {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -327,12 +405,12 @@ const verifyOtp = asyncHandler(async (req, res) => {
     });
 
     res.json({
-        _id: user.id,
-        name: user.name, // Institution also has 'name'
-        surname: user.surname, // Only Member has surname, undefined for Institution
-        mobileNumber: user.mobileNumber,
+        _id: user.id, // Keep main ID for token/API compatibility
+        ...loggedInMember, // Spread specific details (overwrites name/mobile if dependent)
         role: userType, // 'MEMBER' or 'INSTITUTION'
-        institutionType: user.type // Optional: if Institution, send type
+        institutionType: user.type, // Optional: if Institution, send type
+        isFamilyLogin: loggedInMember.memberType === 'DEPENDENT',
+        token: generateToken(user._id, loggedInMember.memberId || loggedInMember._id) // Fallback for Header-based Auth
     });
 });
 

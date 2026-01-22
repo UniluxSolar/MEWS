@@ -1440,7 +1440,7 @@ const MemberRegistration = () => {
             } else {
                 const { data } = await API.post(`/members`, dataPayload, config);
                 // Show Success Modal instead of immediate navigate
-                setCreatedMemberData(data);
+                setCreatedMemberData(data.member);
                 setShowPreview(false);
                 setShowSuccessModal(true);
             }
@@ -1807,13 +1807,13 @@ const MemberRegistration = () => {
                             </button>
                         </div>
 
-                        <div className="p-8 space-y-8">
+                        <div className="p-4 md:p-8 space-y-8">
                             {/* Basic Info Preview */}
                             <div className="mb-8">
                                 <h3 className="text-lg font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
                                     <FaUser className="text-blue-600" /> Basic Information
                                 </h3>
-                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="border border-gray-200 rounded-lg overflow-x-auto">
                                     <table className="w-full text-sm text-left">
                                         <tbody className="divide-y divide-gray-100">
                                             <tr>
@@ -1854,7 +1854,7 @@ const MemberRegistration = () => {
                                 <h3 className="text-lg font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
                                     <FaMapMarkerAlt className="text-blue-600" /> Present Address
                                 </h3>
-                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="border border-gray-200 rounded-lg overflow-x-auto">
                                     <table className="w-full text-sm text-left">
                                         <tbody className="divide-y divide-gray-100">
                                             <tr>
@@ -1892,7 +1892,7 @@ const MemberRegistration = () => {
                                 <h3 className="text-lg font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
                                     <FaHome className="text-blue-600" /> Permanent Address
                                 </h3>
-                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="border border-gray-200 rounded-lg overflow-x-auto">
                                     <table className="w-full text-sm text-left">
                                         <tbody className="divide-y divide-gray-100">
                                             <tr>
@@ -1926,7 +1926,7 @@ const MemberRegistration = () => {
                                 <h3 className="text-lg font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
                                     <FaUsers className="text-blue-600" /> Caste & Community
                                 </h3>
-                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="border border-gray-200 rounded-lg overflow-x-auto">
                                     <table className="w-full text-sm text-left">
                                         <tbody className="divide-y divide-gray-100">
                                             <tr>
@@ -1947,7 +1947,7 @@ const MemberRegistration = () => {
                                 <h3 className="text-lg font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
                                     <FaRing className="text-blue-600" /> Marriage Information
                                 </h3>
-                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="border border-gray-200 rounded-lg overflow-x-auto">
                                     <table className="w-full text-sm text-left">
                                         <tbody className="divide-y divide-gray-100">
                                             <tr>
@@ -1980,7 +1980,7 @@ const MemberRegistration = () => {
                                 <h3 className="text-lg font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
                                     <FaRupeeSign className="text-blue-600" /> Family & Economic
                                 </h3>
-                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="border border-gray-200 rounded-lg overflow-x-auto">
                                     <table className="w-full text-sm text-left">
                                         <tbody className="divide-y divide-gray-100">
                                             <tr>
@@ -2006,7 +2006,7 @@ const MemberRegistration = () => {
                                     <h3 className="text-lg font-bold text-blue-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
                                         <FaUsers className="text-blue-600" /> Family Members
                                     </h3>
-                                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    <div className="border border-gray-200 rounded-lg overflow-x-auto">
                                         <table className="w-full text-sm text-left">
                                             <thead className="bg-gray-50 text-gray-700 font-bold uppercase text-xs">
                                                 <tr>
@@ -2066,7 +2066,7 @@ const MemberRegistration = () => {
                             {/* Other Details - Table Format */}
                             <div className="mb-8">
                                 <h3 className="text-lg font-bold text-blue-700 border-b pb-2 mb-4">Other Details</h3>
-                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="border border-gray-200 rounded-lg overflow-x-auto">
                                     <table className="w-full text-sm text-left">
                                         <thead className="bg-gray-50 text-gray-700 font-bold">
                                             <tr>

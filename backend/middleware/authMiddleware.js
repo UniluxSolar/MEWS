@@ -47,6 +47,7 @@ const protect = async (req, res, next) => {
             }
 
             req.user = user;
+            req.loggedInMemberId = decoded.memberId;
             next();
         } catch (error) {
             console.error(error);

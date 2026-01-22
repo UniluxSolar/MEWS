@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     FaCamera, FaEdit, FaCheckCircle, FaSave, FaTimes, FaArrowLeft, FaFileAlt, FaIdCard, FaPrint
 } from 'react-icons/fa';
@@ -117,37 +117,56 @@ const PersonalInfoTab = ({ formData, handleChange }) => (
     </div>
 );
 
-const FamilyMembersTab = ({ members }) => (
-    <div className="animate-fadeIn">
-        <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-gray-900">Family Members ({members?.length || 0})</h3>
-            {/* Add Member restricted to Village Admin only */}
-        </div>
+const FamilyMembersTab = ({ members, onMemberClick }) => {
+    // Filter out the current user for display, but keep original list for count
+    const displayMembers = members ? members.filter(m => !m.isCurrentUser) : [];
+    const totalCount = members ? members.length : 0;
 
-        {(!members || members.length === 0) ? (
-            <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                <p className="text-gray-500 text-sm">No family members added yet. Contact your Village Admin to add members.</p>
+    return (
+        <div className="animate-fadeIn">
+            <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-gray-900">Family Members ({totalCount})</h3>
+                {/* Add Member restricted to Village Admin only */}
             </div>
-        ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {members.map((member, index) => (
-                    <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50 flex justify-start items-center gap-4">
-                        <img
-                            src={member.photo || "/assets/images/user-profile.png"}
-                            alt={member.name}
-                            className="w-12 h-12 rounded-full object-cover border border-gray-200"
-                        />
-                        <div>
-                            <p className="font-bold text-gray-800 text-sm">{member.name} {member.surname}</p>
-                            <p className="text-xs text-gray-500">{member.relation} • {member.age} Years</p>
+
+            {displayMembers.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                    <p className="text-gray-500 text-sm">No other family members found.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {displayMembers.map((member, index) => (
+                        <div
+                            key={index}
+                            onClick={() => onMemberClick(member)}
+                            className="p-4 border border-gray-200 rounded-lg bg-gray-50 flex justify-start items-center gap-4 cursor-pointer hover:bg-gray-100 hover:shadow-sm transition-all"
+                        >
+                            <div className="relative">
+                                <img
+                                    src={member.photo || "/assets/images/user-profile.png"} // Dependent usually has 'photo', Head has 'photoUrl'. Normalized in useEffect, but good to check.
+                                    alt={member.name}
+                                    className="w-12 h-12 rounded-full object-cover border border-gray-200"
+                                />
+                                {member.isHead && (
+                                    <span className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white">
+                                        HEAD
+                                    </span>
+                                )}
+                            </div>
+                            <div>
+                                <p className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                                    {member.name} {member.surname}
+                                </p>
+                                <p className="text-xs text-gray-500">{member.relation} • {member.age} Years</p>
+                                <span className="text-[10px] text-primary font-bold mt-1 inline-block">Click to View Profile</span>
+                            </div>
                         </div>
-                        {/* Edit/Delete actions restricted to Village Admin */}
-                    </div>
-                ))}
-            </div>
-        )}
-    </div>
-);
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
 
 const DocumentsTab = ({ onOpenApp, onOpenID }) => (
     <div className="animate-fadeIn space-y-6">
@@ -305,6 +324,7 @@ const ProfileSettings = () => {
     // Family Member Modal State
     const [showFamilyModal, setShowFamilyModal] = useState(false);
     const [editingMemberIndex, setEditingMemberIndex] = useState(null);
+    const [familyList, setFamilyList] = useState([]); // Separate state for the UI list of family members
 
     const [formData, setFormData] = useState({
         name: '',
@@ -328,7 +348,42 @@ const ProfileSettings = () => {
         createdAt: ''
     });
 
+    const [isReadOnly, setIsReadOnly] = useState(false); // New state for View Only mode
+    const [viewingMemberId, setViewingMemberId] = useState(null); // Track if we are viewing a specific family member
+
     // Fetch User Data
+    // Helper to calculate relationship relative to the logged-in user
+    const getRelativeRelation = (currentUserRelation, targetMember) => {
+        const targetRelation = targetMember.relation; // Target's relation to HEAD
+
+        // If current user is HEAD, return target's relation to Head as is
+        if (!currentUserRelation || currentUserRelation === 'Head of Family') {
+            return targetRelation;
+        }
+
+        // Standardize strings for comparison (case-insensitive if needed, but usually consistent)
+        const userRel = currentUserRelation.toLowerCase();
+        const targetRel = (targetRelation || '').toLowerCase(); // Head has 'Head of Family' usually
+
+        // Case 1: Logged in as SPOUSE
+        if (userRel === 'spouse' || userRel === 'wife' || userRel === 'husband') {
+            if (targetMember.isHead) return 'Husband'; // Assuming Head is male/generic
+            // For children, they remain Son/Daughter
+            return targetRelation;
+        }
+
+        // Case 2: Logged in as CHILD (Son/Daughter)
+        if (userRel === 'son' || userRel === 'daughter') {
+            if (targetMember.isHead) return 'Father';
+            if (targetRel === 'spouse' || targetRel === 'wife' || targetRel === 'mother') return 'Mother';
+            if (targetRel === 'son') return 'Brother';
+            if (targetRel === 'daughter') return 'Sister';
+        }
+
+        // Fallback: return original relation to Head if complex/unknown
+        return targetRelation;
+    };
+
     // Fetch User Data
     useEffect(() => {
         const fetchProfile = async () => {
@@ -338,28 +393,165 @@ const ProfileSettings = () => {
                 // Since this component uses /members/:id, we need the ID. Login provides it.
                 if (!adminInfo?._id) return;
 
+                // Determine Read Only Mode
+                // If the user is a 'member' (not admin), enforce Read Only
+                // Assuming 'adminInfo.role' is available, or based on user request "member login totally on View mode"
+                // We will assume mostly ALL logins here are members unless role says 'admin'
+                if (adminInfo.role !== 'admin') {
+                    setIsReadOnly(true);
+                }
+
                 const response = await API.get(`/members/${adminInfo._id}`);
 
                 if (response.data) {
-                    const data = response.data;
-                    setFormData({
-                        ...data,
-                        // Ensure nested objects exist to prevent errors
-                        address: {
-                            state: data.address?.state || data.address?.district?.parent?.name || 'Telangana',
-                            district: data.address?.district?.name || data.address?.district || '',
-                            mandal: data.address?.mandal?.name || data.address?.mandal || '',
-                            village: data.address?.village?.name || data.address?.village || '',
-                            houseNumber: data.address?.houseNumber || '',
-                            street: data.address?.street || '',
-                            pinCode: data.address?.pinCode || ''
-                        },
-                        dob: data.dob ? data.dob.split('T')[0] : '', // Format Date for input
-                        familyMembers: data.familyMembers || []
-                    });
-                    if (data.photoUrl) setProfileImage(data.photoUrl);
+                    let data = response.data;
+                    // let isDependent = false; // This variable is no longer needed
 
-                    // Handle View Param after data load
+                    // Set FormData based on who is logged in (Head or Dependent)
+                    // But first, construct the Unified Family List for the "Family Members" tab
+                    // This list must include the HEAD and all DEPENDENTS
+                    const headMember = {
+                        _id: data._id,
+                        name: data.name,
+                        surname: data.surname,
+                        relation: 'Head of Family',
+                        mobileNumber: data.mobileNumber,
+                        photo: data.photoUrl, // Normalize to 'photo'
+                        photoUrl: data.photoUrl,
+                        dob: data.dob,
+                        age: data.age, // Backend might send this, or we calculate
+                        isHead: true,
+                        memberType: 'HEAD',
+                        // Address mapping for display if needed
+                        presentAddress: data.address
+                    };
+
+                    const dependents = (response.data.familyMembers || []).map(fm => ({
+                        ...fm,
+                        memberType: 'DEPENDENT',
+                        // Ensure photos are handled if they exist
+                        photo: fm.photo || fm.photoUrl
+                    }));
+
+                    // Unified List
+                    const allMembers = [headMember, ...dependents];
+
+                    // Mark Current User and Determine their Relation to Head
+                    // adminInfo.memberId is the ID of the logged-in user (Dependent or Head)
+                    const currentMemberId = adminInfo.memberId || adminInfo._id;
+
+                    // Find the logged-in user in the list to get their relation to HEAD
+                    const currentUserObj = allMembers.find(m => (m._id === currentMemberId || m.mewsId === currentMemberId));
+                    const currentUserRelation = currentUserObj ? currentUserObj.relation : 'Head of Family';
+
+                    const finalFamilyList = allMembers.map(m => {
+                        const isCurrentUser = (m._id === currentMemberId || m.mewsId === currentMemberId);
+
+                        // Calculate Display Relation
+                        // If it's the current user, we don't display relation usually, or we show "You"
+                        // But for others, calculate derived relation
+                        const displayRelation = isCurrentUser ? m.relation : getRelativeRelation(currentUserRelation, m);
+
+                        return {
+                            ...m,
+                            relation: displayRelation, // Override relation for display in this list
+                            originalRelation: m.relation, // Keep original just in case
+                            isCurrentUser
+                        };
+                    });
+
+                    setFamilyList(finalFamilyList);
+
+                    // HANDLE VIEW MEMBER FROM URL (Deep Linking support for "New Page" feel)
+                    const viewMemberId = queryParams.get('view_member_id');
+                    let memberToDisplay = data; // Default to main data (Head)
+
+                    if (viewMemberId) {
+                        setViewingMemberId(viewMemberId);
+                        const foundInFamily = finalFamilyList.find(m => m._id === viewMemberId || m.mewsId === viewMemberId);
+                        if (foundInFamily) {
+                            memberToDisplay = { ...foundInFamily, address: foundInFamily.presentAddress || data.address }; // Use family member data
+                            setActiveTab('Personal Info'); // Force tab
+                        }
+                    } else if (adminInfo.memberId && adminInfo.memberId !== adminInfo._id) {
+                        // Default Dependent Login view
+                        const foundMember = data.familyMembers?.find(fm => (fm._id === adminInfo.memberId || fm.mewsId === adminInfo.memberId));
+                        if (foundMember) {
+                            memberToDisplay = {
+                                ...data,
+                                ...foundMember,
+                                address: foundMember.presentAddress || data.address,
+                            };
+                        }
+                    }
+
+                    // Populate Form
+                    // Helper to get nested name if object or use value if string
+                    const getAddressValue = (addrObj, field) => {
+                        if (!addrObj) return '';
+                        const val = addrObj[field];
+                        if (typeof val === 'object' && val !== null) return val.name || '';
+                        if (typeof val === 'string' && val.length > 20 && !val.includes(' ')) return '';
+                        return val || '';
+                    };
+
+                    const headAddress = data.address || {};
+
+                    const resolveAddress = (memberAddr, headAddr) => {
+                        const getField = (f) => {
+                            // Try member's field first
+                            let val = memberAddr?.[f];
+                            // If it is an object (populated), take name
+                            if (val && typeof val === 'object') return val.name;
+                            // If it is a long ID-like string, likely unpopulated ID. Fallback to Head's if safe
+                            if (typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val)) {
+                                const headVal = headAddr?.[f];
+                                if (headVal && typeof headVal === 'object') return headVal.name;
+                                if (headVal && typeof headVal === 'string' && !/^[0-9a-fA-F]{24}$/.test(headVal)) return headVal;
+                                return '';
+                            }
+                            return val || headAddr?.[f]?.name || (typeof headAddr?.[f] === 'string' ? headAddr?.[f] : '') || '';
+                        };
+
+                        return {
+                            state: getField('state') || 'Telangana',
+                            district: getField('district'),
+                            mandal: getField('mandal'),
+                            village: getField('village'),
+                            houseNumber: memberAddr?.houseNumber || headAddr?.houseNumber || '',
+                            street: memberAddr?.street || headAddr?.street || '',
+                            pinCode: memberAddr?.pinCode || headAddr?.pinCode || ''
+                        };
+                    }
+
+                    const finalAddress = resolveAddress(memberToDisplay.address || memberToDisplay.presentAddress, headAddress);
+
+                    setFormData({
+                        ...memberToDisplay,
+                        mewsId: memberToDisplay.mewsId || memberToDisplay.memberId || 'PENDING',
+                        name: memberToDisplay.name || '',
+                        surname: memberToDisplay.surname || '',
+                        mobileNumber: memberToDisplay.mobileNumber || '',
+                        email: memberToDisplay.email || '',
+                        gender: memberToDisplay.gender || '',
+                        address: finalAddress,
+                        dob: memberToDisplay.dob ? memberToDisplay.dob.split('T')[0] : '',
+                        familyMembers: response.data.familyMembers || []
+                    });
+
+                    // Photo Handling
+                    // Dependents often have 'photo' (GCS path) or 'photoUrl' (signed/full). 
+                    // Head has 'photoUrl'.
+                    // We must resolve this.
+                    const rawPhoto = memberToDisplay.photo || memberToDisplay.photoUrl;
+                    if (rawPhoto) {
+                        setProfileImage(rawPhoto);
+                    } else {
+                        setProfileImage("/assets/images/user-profile.png");
+                    }
+
+
+                    // Handle Document View Param
                     if (viewParam === 'application') {
                         setActiveTab('My Documents');
                         setShowAppModal(true);
@@ -375,7 +567,7 @@ const ProfileSettings = () => {
             }
         };
         fetchProfile();
-    }, [viewParam]);
+    }, [location.search, viewParam]); // React to URL changes
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -456,6 +648,7 @@ const ProfileSettings = () => {
                     if (storedAdmin) {
                         storedAdmin.photoUrl = updatedMember.photoUrl;
                         localStorage.setItem('adminInfo', JSON.stringify(storedAdmin));
+                        window.dispatchEvent(new Event('storage'));
                     }
                 }
 
@@ -511,6 +704,20 @@ const ProfileSettings = () => {
         const baseUrl = apiUrl.replace(/\/api$/, '');
         const cleanUrl = url.startsWith('/') ? url : `/${url}`;
         return `${baseUrl}${cleanUrl}`;
+    };
+
+    const navigate = useNavigate(); // Hook for navigation
+
+    const handleViewMember = (member) => {
+        // Instead of just setting state, Navigate to URL with param
+        // This gives the "New Page" behavior (browser history, back button)
+        navigate(`?view_member_id=${member._id || member.mewsId}`);
+    };
+
+    // Helper to go back to main list
+    const handleBackToFamily = () => {
+        navigate(location.pathname); // Clear query params
+        setActiveTab('Family Members'); // Switch back to list tab
     };
 
     if (loading) return <div className="p-8 text-center">Loading Profile...</div>;
@@ -604,81 +811,356 @@ const ProfileSettings = () => {
                 </div>
             )}
 
-            {/* Back Button */}
-            <div className="">
+            {/* Dashboard Link */}
+            <div className="mb-6">
                 <Link to="/dashboard" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
                     <FaArrowLeft size={12} /> Back to Dashboard
                 </Link>
             </div>
 
-            {/* Profile Header Card */}
-            <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-8">
-                <div className="relative">
-                    <div className="w-32 h-32 rounded-full p-1 border-2 border-dashed border-gray-300 overflow-hidden">
-                        <img
-                            src={getImageUrl(formData.photoUrl || profileImage)}
-                            alt="Profile"
-                            className="w-full h-full object-cover rounded-full bg-gray-50"
-                        />
-                    </div>
-                </div>
+            {/* Main Content Card */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-h-[500px]">
 
-                <div className="flex-1 text-center md:text-left">
-                    <div className="flex flex-col md:flex-row items-center gap-4 mb-2">
-                        <h1 className="text-2xl font-bold text-gray-900">{formData.name} {formData.surname}</h1>
+                {/* Back Button for Family View */}
+                {viewingMemberId && (
+                    <div className="bg-blue-50 px-8 py-3 border-b border-blue-100">
+                        <button
+                            onClick={handleBackToFamily}
+                            className="flex items-center gap-2 text-primary font-bold hover:underline text-sm"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                            Back to Family List
+                        </button>
                     </div>
-                    <div className="flex flex-wrap justify-center md:justify-start gap-x-8 gap-y-2 text-sm text-gray-500 mb-6">
-                        <div>
-                            <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wide">Member ID</span>
-                            <span className="font-bold text-gray-800">{formData.mewsId || 'PENDING'}</span>
-                        </div>
-                        <div>
-                            <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wide">Member Since</span>
-                            <span className="font-bold text-gray-800">
-                                {formData.createdAt ? new Date(formData.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                )}
 
-            {/* Navigation Tabs */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-2 overflow-x-auto">
-                <div className="flex gap-6 min-w-max">
+                {/* Tabs Header */}
+                <div className="flex border-b border-gray-200 overflow-x-auto bg-gray-50/50 px-4 md:px-8">
                     {['Personal Info', 'My Documents', 'Family Members', 'Notifications'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`py-4 px-2 text-sm font-bold border-b-2 transition-colors ${activeTab === tab
-                                ? 'text-[#1e2a4a] border-[#1e2a4a]'
-                                : 'text-gray-500 border-transparent hover:text-gray-800'
+                            className={`px-4 md:px-6 py-4 font-semibold text-sm transition-all whitespace-nowrap border-b-2 ${activeTab === tab
+                                ? 'text-primary border-primary bg-white'
+                                : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-100/50'
                                 }`}
                         >
                             {tab}
                         </button>
                     ))}
                 </div>
+
+                <div className="p-6 md:p-8">
+                    {activeTab === 'Personal Info' && (
+                        <div className="animate-fadeIn w-full">
+                            {/* Profile Header Section */}
+                            <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-10 pb-8 border-b border-gray-100">
+                                <div className="relative group shrink-0">
+                                    <div className="w-32 h-32 rounded-full ring-4 ring-white shadow-lg overflow-hidden relative">
+                                        <img
+                                            src={getImageUrl(profileImage)}
+                                            alt="Profile"
+                                            className="w-full h-full object-cover bg-gray-100"
+                                        />
+                                        {!isReadOnly && (
+                                            <div
+                                                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-sm"
+                                                onClick={() => document.getElementById('photo-upload').click()}
+                                            >
+                                                <FaCamera className="text-white text-2xl" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    {!isReadOnly && (
+                                        <input
+                                            type="file"
+                                            id="photo-upload"
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                const file = e.target.files[0];
+                                                if (file) {
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => {
+                                                        setProfileImage(reader.result);
+                                                        setFormData(prev => ({ ...prev, photoUrl: reader.result }));
+                                                    }
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }}
+                                        />
+                                    )}
+                                </div>
+                                <div className="text-center md:text-left flex-1">
+                                    <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                                        <h1 className="text-3xl font-bold text-gray-900">{formData.name} {formData.surname}</h1>
+                                        {isReadOnly && (
+                                            <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full border border-gray-200">
+                                                View Only
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-wrap justify-center md:justify-start gap-6 text-sm text-gray-500">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium text-gray-400">ID:</span>
+                                            <span className="font-mono text-primary bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                                                {/* Display logic: Valid ID or PENDING */}
+                                                {(formData.mewsId && formData.mewsId !== 'PENDING') ? formData.mewsId : 'PENDING'}
+                                            </span>
+                                        </div>
+                                        {formData.dob && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium text-gray-400">Born:</span>
+                                                <span className="text-gray-700">{formData.dob}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Details Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                                {/* Personal Details Column */}
+                                <div className="space-y-6">
+                                    <h3 className="text-lg font-bold text-gray-900 border-l-4 border-primary pl-3">Personal Details</h3>
+
+                                    <div className="grid gap-6">
+                                        <div className="group">
+                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">First Name</label>
+                                            {isReadOnly ? (
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.name}</p>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    name="name"
+                                                    value={formData.name}
+                                                    onChange={handleChange}
+                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                />
+                                            )}
+                                        </div>
+
+                                        <div className="group">
+                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Surname</label>
+                                            {isReadOnly ? (
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.surname}</p>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    name="surname"
+                                                    value={formData.surname}
+                                                    onChange={handleChange}
+                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                />
+                                            )}
+                                        </div>
+
+                                        <div className="group">
+                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Mobile Number</label>
+                                            {isReadOnly ? (
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1 flex items-center gap-2">
+                                                    {formData.mobileNumber}
+                                                </p>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    name="mobileNumber"
+                                                    value={formData.mobileNumber}
+                                                    onChange={handleChange}
+                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                />
+                                            )}
+                                        </div>
+
+                                        <div className="group">
+                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Email</label>
+                                            {isReadOnly ? (
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.email || '-'}</p>
+                                            ) : (
+                                                <input
+                                                    type="email"
+                                                    name="email"
+                                                    value={formData.email}
+                                                    onChange={handleChange}
+                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                />
+                                            )}
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="group">
+                                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Date of Birth</label>
+                                                {isReadOnly ? (
+                                                    <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.dob}</p>
+                                                ) : (
+                                                    <input
+                                                        type="date"
+                                                        name="dob"
+                                                        value={formData.dob}
+                                                        onChange={handleChange}
+                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                    />
+                                                )}
+                                            </div>
+                                            <div className="group">
+                                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Gender</label>
+                                                {isReadOnly ? (
+                                                    <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.gender}</p>
+                                                ) : (
+                                                    <select
+                                                        name="gender"
+                                                        value={formData.gender}
+                                                        onChange={handleChange}
+                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                    >
+                                                        <option value="Male">Male</option>
+                                                        <option value="Female">Female</option>
+                                                        <option value="Other">Other</option>
+                                                    </select>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Address Details Column */}
+                                <div className="space-y-6">
+                                    <h3 className="text-lg font-bold text-gray-900 border-l-4 border-amber-500 pl-3">Address Details</h3>
+
+                                    <div className="grid gap-6">
+                                        <div className="group">
+                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">House Number</label>
+                                            {isReadOnly ? (
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address.houseNumber || '-'}</p>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    name="address.houseNumber"
+                                                    value={formData.address.houseNumber}
+                                                    onChange={handleChange}
+                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="group">
+                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Street / Colony</label>
+                                            {isReadOnly ? (
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address.street || '-'}</p>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    name="address.street"
+                                                    value={formData.address.street}
+                                                    onChange={handleChange}
+                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="group">
+                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Village</label>
+                                            {isReadOnly ? (
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address.village || '-'}</p>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    name="address.village"
+                                                    value={formData.address.village}
+                                                    onChange={handleChange}
+                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="group">
+                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Mandal</label>
+                                            {isReadOnly ? (
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address.mandal || '-'}</p>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    name="address.mandal"
+                                                    value={formData.address.mandal}
+                                                    onChange={handleChange}
+                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="group">
+                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">District</label>
+                                            {isReadOnly ? (
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address.district || '-'}</p>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    name="address.district"
+                                                    value={formData.address.district}
+                                                    onChange={handleChange}
+                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="group">
+                                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">State</label>
+                                                {isReadOnly ? (
+                                                    <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address.state || 'Telangana'}</p>
+                                                ) : (
+                                                    <input
+                                                        type="text"
+                                                        name="address.state"
+                                                        value={formData.address.state}
+                                                        onChange={handleChange}
+                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                    />
+                                                )}
+                                            </div>
+                                            <div className="group">
+                                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Pin Code</label>
+                                                {isReadOnly ? (
+                                                    <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address.pinCode || '-'}</p>
+                                                ) : (
+                                                    <input
+                                                        type="text"
+                                                        name="address.pinCode"
+                                                        value={formData.address.pinCode}
+                                                        onChange={handleChange}
+                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Only Show Update Button if NOT Read Only */}
+                            {!isReadOnly && (
+                                <div className="pt-8 flex justify-end border-t border-gray-100 mt-8">
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={saving}
+                                        className={`px-8 py-3 bg-gradient-to-r from-primary to-blue-600 text-white font-bold rounded-lg shadow-md hover:shadow-lg transform active:scale-95 transition-all flex items-center gap-2 ${saving ? 'opacity-70 cursor-wait' : ''}`}
+                                    >
+                                        {saving && <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                                        {saving ? 'Updating...' : 'Update Profile'}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'My Documents' && <DocumentsTab onOpenApp={() => setShowAppModal(true)} onOpenID={() => setShowIDModal(true)} />}
+
+                    {activeTab === 'Family Members' && (
+                        <FamilyMembersTab
+                            members={familyList}
+                            onMemberClick={handleViewMember}
+                        />
+                    )}
+
+                    {activeTab === 'Notifications' && <NotificationsTab />}
+                </div>
             </div>
-
-            {/* Form Section */}
-            <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm min-h-[400px]">
-
-                {activeTab === 'Personal Info' && <PersonalInfoTab formData={formData} handleChange={handleChange} />}
-
-                {activeTab === 'My Documents' && <DocumentsTab onOpenApp={() => setShowAppModal(true)} onOpenID={() => setShowIDModal(true)} />}
-
-                {activeTab === 'Family Members' && (
-                    <FamilyMembersTab
-                        members={formData.familyMembers}
-                    />
-                )}
-
-                {activeTab === 'Notifications' && <NotificationsTab />}
-
-
-
-            </div>
-        </div>
+        </div >
     );
 };
 

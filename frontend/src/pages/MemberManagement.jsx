@@ -9,7 +9,7 @@ import {
     FaSearch, FaFilter, FaPlus, FaEllipsisV, FaFileDownload, FaMapMarkedAlt, FaMapMarkerAlt,
     FaTable, FaThLarge, FaEye, FaEdit, FaTrash, FaPhoneAlt, FaIdCard,
     FaCheckSquare, FaSort, FaSortUp, FaSortDown, FaChevronLeft, FaChevronRight,
-    FaFileExcel, FaFilePdf
+    FaFileExcel, FaFilePdf, FaCrown
 } from 'react-icons/fa';
 import { saveAs } from 'file-saver';
 import AdminSidebar from '../components/AdminSidebar';
@@ -866,7 +866,14 @@ const MemberManagement = () => {
                                                                 </td>
                                                                 <td className="px-4 py-3">
                                                                     <div className="flex flex-col truncate pr-2">
-                                                                        <Link to={`/admin/members/${member._id}`} className="text-sm font-bold text-slate-800 hover:text-blue-600 cursor-pointer truncate" title={`${member.name} ${member.surname}`}>{member.name} {member.surname}</Link>
+                                                                        <Link to={`/admin/members/${member._id}`} className="text-sm font-bold text-slate-800 hover:text-blue-600 cursor-pointer truncate flex items-center gap-2" title={`${member.name} ${member.surname}`}>
+                                                                            {member.name} {member.surname}
+                                                                            {!member.headOfFamily && (
+                                                                                <span className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded border border-amber-200 flex items-center gap-1" title="Head of Family">
+                                                                                    <FaCrown size={8} /> Head
+                                                                                </span>
+                                                                            )}
+                                                                        </Link>
                                                                         <div className="text-[10px] text-slate-400 font-mono truncate">ID: {member.mewsId || member._id.substring(0, 6)}</div>
                                                                     </div>
                                                                 </td>
@@ -917,6 +924,13 @@ const MemberManagement = () => {
                                                 {displayedMembers.map(member => (
                                                     <div key={member._id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 hover:shadow-md transition relative group">
                                                         <div className="absolute top-3 right-3"><span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide ${(member.occupation || '').toLowerCase().includes('farmer') ? 'bg-green-50 text-green-600' : (member.occupation || '').toLowerCase().includes('student') ? 'bg-blue-50 text-blue-600' : (member.occupation || '').toLowerCase().includes('business') ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>{member.occupation || 'Member'}</span></div>
+                                                        {!member.headOfFamily && (
+                                                            <div className="absolute top-3 left-3 z-10">
+                                                                <span className="bg-amber-100 text-amber-700 text-[9px] px-1.5 py-0.5 rounded border border-amber-200 flex items-center gap-1 font-bold shadow-sm" title="Head of Family">
+                                                                    <FaCrown size={8} /> HEAD
+                                                                </span>
+                                                            </div>
+                                                        )}
                                                         <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-xl font-bold text-slate-400 mb-3 border-2 border-white shadow-md mx-auto overflow-hidden mt-2 relative">
                                                             <span className="absolute inset-0 flex items-center justify-center w-full h-full">{(member.name || '').charAt(0)}</span>
                                                             <img

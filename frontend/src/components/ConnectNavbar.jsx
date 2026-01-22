@@ -5,8 +5,10 @@ import { HiMenu } from 'react-icons/hi';
 import MewsLogo from '../assets/mews_main_logo_new.png';
 
 const ConnectNavbar = () => {
+    const [isOpen, setIsOpen] = React.useState(false);
+
     return (
-        <nav className="bg-[#1e2a4a] border-b border-gray-700 text-white">
+        <nav className="bg-[#1e2a4a] border-b border-gray-700 text-white relative z-50">
             <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 {/* Logo Area */}
                 <div className="flex items-center gap-8">
@@ -38,13 +40,31 @@ const ConnectNavbar = () => {
 
                 {/* Right Actions */}
                 <div className="flex items-center gap-4">
-
-
-                    <button className="md:hidden text-white p-2">
+                    <button
+                        className="md:hidden text-white p-2 focus:outline-none"
+                        onClick={() => setIsOpen(!isOpen)}
+                    >
                         <HiMenu size={24} />
                     </button>
                 </div>
             </div>
+
+            {/* Mobile Dropdown Menu */}
+            {isOpen && (
+                <div className="md:hidden absolute top-16 left-0 w-full bg-[#1e2a4a] border-b border-gray-700 shadow-xl animate-fadeIn">
+                    <div className="px-4 py-4 space-y-3 flex flex-col">
+                        <Link to="/login" className="text-center px-4 py-3 bg-white text-[#1e2a4a] font-bold rounded-lg hover:bg-gray-100 transition">
+                            Member Login
+                        </Link>
+                        <Link to="/admin/login" className="text-center px-4 py-3 border border-white text-white font-bold rounded-lg hover:bg-white/10 transition">
+                            Admin Login
+                        </Link>
+                        <Link to="/institution/login" className="text-center px-4 py-3 border border-white text-white font-bold rounded-lg hover:bg-white/10 transition">
+                            Institution Login
+                        </Link>
+                    </div>
+                </div>
+            )}
         </nav>
     );
 };
