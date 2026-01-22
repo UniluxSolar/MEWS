@@ -1,17 +1,25 @@
-# Base image
-FROM node:18-alpine
+# Stage 1: Build Frontend
+FROM node:18-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
 
-# Set working directory
+# Stage 2: Setup Backend
+FROM node:18-alpine
 WORKDIR /app
 
-# Copy package.json and package-lock.json from backend directory
+# Copy backend dependencies
 COPY backend/package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# Copy source code from backend directory
-COPY backend/ .
+# Copy backend source code
+COPY backend/ ./
+
+# Copy built frontend from Stage 1
+# server.js expects ../frontend/dist relative to /app, which maps to /frontend/dist
+COPY --from=frontend-builder /app/frontend/dist /frontend/dist
 
 # Expose port
 EXPOSE 8080
