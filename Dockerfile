@@ -8,6 +8,7 @@ RUN npm run build
 
 # Stage 2: Setup Backend
 FROM node:18-alpine
+ENV NODE_ENV=production
 WORKDIR /app
 
 # Copy backend dependencies

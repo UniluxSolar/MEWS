@@ -11,7 +11,7 @@ const connectDB = async () => {
         console.log(`MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
         console.error(`Error: ${error.message}`);
-        process.exit(1);
+        // process.exit(1); // Do not crash on DB failure. Allow server to start for Cloud Run health checks.
     }
 };
 
