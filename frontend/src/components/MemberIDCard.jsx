@@ -3,6 +3,7 @@ import html2canvas from 'html2canvas';
 import { FaDownload, FaPhoneAlt, FaCheck } from 'react-icons/fa';
 import jsPDF from 'jspdf';
 import mewsLogo from '../assets/mews_main_logo_new.png';
+import './MemberIDCardStyles.css';
 
 const MemberIDCard = ({ member }) => {
     const frontRef = useRef(null);
@@ -44,7 +45,7 @@ const MemberIDCard = ({ member }) => {
     };
 
     // Address Formatting
-    const address = member.address || {};
+    const address = member.permanentAddress || member.address || {};
     const fullAddress = [
         address.houseNumber ? `H.No: ${address.houseNumber}` : '',
         address.street,
@@ -54,6 +55,21 @@ const MemberIDCard = ({ member }) => {
         address.state || 'Telangana',
         address.pinCode
     ].filter(Boolean).join(', ');
+
+    // Role based colors
+    const roleColors = {
+        'SUPER_ADMIN': '#8B1D1D',
+        'STATE_ADMIN': '#4A2C6D',
+        'DISTRICT_ADMIN': '#1F3A5F',
+        'MANDAL_ADMIN': '#2F6B3F',
+        'VILLAGE_ADMIN': '#C9A227',
+        'MEMBER': '#6B7280'
+    };
+
+    console.log('MemberIDCard Debug:', { role: member.role, mewsId: member.mewsId, color: roleColors[member.role] });
+
+    const effectiveRole = member.role || 'MEMBER';
+    const headerColor = roleColors[effectiveRole] || roleColors['MEMBER'];
 
     return (
         <div className="flex flex-col items-center gap-6">
@@ -66,7 +82,7 @@ const MemberIDCard = ({ member }) => {
                 </button>
             </div>
 
-            <div className="flex flex-wrap gap-8 justify-center">
+            <div className="flex flex-wrap gap-8 justify-center id-card-scale-wrapper transition-transform duration-300">
                 {/* FRONT SIDE */}
                 <div ref={frontRef} className="w-[400px] h-[252px] bg-white rounded-xl shadow-lg border border-gray-300 overflow-hidden relative flex flex-col shrink-0">
                     {/* Watermark */}
@@ -81,9 +97,9 @@ const MemberIDCard = ({ member }) => {
                                 Mala Educational Welfare Society
                             </div>
                         </div>
-                        <div className="h-[30px] bg-[#1e2a4a] flex items-center justify-between px-4 pl-[70px]">
+                        <div className="h-[30px] flex items-center justify-between px-4 pl-[70px]" style={{ backgroundColor: headerColor }}>
                             <h2 className="text-white font-bold text-[10px] tracking-[0.15em] uppercase drop-shadow-sm">
-                                {member.role === 'ADMIN' ? 'ADMIN' : 'MEMBER'}
+                                {member.role === 'ADMIN' ? 'ADMIN' : (member.role === 'MEMBER' ? 'MEMBER' : member.role.replace('_', ' '))}
                             </h2>
                             <div className="text-[10px] font-bold text-white tracking-wide bg-white/10 px-2 py-0.5 rounded">
                                 ID: <span className="font-mono">{member.mewsId || 'PENDING'}</span>

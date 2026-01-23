@@ -16,6 +16,11 @@ router.post('/management', protect, authorize('SUPER_ADMIN', 'STATE_ADMIN', 'DIS
 router.put('/management/:id', protect, authorize('SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN'), updateAdmin);
 router.delete('/management/:id', protect, authorize('SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN'), deleteAdmin);
 
+// Member Promotion Routes
+const { searchMember, promoteMember } = require('../controllers/adminManagementController');
+router.post('/management/search-member', protect, authorize('SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN'), searchMember);
+router.post('/management/promote-member', protect, authorize('SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN'), promoteMember);
+
 // New: Helper to fetch locations for dropdown
 router.get('/management/locations', protect, getChildLocations);
 

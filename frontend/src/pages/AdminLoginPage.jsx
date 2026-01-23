@@ -5,33 +5,101 @@ import { FaUsers, FaEye, FaEyeSlash, FaChevronDown } from 'react-icons/fa';
 
 const AdminLoginPage = () => {
     const navigate = useNavigate();
-    const [loginMethod, setLoginMethod] = useState('password'); // 'password' | 'otp'
+    const [loginMethod, setLoginMethod] = useState('otp'); // Default to OTP as per updated requirement? Or keep password default. Image implies OTP is primary view now? Let's check image. Image has "Login with Password" button below, implying OTP is active. Let's Set default to 'otp' or persist previous. I'll default to 'otp' to match latest request focus.
     const [showPassword, setShowPassword] = useState(false);
 
-    // Credentials State
+    // Credentials State (Password Login)
     const [credentials, setCredentials] = useState({ username: '', password: '', role: 'VILLAGE_ADMIN' });
+
+    // OTP State
     const [mobileNumber, setMobileNumber] = useState('');
+    const [otp, setOtp] = useState('');
+    const [otpSent, setOtpSent] = useState(false);
+    const [timer, setTimer] = useState(0);
+    const [feedbackMessage, setFeedbackMessage] = useState(null);
 
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Timer Effect
+    React.useEffect(() => {
+        let interval;
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [timer]);
 
     const handleChange = (e) => {
         setCredentials({ ...credentials, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSendOTP = async () => {
+        setFeedbackMessage(null);
+        setError('');
+        if (!mobileNumber || mobileNumber.length !== 10) {
+            setError('Please enter a valid 10-digit mobile number');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            // Use userType='MEMBER' because Admins are promoted Members
+            const { data } = await API.post('/auth/request-otp', { mobile: mobileNumber, userType: 'MEMBER' });
+            setOtpSent(true);
+            setTimer(60);
+            setFeedbackMessage({ type: 'success', text: data.message || 'OTP sent successfully!' });
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Failed to send OTP';
+            setError(msg);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyOTP = async (e) => {
+        e.preventDefault(); // In case it's in a form
         setLoading(true);
         setError('');
         try {
-            // NOTE: In a real app, you would handle OTP login separately here.
-            // Keeping existing password login logic for now as requested "functionality should be as it is".
-            if (loginMethod === 'otp') {
-                setError("OTP Login functionality is currently disabled for security.");
+            const { data } = await API.post('/auth/verify-otp', { mobile: mobileNumber, otp, userType: 'MEMBER' });
+
+            // Check if user is actually an admin
+            const adminRoles = ['SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN'];
+            if (!adminRoles.includes(data.role)) {
+                setError('Access Denied. You are not an Admin.');
                 setLoading(false);
                 return;
             }
 
+            localStorage.setItem('adminInfo', JSON.stringify(data));
+            navigate('/admin/dashboard', { replace: true });
+        } catch (err) {
+            setError(err.response?.data?.message || 'Invalid OTP');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        // OTP Login Handling
+        if (loginMethod === 'otp') {
+            if (otpSent) {
+                handleVerifyOTP(e);
+            } else {
+                handleSendOTP();
+            }
+            return;
+        }
+
+        // Password Login Handling
+        setLoading(true);
+        setError('');
+        try {
             const { data } = await API.post('/auth/login', credentials);
             localStorage.setItem('adminInfo', JSON.stringify(data));
             navigate('/admin/dashboard', { replace: true });
@@ -61,8 +129,9 @@ const AdminLoginPage = () => {
                 {/* Login Form */}
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {error && <div className="text-red-500 text-xs text-center font-bold bg-red-50 p-2 rounded-lg">{error}</div>}
+                    {feedbackMessage && <div className="text-emerald-600 text-xs text-center font-bold bg-emerald-50 p-2 rounded-lg">{feedbackMessage.text}</div>}
 
-                    {/* Role Selector (Preserved Functionality) */}
+                    {/* Role Selector (Common to both) */}
                     <div className="relative">
                         <label className="text-xs font-semibold text-gray-600 mb-1.5 block ml-1">Select Role</label>
                         <div className="relative">
@@ -148,19 +217,61 @@ const AdminLoginPage = () => {
                                 <input
                                     type="tel"
                                     value={mobileNumber}
-                                    onChange={(e) => setMobileNumber(e.target.value)}
-                                    placeholder="Enter your mobile number"
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, '');
+                                        if (val.length <= 10) setMobileNumber(val);
+                                    }}
+                                    placeholder="Enter 10-digit mobile number"
                                     className="w-full bg-gray-100 text-gray-800 text-sm rounded-lg px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#274472] transition-all placeholder:text-gray-400"
+                                    disabled={otpSent}
                                 />
                             </div>
 
+                            {/* OTP Input */}
+                            {otpSent && (
+                                <div>
+                                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block ml-1">One Time Password (OTP)</label>
+                                    <input
+                                        type="text"
+                                        value={otp}
+                                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                        placeholder="Enter 4-digit OTP"
+                                        maxLength={4}
+                                        className="w-full bg-white border-2 border-[#274472] text-gray-800 text-lg tracking-widest text-center rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#274472] transition-all"
+                                    />
+                                    <div className="text-right mt-2">
+                                        {timer > 0 ? (
+                                            <span className="text-xs text-gray-500 font-medium">Resend in {timer}s</span>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={handleSendOTP}
+                                                className="text-xs font-bold text-[#274472] hover:underline"
+                                            >
+                                                Resend OTP
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             <button
-                                type="button"
-                                className="w-full bg-[#274472] text-white font-bold py-3.5 rounded-lg shadow-lg hover:bg-[#1a335d] transition-all"
-                                onClick={() => alert("OTP Sent (Demo)")}
+                                type="submit"
+                                disabled={loading}
+                                className={`w-full bg-[#274472] text-white font-bold py-3.5 rounded-lg shadow-lg hover:bg-[#1a335d] transition-all ${loading ? 'opacity-70' : ''}`}
                             >
-                                Send OTP
+                                {loading ? 'Processing...' : (otpSent ? 'Login' : 'Send OTP')}
                             </button>
+
+                            {otpSent && (
+                                <button
+                                    type="button"
+                                    onClick={() => setOtpSent(false)}
+                                    className="w-full text-center text-xs text-gray-500 hover:text-[#274472]"
+                                >
+                                    Change Mobile Number
+                                </button>
+                            )}
                         </>
                     )}
                 </form>
@@ -175,7 +286,11 @@ const AdminLoginPage = () => {
                 {/* Toggle Login Method Button */}
                 <button
                     type="button"
-                    onClick={() => setLoginMethod(loginMethod === 'password' ? 'otp' : 'password')}
+                    onClick={() => {
+                        setLoginMethod(loginMethod === 'password' ? 'otp' : 'password');
+                        setError('');
+                        setFeedbackMessage(null);
+                    }}
                     className="w-full bg-gray-50 text-[#274472] font-bold py-3.5 rounded-lg border border-gray-100 hover:bg-gray-100 transition-all text-sm mb-8"
                 >
                     {loginMethod === 'password' ? 'Login with OTP' : 'Login with Password'}

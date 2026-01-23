@@ -163,7 +163,13 @@ const CreateTicketModal = ({ isOpen, onClose, onCreate }) => {
 
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files[0]) {
-            setFormData({ ...formData, attachment: e.target.files[0] });
+            const file = e.target.files[0];
+            if (file.size > 5242880) {
+                alert("File size exceeds 5 MB. Please upload a smaller file.");
+                e.target.value = null;
+                return;
+            }
+            setFormData({ ...formData, attachment: file });
         }
     };
 

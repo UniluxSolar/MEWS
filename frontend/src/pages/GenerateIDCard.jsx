@@ -54,9 +54,9 @@ const GenerateIDCard = () => {
                     return loc || '';
                 };
 
-                const vName = await resolveLocationName(newMember.address?.village, rawData.presentVillage, resolvedNames.village);
-                const mName = await resolveLocationName(newMember.address?.mandal, rawData.presentMandal, resolvedNames.mandal);
-                const dName = await resolveLocationName(newMember.address?.district, rawData.presentDistrict, resolvedNames.district);
+                const vName = await resolveLocationName(newMember.permanentAddress?.village || newMember.address?.village, rawData.permVillage || rawData.presentVillage, resolvedNames.village);
+                const mName = await resolveLocationName(newMember.permanentAddress?.mandal || newMember.address?.mandal, rawData.permMandal || rawData.presentMandal, resolvedNames.mandal);
+                const dName = await resolveLocationName(newMember.permanentAddress?.district || newMember.address?.district, rawData.permDistrict || rawData.presentDistrict, resolvedNames.district);
 
                 // FIX: Force set ID from state username if available (Source of Truth)
                 if (stateData.username) {
@@ -65,9 +65,10 @@ const GenerateIDCard = () => {
 
                 const processMember = (member, isDependent = false) => {
                     // FIX: REMOVED Random ID Generation. Strictly use mewsId or null.
-                    const pincode = member.address?.pinCode || resolvedNames.pincode || rawData.presentPincode || '';
-                    const houseNo = member.address?.houseNumber || resolvedNames.houseNo || rawData.presentHouseNo || '';
-                    const street = member.address?.street || resolvedNames.street || rawData.presentStreet || '';
+                    const addressSource = member.permanentAddress || member.address || {};
+                    const pincode = addressSource.pinCode || resolvedNames.pincode || rawData.permPincode || rawData.presentPincode || '';
+                    const houseNo = addressSource.houseNumber || resolvedNames.houseNo || rawData.permHouseNo || rawData.presentHouseNo || '';
+                    const street = addressSource.street || resolvedNames.street || rawData.permStreet || rawData.presentStreet || '';
 
                     const validUntil = getValidUntil();
                     const rel = member.relationToHead || member.relation || 'Family';

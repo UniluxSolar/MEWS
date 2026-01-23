@@ -223,7 +223,15 @@ const InstitutionRegistration = () => {
     };
 
     const handleFiles = (files) => {
-        const newFiles = Array.from(files).map(file => Object.assign(file, {
+        const validFiles = Array.from(files).filter(file => {
+            if (file.size > 5242880) {
+                alert(`File ${file.name} exceeds 5 MB Limit and will not be uploaded.`);
+                return false;
+            }
+            return true;
+        });
+
+        const newFiles = validFiles.map(file => Object.assign(file, {
             preview: URL.createObjectURL(file)
         }));
         setUploadedFiles(prev => [...prev, ...newFiles]);

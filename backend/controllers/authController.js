@@ -404,10 +404,17 @@ const verifyOtp = asyncHandler(async (req, res) => {
         maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     });
 
+    // Determine Role (Use Member's role if elevated, otherwise 'MEMBER')
+    let finalRole = userType;
+    if (userType === 'MEMBER') {
+        finalRole = (user.role && user.role !== 'MEMBER') ? user.role : 'MEMBER';
+    }
+
     res.json({
         _id: user.id, // Keep main ID for token/API compatibility
         ...loggedInMember, // Spread specific details (overwrites name/mobile if dependent)
-        role: userType, // 'MEMBER' or 'INSTITUTION'
+        role: finalRole, // Return actual role (e.g. VILLAGE_ADMIN)
+        assignedLocation: user.assignedLocation, // Send assigned location ID
         institutionType: user.type, // Optional: if Institution, send type
         isFamilyLogin: loggedInMember.memberType === 'DEPENDENT',
         token: generateToken(user._id, loggedInMember.memberId || loggedInMember._id) // Fallback for Header-based Auth

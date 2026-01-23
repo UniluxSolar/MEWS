@@ -119,7 +119,14 @@ const AdminAnnouncements = () => {
 
     const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
-        setAttachments(prev => [...prev, ...files]);
+        const validFiles = files.filter(file => {
+            if (file.size > 5242880) {
+                alert(`File ${file.name} exceeds 5 MB Limit.`);
+                return false;
+            }
+            return true;
+        });
+        setAttachments(prev => [...prev, ...validFiles]);
         // Clear input so same file can be selected again if removed
         e.target.value = '';
     };

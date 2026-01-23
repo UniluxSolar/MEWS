@@ -8,7 +8,13 @@ const MemberSchema = new mongoose.Schema({
     dob: { type: Date },
     age: { type: Number },
     gender: { type: String, enum: ['Male', 'Female', 'Other'] },
-    occupation: { type: String }, // New Field
+    occupation: { type: String },
+    politicalDetails: {
+        position: String,
+        fromDate: Date,
+        toDate: Date
+    },
+    businessType: { type: String }, // New Field for Self-Employed/Business
     jobSector: { type: String },
     jobOrganization: { type: String },
     jobDesignation: { type: String },
@@ -176,11 +182,21 @@ const MemberSchema = new mongoose.Schema({
     // K1. Family Linking End (Already closed in line 165)
 
     // L. Authentication (OTP)
-    // L. Authentication (OTP)
     otpHash: { type: String },
     otpExpires: { type: Date },
     otpLastSent: { type: Date },
-    isPhoneVerified: { type: Boolean, default: false }
+    isPhoneVerified: { type: Boolean, default: false },
+
+    // M. Role & Permissions (Unified Access)
+    role: {
+        type: String,
+        enum: ['SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'MEMBER'],
+        default: 'MEMBER'
+    },
+    assignedLocation: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Location'
+    }
 }, {
     timestamps: true
 });

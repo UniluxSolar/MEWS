@@ -127,11 +127,17 @@ const registerMember = asyncHandler(async (req, res) => {
         dob: data.dob ? new Date(data.dob) : undefined,
         age: cleanNum(data.age),
         occupation: clean(data.occupation),
+        politicalDetails: {
+            position: clean(data.politicalPosition),
+            fromDate: data.politicalFromDate ? new Date(data.politicalFromDate) : undefined,
+            toDate: data.politicalToDate ? new Date(data.politicalToDate) : undefined
+        },
         jobSector: clean(data.jobSector),
         jobOrganization: clean(data.jobOrganization),
         jobDesignation: clean(data.jobDesignation),
         jobCategory: clean(data.jobCategory),
         jobSubCategory: clean(data.jobSubCategory),
+        businessType: clean(data.businessType),
         educationLevel: clean(data.educationLevel),
         gender: clean(data.gender),
         mobileNumber: clean(data.mobileNumber),
@@ -252,6 +258,7 @@ const registerMember = asyncHandler(async (req, res) => {
                         jobDesignation: clean(fm.jobDesignation),
                         jobCategory: clean(fm.jobCategory),
                         jobSubCategory: clean(fm.jobSubCategory),
+                        businessType: clean(fm.businessType),
                         educationLevel: clean(fm.educationLevel),
                         mobileNumber: clean(fm.mobileNumber),
                         aadhaarNumber: clean(fm.aadhaarNumber),
@@ -841,6 +848,14 @@ const updateMember = asyncHandler(async (req, res) => {
             if (data.dob) member.dob = new Date(data.dob);
             if (data.age) member.age = cleanNum(data.age);
             if (data.occupation !== undefined) member.occupation = clean(data.occupation);
+            // Update Political Details
+            if (data.politicalPosition !== undefined || data.politicalFromDate !== undefined) {
+                if (!member.politicalDetails) member.politicalDetails = {};
+                if (data.politicalPosition !== undefined) member.politicalDetails.position = clean(data.politicalPosition);
+                if (data.politicalFromDate) member.politicalDetails.fromDate = new Date(data.politicalFromDate);
+                if (data.politicalToDate) member.politicalDetails.toDate = new Date(data.politicalToDate);
+            }
+            if (data.businessType !== undefined) member.businessType = clean(data.businessType); // Update Business Type
             if (data.jobSector !== undefined) member.jobSector = clean(data.jobSector);
             if (data.jobOrganization !== undefined) member.jobOrganization = clean(data.jobOrganization);
             if (data.jobDesignation !== undefined) member.jobDesignation = clean(data.jobDesignation);
@@ -1250,6 +1265,10 @@ const checkDuplicate = asyncHandler(async (req, res) => {
         query['voterId.epicNumber'] = value;
     } else if (field === 'rationCard') {
         query['rationCard.number'] = value;
+    } else if (field === 'mobileNumber') {
+        query.mobileNumber = value;
+    } else if (field === 'communityCert') {
+        query['casteDetails.communityCertNumber'] = value;
     } else {
         return res.status(400).json({ message: "Invalid field type" });
     }
@@ -1259,7 +1278,7 @@ const checkDuplicate = asyncHandler(async (req, res) => {
     if (exists) {
         return res.status(200).json({
             isDuplicate: true,
-            message: `This ${field === 'voterId' ? 'Voter ID' : (field === 'rationCard' ? 'Ration Card' : 'Aadhaar Number')} is already registered.`
+            message: `This ${field === 'voterId' ? 'Voter ID' : (field === 'rationCard' ? 'Ration Card' : (field === 'mobileNumber' ? 'Mobile Number' : (field === 'communityCert' ? 'Community Certificate Number' : 'Aadhaar Number')))} is already registered.`
         });
     }
 

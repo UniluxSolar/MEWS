@@ -98,8 +98,8 @@ function App() {
                 <Route path="/benefits" element={<div className="p-10 text-center">Benefits Page Coming Soon</div>} />
                 <Route path="/donate" element={<div className="p-10 text-center">Donate Page Coming Soon</div>} />
 
-                {/* Dashboard Area - Protected (Member & Institution) */}
-                <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['MEMBER', 'INSTITUTION']} />}>
+                {/* Dashboard Area - Protected (Member & Institution & Admins) */}
+                <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['MEMBER', 'INSTITUTION', 'SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'ADMIN']} />}>
                     <Route element={<DashboardLayout />}>
                         <Route index element={<DashboardHome />} />
                         <Route path="applications" element={<MyApplications />} />

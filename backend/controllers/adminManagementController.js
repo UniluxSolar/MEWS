@@ -249,10 +249,120 @@ const getChildLocations = asyncHandler(async (req, res) => {
 });
 
 
+// @desc    Search member by mobile number for promotion
+// @route   POST /api/admin/management/search-member
+// @access  Private
+const searchMember = asyncHandler(async (req, res) => {
+    const { mobileNumber } = req.body;
+    const Member = require('../models/Member');
+
+    if (!mobileNumber) {
+        res.status(400);
+        throw new Error('Mobile number is required');
+    }
+
+    const member = await Member.findOne({ mobileNumber }).select('name surname mobileNumber photoUrl role assignedLocation');
+
+    if (!member) {
+        res.status(404);
+        throw new Error('Member not found');
+    }
+
+    // Populate existing location name if any
+    await member.populate('assignedLocation', 'name type');
+
+    res.json(member);
+});
+
+// @desc    Promote member to admin
+// @route   POST /api/admin/management/promote-member
+// @access  Private
+const promoteMember = asyncHandler(async (req, res) => {
+    const { memberId, role, assignedLocation } = req.body;
+    const currentUser = req.user;
+    const Member = require('../models/Member');
+
+    // 1. Hierarchy Check
+    if (!canManageRole(currentUser.role, role)) {
+        res.status(403);
+        throw new Error(`You cannot assign the role ${role}. Access Denied.`);
+    }
+
+    // 2. Location Check
+    if (currentUser.assignedLocation) {
+        // If current user is bound to a location, the new user MUST be in a child location
+        const isValidLocation = await verifyLocationHierarchy(currentUser.assignedLocation, assignedLocation);
+        if (!isValidLocation) {
+            res.status(403);
+            throw new Error("Invalid location assignment. You can only assign locations within your jurisdiction.");
+        }
+    }
+
+    const member = await Member.findById(memberId);
+    if (!member) {
+        res.status(404);
+        throw new Error('Member not found');
+    }
+
+    // Check if trying to demote higher or equal role (Optional safety)
+    if (member.role && HIERARCHY_LEVELS[member.role] >= HIERARCHY_LEVELS[currentUser.role]) {
+        res.status(403);
+        throw new Error('Cannot modify a member with equal or higher rank.');
+    }
+
+    // 3. Create or Update User Account
+    // Username = Mobile Number
+    let user = await User.findOne({ username: member.mobileNumber });
+
+    if (!user) {
+        // Create new User
+        const defaultPassword = `Mews@${member.mobileNumber}`; // Default pwd
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(defaultPassword, salt);
+
+        user = await User.create({
+            username: member.mobileNumber,
+            email: member.email || `${member.mobileNumber}@mews.local`,
+            passwordHash: hashedPassword,
+            role,
+            assignedLocation,
+            isActive: true
+        });
+    } else {
+        // Update existing User
+        // Ensure we don't overwrite a SUPER_ADMIN or higher rank by accident, but line 48 check covers basic role management.
+        user.role = role;
+        user.assignedLocation = assignedLocation;
+        user.isActive = true;
+        await user.save();
+    }
+
+    // 4. Update Member Document
+    member.role = role;
+    member.assignedLocation = assignedLocation;
+    await member.save();
+
+    res.json({
+        message: 'Member promoted successfully',
+        member: {
+            _id: member._id,
+            name: member.name,
+            role: member.role,
+            assignedLocation: member.assignedLocation
+        },
+        user: {
+            username: user.username,
+            role: user.role
+        }
+    });
+});
+
 module.exports = {
     getSubordinateAdmins,
     createAdmin,
     updateAdmin,
     deleteAdmin,
-    getChildLocations
+    getChildLocations,
+    searchMember,
+    promoteMember
 };

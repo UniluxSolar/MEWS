@@ -880,6 +880,11 @@ const ProfileSettings = () => {
                                             onChange={(e) => {
                                                 const file = e.target.files[0];
                                                 if (file) {
+                                                    if (file.size > 5242880) {
+                                                        alert("File size exceeds 5 MB. Please upload a smaller file.");
+                                                        e.target.value = null;
+                                                        return;
+                                                    }
                                                     const reader = new FileReader();
                                                     reader.onloadend = () => {
                                                         setProfileImage(reader.result);

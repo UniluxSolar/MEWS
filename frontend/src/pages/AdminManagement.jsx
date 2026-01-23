@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    FaUserShield, FaPlus, FaEdit, FaTrash, FaSearch, FaEllipsisV,
+    FaUserShield, FaEdit, FaTrash, FaSearch, FaEllipsisV, FaUserPlus,
     FaCheckCircle, FaTimesCircle, FaFileDownload, FaFilter, FaUsers, FaMapMarkedAlt,
     FaEye, FaChevronLeft, FaChevronRight, FaCheckSquare
 } from 'react-icons/fa';
@@ -23,6 +23,13 @@ const AdminManagement = () => {
     });
     const [editingId, setEditingId] = useState(null);
     const [locations, setLocations] = useState([]);
+
+    // Promote Member States
+    const [isPromoting, setIsPromoting] = useState(false);
+    const [searchMobile, setSearchMobile] = useState('');
+    const [memberToPromote, setMemberToPromote] = useState(null);
+    const [searchLoading, setSearchLoading] = useState(false);
+    const [searchError, setSearchError] = useState('');
 
     // Filters
     const [searchTerm, setSearchTerm] = useState('');
@@ -133,7 +140,46 @@ const AdminManagement = () => {
         }
     };
 
+    // Promote Handler
+    const handleSearchMember = async () => {
+        setSearchLoading(true);
+        setSearchError('');
+        try {
+            const { data } = await API.post('/admin/management/search-member', { mobileNumber: searchMobile });
+            setMemberToPromote(data);
+            // Pre-fill location if matches allowed locations? No, let user pick exact scope.
+        } catch (error) {
+            setMemberToPromote(null);
+            setSearchError(error.response?.data?.message || 'Member not found');
+        } finally {
+            setSearchLoading(false);
+        }
+    };
+
+    const handlePromoteSubmit = async (e) => {
+        e.preventDefault();
+        if (!memberToPromote) return;
+        try {
+            await API.post('/admin/management/promote-member', {
+                memberId: memberToPromote._id,
+                role: formData.role,
+                assignedLocation: formData.assignedLocation
+            });
+            setShowModal(false);
+            // Reset States
+            setIsPromoting(false);
+            setMemberToPromote(null);
+            setSearchMobile('');
+            setFormData({ username: '', email: '', password: '', role: '', assignedLocation: '', isActive: true });
+            alert('Member Promoted Successfully! Default Password is "Mews@<Mobile>"');
+            fetchAdmins();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Promotion Failed');
+        }
+    };
+
     const handleEdit = (admin) => {
+        setIsPromoting(false);
         setFormData({
             username: admin.username,
             email: admin.email || '',
@@ -220,11 +266,14 @@ const AdminManagement = () => {
                             <button
                                 onClick={() => {
                                     setEditingId(null);
+                                    setIsPromoting(true); // Enable Promote Mode
+                                    setMemberToPromote(null);
+                                    setSearchMobile('');
                                     setFormData({ username: '', email: '', password: '', role: '', assignedLocation: '', isActive: true });
                                     setShowModal(true);
                                 }}
                                 className="bg-[#1e2a4a] text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-900/30 hover:bg-[#2a3b66] transition">
-                                <FaPlus /> Create Admin
+                                <FaUserPlus /> Assign Admin
                             </button>
                         </div>
                     </DashboardHeader>
@@ -474,7 +523,7 @@ const AdminManagement = () => {
             </div>
 
             {/* Create/Edit Modal */}
-            {showModal && (
+            {showModal && !isPromoting && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -562,6 +611,99 @@ const AdminManagement = () => {
                                 {editingId ? 'Update Admin' : 'Create Admin Account'}
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Promote Member Modal */}
+            {showModal && isPromoting && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                            <h3 className="font-bold text-lg text-slate-800">Promote Member to Admin</h3>
+                            <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">×</button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            {/* Step 1: Search */}
+                            {!memberToPromote ? (
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Search Member by Mobile</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            className="flex-1 p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                            placeholder="Enter 10-digit Mobile Number"
+                                            value={searchMobile}
+                                            onChange={(e) => setSearchMobile(e.target.value.replace(/\D/g, ''))}
+                                        />
+                                        <button
+                                            onClick={handleSearchMember}
+                                            disabled={searchLoading || searchMobile.length !== 10}
+                                            className="bg-blue-600 text-white px-4 rounded-lg font-bold disabled:opacity-50"
+                                        >
+                                            {searchLoading ? '...' : <FaSearch />}
+                                        </button>
+                                    </div>
+                                    {searchError && <p className="text-red-500 text-xs mt-2">{searchError}</p>}
+                                </div>
+                            ) : (
+                                /* Step 2: Assign Role */
+                                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex items-center gap-4">
+                                        {memberToPromote.photoUrl ? (
+                                            <img src={memberToPromote.photoUrl} alt="Profile" className="w-12 h-12 rounded-full object-cover" />
+                                        ) : (
+                                            <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center font-bold text-blue-700">
+                                                {memberToPromote.name.charAt(0)}
+                                            </div>
+                                        )}
+                                        <div>
+                                            <h4 className="font-bold text-slate-800">{memberToPromote.name} {memberToPromote.surname}</h4>
+                                            <p className="text-xs text-slate-500">{memberToPromote.mobileNumber}</p>
+                                            <p className="text-xs text-blue-600 font-semibold">{memberToPromote.role.replace('_', ' ')}</p>
+                                        </div>
+                                        <button onClick={() => setMemberToPromote(null)} className="ml-auto text-xs text-red-500 underline">Change</button>
+                                    </div>
+
+                                    <form onSubmit={handlePromoteSubmit} className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-1">Assign Role</label>
+                                                <select
+                                                    required
+                                                    className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                    value={formData.role}
+                                                    onChange={e => setFormData({ ...formData, role: e.target.value })}
+                                                >
+                                                    <option value="">Select Role</option>
+                                                    {allowedRoles.map(role => (
+                                                        <option key={role} value={role}>{role.replace('_', ' ')}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 mb-1">Assign Location</label>
+                                                <select
+                                                    required
+                                                    className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                    value={formData.assignedLocation}
+                                                    onChange={e => setFormData({ ...formData, assignedLocation: e.target.value })}
+                                                >
+                                                    <option value="">Select Location</option>
+                                                    {locations.map(loc => (
+                                                        <option key={loc._id} value={loc._id}>{loc.name} ({loc.type})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <button type="submit" className="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-bold hover:bg-emerald-700 transition-colors mt-2 shadow-lg shadow-emerald-200">
+                                            Confirm Promotion
+                                        </button>
+                                    </form>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

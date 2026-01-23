@@ -26,7 +26,8 @@ const protect = async (req, res, next) => {
                 const Member = require('../models/Member');
                 user = await Member.findById(decoded.id);
                 if (user) {
-                    user.role = 'MEMBER'; // Ensure role is set
+                    // Role is now defined in Member schema, do not overwrite it.
+                    // user.role = 'MEMBER'; 
                     // Mongoose document to object hack if needed, but usually redundant if we just assign property
                     // If strict schema, we might need to use .toObject() or just rely on virtuals if defined.
                     // For now, attaching to the mongoose document instance usually works in memory.

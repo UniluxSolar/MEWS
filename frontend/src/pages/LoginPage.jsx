@@ -69,6 +69,7 @@ const LoginPage = () => {
             setLoading(true);
             const { data } = await API.post('/auth/verify-otp', { mobile, otp, userType: 'MEMBER' });
             localStorage.setItem('adminInfo', JSON.stringify(data)); // Store member info as adminInfo for compatibility
+
             navigate(redirectPath, { replace: true });
         } catch (error) {
             alert(error.response?.data?.message || 'Invalid OTP');

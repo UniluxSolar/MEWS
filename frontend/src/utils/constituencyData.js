@@ -124,6 +124,14 @@ export const constituencyMandals = {
     "Suryapet": ["Suryapet", "Atmakur (S)", "Chivvemla", "Penpahad"],
     "Thungathurthi": ["Thungathurthi", "Thirumalagiri", "Nuthankal", "Jaji Reddi Gudem", "Mothkur", "Maddirala", "Noothankal", "Nagaram", "Shali Gouraram", "Arvapally"],
 
+    // NALGONDA District
+    "Miryalaguda": ["Miryalaguda", "Vemulapalle", "Dameracherla"],
+    "Nalgonda": ["Nalgonda", "Tipperthy", "Kanagal", "Madugulapally"],
+    "Nakrekal": ["Nakrekal", "Chityal", "Kethepally", "Kattangur"],
+    "Devarakonda": ["Devarakonda", "Chintapally", "Gundlapally", "Chandampet", "Nampally", "Pedda Adiserla Pally"],
+    "Nagarjuna Sagar": ["Gurrampode", "Nidamanoor", "Peddavoora", "Tripuraram", "Tirumalagiri Sagar", "Anumula"],
+    "Munugode": ["Munugode", "Narayanapur", "Marriguda", "Chandur", "Choutuppal", "Ghatuppal"],
+
     // Default Fallback / Empty for others to prevent crashes
     // User can populate more here
 };

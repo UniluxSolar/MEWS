@@ -44,6 +44,19 @@ const MemberIDCardTemplate = ({ member, idPrefix = "single-card" }) => {
         }
     }
 
+    // Role based colors
+    const roleColors = {
+        'SUPER_ADMIN': '#8B1D1D',
+        'STATE_ADMIN': '#4A2C6D',
+        'DISTRICT_ADMIN': '#1F3A5F',
+        'MANDAL_ADMIN': '#2F6B3F',
+        'VILLAGE_ADMIN': '#C9A227',
+        'MEMBER': '#6B7280'
+    };
+
+    const effectiveRole = member.role || 'MEMBER';
+    const headerColor = roleColors[effectiveRole] || roleColors['MEMBER'];
+
     return (
         <div className="flex flex-wrap gap-8 justify-center">
             {/* FRONT SIDE */}
@@ -60,7 +73,7 @@ const MemberIDCardTemplate = ({ member, idPrefix = "single-card" }) => {
                             Mala Educational Welfare Society
                         </div>
                     </div>
-                    <div className="h-[30px] bg-[#1e2a4a] flex items-center justify-between px-4 pl-[70px]">
+                    <div className="h-[30px] flex items-center justify-between px-4 pl-[70px]" style={{ backgroundColor: headerColor }}>
                         <h2 className="text-white font-bold text-[10px] tracking-[0.15em] uppercase drop-shadow-sm">
                             {designation}
                         </h2>
