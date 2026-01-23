@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { FaShieldAlt, FaSearch, FaExclamationTriangle, FaBell, FaChevronDown } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { FaShieldAlt, FaSearch, FaExclamationTriangle, FaBell, FaChevronDown, FaUser, FaSignOutAlt } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
 import API from '../api';
 
 import mewsLogo from '../assets/mews_main_logo_new.png';
 
 const AdminHeader = (props) => { // props now contains locationName
+    const navigate = useNavigate();
+    const dropdownRef = useRef(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
     // Force HMR Update
     const [adminName, setAdminName] = useState('Admin');
     const [roleText, setRoleText] = useState('Administrator');
@@ -59,6 +63,23 @@ const AdminHeader = (props) => { // props now contains locationName
     }, []);
 
     const displayLocation = props.locationName || locationName;
+
+    const handleLogout = () => {
+        localStorage.removeItem('adminInfo');
+        navigate('/'); // Redirect to home/login
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     return (
         <header className="bg-[#0f172a] text-white h-16 flex items-center justify-between px-6 sticky top-0 z-50 shadow-md flex-shrink-0">
@@ -125,13 +146,43 @@ const AdminHeader = (props) => { // props now contains locationName
                     <FaBell size={18} className="text-gray-300" />
                     <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0f172a]"></span>
                 </Link>
-                <div className="flex items-center gap-2 pl-4 border-l border-slate-700 cursor-pointer">
-                    <img src={profileLogo} alt="Admin" className="w-9 h-9 rounded-full border-2 border-slate-600 bg-white" />
-                    <FaChevronDown size={10} className="text-gray-400" />
+
+                {/* Profile Dropdown */}
+                <div className="relative" ref={dropdownRef}>
+                    <div
+                        className="flex items-center gap-2 pl-4 border-l border-slate-700 cursor-pointer hover:opacity-80 transition"
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    >
+                        <img src={profileLogo} alt="Admin" className="w-9 h-9 rounded-full border-2 border-slate-600 bg-white object-cover" />
+                        <FaChevronDown size={10} className={`text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                    </div>
+
+                    {isDropdownOpen && (
+                        <div className="absolute right-0 top-12 w-48 bg-white text-slate-800 rounded-xl shadow-xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-right">
+                            <div className="px-4 py-3 border-b border-slate-50 bg-slate-50">
+                                <p className="text-sm font-bold text-slate-800 truncate">{adminName}</p>
+                                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{roleText.replace(' Portal', '')}</p>
+                            </div>
+                            <Link
+                                to="/admin/settings"
+                                className="w-full text-left px-4 py-3 text-sm font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-3 transition"
+                                onClick={() => setIsDropdownOpen(false)}
+                            >
+                                <FaUser size={14} /> Profile Settings
+                            </Link>
+                            <button
+                                onClick={handleLogout}
+                                className="w-full text-left px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center gap-3 transition border-t border-slate-50"
+                            >
+                                <FaSignOutAlt size={14} /> Sign Out
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </header>
     );
 };
+
 
 export default AdminHeader;

@@ -25,7 +25,7 @@ const loginUser = asyncHandler(async (req, res) => {
             { username: { $regex: new RegExp(`^${loginInput}$`, "i") } },
             { email: loginInput.toLowerCase() }
         ]
-    });
+    }).populate('memberId', 'name surname');
 
     console.log("User Found in DB:", user ? "YES" : "NO");
     if (user) {
@@ -60,13 +60,13 @@ const loginUser = asyncHandler(async (req, res) => {
 
             res.json({
                 _id: user.id,
-                name: user.username,
+                name: user.memberId ? `${user.memberId.name} ${user.memberId.surname}` : user.username,
+                username: user.username,
                 email: user.email,
                 role: user.role,
                 assignedLocation: user.assignedLocation,
                 locationName,
                 institutionId: user.institutionId,
-                // token: generateToken(user._id) // Token is now in cookie, optional to send back but safer not to
             });
             return;
         }

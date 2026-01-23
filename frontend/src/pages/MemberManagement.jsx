@@ -703,25 +703,7 @@ const MemberManagement = () => {
                 <main className="flex-1 overflow-y-auto">
                     <DashboardHeader
                         title="Member Management"
-                        subtitle={null}
-                        breadcrumb={
-                            <>
-                                <Link to="/admin/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
-                                <span className="opacity-70">&gt;</span>
-                                <span>Members</span>
-                            </>
-                        }
-                    >
-                        <div className="flex flex-col items-end gap-3">
-                            {/* View Toggle */}
-                            <div className="flex items-center gap-2 bg-white/10 p-1 rounded-lg w-fit backdrop-blur-sm border border-white/20">
-                                <span className="text-xs font-bold text-white px-2">View:</span>
-                                <button onClick={() => setViewMode('table')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'table' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaTable /> Table</button>
-                                <button onClick={() => setViewMode('cards')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'cards' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaThLarge /> Cards</button>
-                                <button onClick={() => setViewMode('map')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'map' ? 'bg-white text-blue-900 shadow-sm' : 'text-blue-100 hover:bg-white/10'}`}><FaMapMarkedAlt /> Map</button>
-                            </div>
-
-                            {/* Actions */}
+                        headerActions={
                             <div className="flex items-center gap-3">
                                 <Link to="/admin/members/new" className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg transition transform hover:scale-105">
                                     <FaPlus /> Add Member
@@ -743,16 +725,33 @@ const MemberManagement = () => {
                                     )}
                                 </div>
                             </div>
-                        </div>
-                    </DashboardHeader>
+                        }
+                        subtitle={null}
+                        breadcrumb={
+                            <>
+                                <Link to="/admin/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+                                <span className="opacity-70">&gt;</span>
+                                <span>Members</span>
+                            </>
+                        }
+                    />
 
                     <div className="px-4 md:px-8 -mt-10 pb-12 w-full">
                         {/* Search & Filter Card (Condensed) */}
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-                            <div className="flex justify-start items-center gap-4 mb-4">
-                                <h3 className="text-slate-800 font-bold">Search & Filter</h3>
-                                <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-sm font-bold shadow-sm border border-blue-100">
-                                    Total: {filteredMembers.length} Members
+                            <div className="flex justify-between items-center mb-6">
+                                <div className="flex justify-start items-center gap-4">
+                                    <h3 className="text-slate-800 font-bold">Search & Filter</h3>
+                                    <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-sm font-bold shadow-sm border border-blue-100">
+                                        Total: {filteredMembers.length} Members
+                                    </div>
+                                </div>
+                                {/* View Toggle - Relocated */}
+                                <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg w-fit border border-slate-200">
+                                    <span className="text-xs font-bold text-slate-500 px-2">View:</span>
+                                    <button onClick={() => setViewMode('table')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'table' ? 'bg-white text-blue-700 shadow-sm border border-slate-200' : 'text-slate-500 hover:bg-white/50'}`}><FaTable /> Table</button>
+                                    <button onClick={() => setViewMode('cards')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'cards' ? 'bg-white text-blue-700 shadow-sm border border-slate-200' : 'text-slate-500 hover:bg-white/50'}`}><FaThLarge /> Cards</button>
+                                    <button onClick={() => setViewMode('map')} className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'map' ? 'bg-white text-blue-700 shadow-sm border border-slate-200' : 'text-slate-500 hover:bg-white/50'}`}><FaMapMarkedAlt /> Map</button>
                                 </div>
                             </div>
                             <div className="mb-6">

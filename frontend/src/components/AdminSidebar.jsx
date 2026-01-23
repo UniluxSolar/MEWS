@@ -15,6 +15,7 @@ const SidebarItem = ({ icon: Icon, label, active, to }) => (
 const AdminSidebar = ({ activePage }) => {
     const navigate = useNavigate();
     const [roleLabel, setRoleLabel] = useState('Dashboard');
+    const [settingsLabel, setSettingsLabel] = useState('Settings');
     const [adminName, setAdminName] = useState('');
     const [userRole, setUserRole] = useState('');
     const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -25,10 +26,20 @@ const AdminSidebar = ({ activePage }) => {
             const { role, name } = JSON.parse(info);
             setAdminName(name || 'Admin');
             setUserRole(role);
+
+            // Dashboard Label
             if (role === 'VILLAGE_ADMIN') setRoleLabel('Village Dashboard');
             else if (role === 'MANDAL_ADMIN') setRoleLabel('Mandal Dashboard');
             else if (role === 'DISTRICT_ADMIN') setRoleLabel('District Dashboard');
+            else if (role === 'STATE_ADMIN') setRoleLabel('State Dashboard');
             else setRoleLabel('Admin Dashboard');
+
+            // Settings Label
+            if (role === 'VILLAGE_ADMIN') setSettingsLabel('Village Settings');
+            else if (role === 'MANDAL_ADMIN') setSettingsLabel('Mandal Settings');
+            else if (role === 'DISTRICT_ADMIN') setSettingsLabel('District Settings');
+            else if (role === 'STATE_ADMIN') setSettingsLabel('State Settings');
+            else setSettingsLabel('Admin Settings');
         }
     }, []);
 
@@ -98,7 +109,7 @@ const AdminSidebar = ({ activePage }) => {
                     <SidebarItem to="/admin/funding" icon={FaHandHoldingUsd} label="Funding Requests" active={activePage === 'funding'} />
 
                     <SidebarItem to="/admin/activity-log" icon={FaChartLine} label="Activity Logs" active={activePage === 'activity'} />
-                    <SidebarItem to="/admin/settings" icon={FaCog} label="Village Settings" active={activePage === 'settings'} />
+                    <SidebarItem to="/admin/settings" icon={FaCog} label={settingsLabel} active={activePage === 'settings'} />
                     <SidebarItem to="/admin/help" icon={FaQuestionCircle} label="Help & Support" active={activePage === 'help'} />
                     <SidebarItem to="/admin/announcements" icon={FaBullhorn} label="Announcements" active={activePage === 'announcements'} />
 

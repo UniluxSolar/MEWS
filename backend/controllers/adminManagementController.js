@@ -67,6 +67,7 @@ const getSubordinateAdmins = asyncHandler(async (req, res) => {
     const admins = await User.find(query)
         .select('-passwordHash')
         .populate('assignedLocation', 'name type')
+        .populate('memberId', 'name surname mobileNumber photoUrl')
         .sort({ role: 1, createdAt: -1 });
 
     res.json(admins);
@@ -326,6 +327,7 @@ const promoteMember = asyncHandler(async (req, res) => {
             passwordHash: hashedPassword,
             role,
             assignedLocation,
+            memberId: member._id,
             isActive: true
         });
     } else {
@@ -333,6 +335,7 @@ const promoteMember = asyncHandler(async (req, res) => {
         // Ensure we don't overwrite a SUPER_ADMIN or higher rank by accident, but line 48 check covers basic role management.
         user.role = role;
         user.assignedLocation = assignedLocation;
+        user.memberId = member._id;
         user.isActive = true;
         await user.save();
     }

@@ -2,11 +2,11 @@ import React from 'react';
 import { FaBullhorn, FaSearch } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 
-const DashboardHeader = ({ title, subtitle, stats, breadcrumb, children }) => {
+const DashboardHeader = ({ title, subtitle, stats, breadcrumb, headerActions, children }) => {
     return (
         <div className="bg-gradient-to-r from-[#1e2a4a] to-[#2a3b66] text-white p-8 pb-16">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 w-full">
-                <div>
+                <div className="w-full md:w-auto">
                     <p className="text-white text-sm font-medium mb-1 uppercase tracking-wider opacity-80">
                         {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
@@ -15,9 +15,16 @@ const DashboardHeader = ({ title, subtitle, stats, breadcrumb, children }) => {
                             {breadcrumb}
                         </div>
                     )}
-                    <h1 className="text-3xl font-bold text-white">
-                        {title}
-                    </h1>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                        <h1 className="text-3xl font-bold text-white whitespace-nowrap">
+                            {title}
+                        </h1>
+                        {headerActions && (
+                            <div className="flex items-center gap-3">
+                                {headerActions}
+                            </div>
+                        )}
+                    </div>
                     {subtitle && (
                         <div className="text-white mt-2 opacity-90 max-w-xl text-sm">
                             {subtitle}

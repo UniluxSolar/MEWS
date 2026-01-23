@@ -19,6 +19,39 @@ const AdminVillageSettings = () => {
     const [passwordData, setPasswordData] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
     const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
     const [theme, setTheme] = useState('light');
+    const [pageTitle, setPageTitle] = useState('Settings');
+    const [pageSubtitle, setPageSubtitle] = useState('Manage configuration and preferences.');
+    const [locationFieldLabel, setLocationFieldLabel] = useState('Location Name');
+    const [locationFieldValue, setLocationFieldValue] = useState('');
+    const [adminRole, setAdminRole] = useState('');
+
+    // Determine titles based on role
+    useEffect(() => {
+        const info = localStorage.getItem('adminInfo');
+        if (info) {
+            const { role } = JSON.parse(info);
+            setAdminRole(role);
+            if (role === 'VILLAGE_ADMIN') {
+                setPageTitle('Village Settings');
+                setPageSubtitle('Manage configuration and preferences for your village.');
+                setLocationFieldLabel('Village Name');
+            } else if (role === 'MANDAL_ADMIN') {
+                setPageTitle('Mandal Settings');
+                setPageSubtitle('Manage configuration and preferences for your mandal.');
+                setLocationFieldLabel('Mandal Name');
+            } else if (role === 'DISTRICT_ADMIN') {
+                setPageTitle('District Settings');
+                setPageSubtitle('Manage configuration and preferences for your district.');
+                setLocationFieldLabel('District Name');
+            } else if (role === 'STATE_ADMIN') {
+                setPageTitle('State Settings');
+                setPageSubtitle('Manage configuration and preferences for the state.');
+                setLocationFieldLabel('State Name');
+            } else {
+                setPageTitle('Admin Settings');
+            }
+        }
+    }, []);
 
     // Initialize Theme
     useEffect(() => {
@@ -49,9 +82,13 @@ const AdminVillageSettings = () => {
             try {
                 const { data } = await API.get('/admin/settings');
                 setSettings(data);
-                // Also fetch 2FA status if possible, or assume it comes with settings? 
-                // For now we might need a separate call or update getVillageSettings to return user flags.
-                // NOTE: Ideally getVillageSettings should return this. Let's assume we lazy load or default it.
+
+                // Set initial location field value based on role
+                if (adminRole === 'VILLAGE_ADMIN') setLocationFieldValue(data.villageName);
+                else if (adminRole === 'MANDAL_ADMIN') setLocationFieldValue(data.mandal);
+                else if (adminRole === 'DISTRICT_ADMIN') setLocationFieldValue(data.district);
+                else if (adminRole === 'STATE_ADMIN') setLocationFieldValue(data.state || 'Telangana');
+
             } catch (error) {
                 console.error("Failed to fetch settings", error);
             } finally {
@@ -59,7 +96,7 @@ const AdminVillageSettings = () => {
             }
         };
         fetchSettings();
-    }, []);
+    }, [adminRole]);
 
     const handleChange = (e) => {
         setSettings({ ...settings, [e.target.name]: e.target.value });
@@ -101,8 +138,8 @@ const AdminVillageSettings = () => {
                 <AdminSidebar activePage="settings" />
                 <main className="flex-1 overflow-y-auto">
                     <DashboardHeader
-                        title="Village Settings"
-                        subtitle="Manage configuration and preferences for your village."
+                        title={pageTitle}
+                        subtitle={pageSubtitle}
                         breadcrumb={
                             <>
                                 <Link to="/admin/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
@@ -152,35 +189,40 @@ const AdminVillageSettings = () => {
                                         ) : (
                                             <div className="space-y-6 max-w-2xl">
                                                 <div>
-                                                    <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase">Village Name</label>
+                                                    <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase">{locationFieldLabel}</label>
                                                     <input
                                                         type="text"
-                                                        name="villageName"
-                                                        value={settings.villageName}
+                                                        value={locationFieldValue}
                                                         disabled
                                                         className="w-full bg-gray-100 border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-bold cursor-not-allowed"
                                                     />
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-6">
-                                                    <div>
-                                                        <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase">Mandal</label>
-                                                        <input
-                                                            type="text"
-                                                            value={settings.mandal}
-                                                            disabled
-                                                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed"
-                                                        />
+
+                                                {/* Conditional Grid Section */}
+                                                {(adminRole === 'VILLAGE_ADMIN' || adminRole === 'MANDAL_ADMIN') && (
+                                                    <div className="grid grid-cols-2 gap-6">
+                                                        {adminRole === 'VILLAGE_ADMIN' && (
+                                                            <div>
+                                                                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase">Mandal</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={settings.mandal}
+                                                                    disabled
+                                                                    className="w-full bg-gray-100 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                        <div>
+                                                            <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase">District</label>
+                                                            <input
+                                                                type="text"
+                                                                value={settings.district}
+                                                                disabled
+                                                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed"
+                                                            />
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase">District</label>
-                                                        <input
-                                                            type="text"
-                                                            value={settings.district}
-                                                            disabled
-                                                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed"
-                                                        />
-                                                    </div>
-                                                </div>
+                                                )}
                                                 <div>
                                                     <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase">Admin Contact Email</label>
                                                     <input

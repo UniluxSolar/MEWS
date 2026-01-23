@@ -31,6 +31,11 @@ const UserSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Institution'
     },
+    // For admins promoted from members
+    memberId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Member'
+    },
     isActive: {
         type: Boolean,
         default: true

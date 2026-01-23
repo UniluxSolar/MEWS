@@ -249,6 +249,25 @@ const AdminManagement = () => {
                 <main className="flex-1 overflow-y-auto">
                     <DashboardHeader
                         title="Admin Management"
+                        headerActions={
+                            <div className="flex items-center gap-3">
+                                <button onClick={exportToExcel} className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-md text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 border border-white/20 transition">
+                                    <FaFileDownload /> Export Data
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setEditingId(null);
+                                        setIsPromoting(true); // Enable Promote Mode
+                                        setMemberToPromote(null);
+                                        setSearchMobile('');
+                                        setFormData({ username: '', email: '', password: '', role: '', assignedLocation: '', isActive: true });
+                                        setShowModal(true);
+                                    }}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg transition transform hover:scale-105">
+                                    <FaUserPlus /> Assign Admin
+                                </button>
+                            </div>
+                        }
                         subtitle={
                             <div className="flex items-center gap-4">
                                 <span>Dashboard &gt; Admins</span>
@@ -258,25 +277,7 @@ const AdminManagement = () => {
                                 </div>
                             </div>
                         }
-                    >
-                        <div className="flex items-center gap-3">
-                            <button onClick={exportToExcel} className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-md text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 border border-white/20 transition">
-                                <FaFileDownload /> Export Data
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setEditingId(null);
-                                    setIsPromoting(true); // Enable Promote Mode
-                                    setMemberToPromote(null);
-                                    setSearchMobile('');
-                                    setFormData({ username: '', email: '', password: '', role: '', assignedLocation: '', isActive: true });
-                                    setShowModal(true);
-                                }}
-                                className="bg-[#1e2a4a] text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-900/30 hover:bg-[#2a3b66] transition">
-                                <FaUserPlus /> Assign Admin
-                            </button>
-                        </div>
-                    </DashboardHeader>
+                    />
 
                     <div className="px-4 md:px-8 -mt-10 pb-12 w-full">
 
@@ -372,10 +373,10 @@ const AdminManagement = () => {
                                 </div>
                             </div>
 
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-50/50 border-b border-slate-100 text-sm font-bold text-slate-400 uppercase tracking-wider">
+                            <div className="overflow-auto max-h-[calc(100vh-400px)] border-t border-slate-100">
+                                <table className="w-full text-left border-collapse relative">
+                                    <thead className="sticky top-0 z-20 shadow-sm bg-slate-50">
+                                        <tr className="border-b border-slate-100 text-sm font-bold text-slate-400 uppercase tracking-wider">
                                             <th className="px-6 py-4 w-10">
                                                 <input type="checkbox" className="rounded border-slate-300" />
                                             </th>
@@ -407,9 +408,9 @@ const AdminManagement = () => {
                                                                 onClick={() => setViewAdmin(admin)}
                                                                 className="text-sm font-bold text-slate-800 hover:text-blue-600 cursor-pointer hover:underline"
                                                             >
-                                                                {admin.username}
+                                                                {admin.memberId ? `${admin.memberId.name} ${admin.memberId.surname}` : admin.username}
                                                             </div>
-                                                            <div className="text-xs text-slate-400">{admin.email || 'No Email'}</div>
+                                                            <div className="text-xs text-slate-400">{admin.memberId ? admin.username : admin.email || 'No Email'}</div>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -722,8 +723,12 @@ const AdminManagement = () => {
                                     {viewAdmin.username.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold text-slate-800">{viewAdmin.username}</h2>
-                                    <p className="text-slate-500 text-sm">{viewAdmin.email || 'No email provided'}</p>
+                                    <h2 className="text-xl font-bold text-slate-800">
+                                        {viewAdmin.memberId ? `${viewAdmin.memberId.name} ${viewAdmin.memberId.surname}` : viewAdmin.username}
+                                    </h2>
+                                    <p className="text-slate-500 text-sm">
+                                        {viewAdmin.memberId ? viewAdmin.username : viewAdmin.email || 'No email provided'}
+                                    </p>
                                 </div>
                             </div>
 
