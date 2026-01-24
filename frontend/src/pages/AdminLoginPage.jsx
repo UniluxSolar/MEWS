@@ -1,15 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import API from '../api';
 import { useNavigate } from 'react-router-dom';
-import { FaUsers, FaEye, FaEyeSlash, FaChevronDown } from 'react-icons/fa';
+import { FaUsers } from 'react-icons/fa';
+import mewsLogo from '../assets/mews_main_logo_new.png';
 
 const AdminLoginPage = () => {
     const navigate = useNavigate();
-    const [loginMethod, setLoginMethod] = useState('otp'); // Default to OTP as per updated requirement? Or keep password default. Image implies OTP is primary view now? Let's check image. Image has "Login with Password" button below, implying OTP is active. Let's Set default to 'otp' or persist previous. I'll default to 'otp' to match latest request focus.
-    const [showPassword, setShowPassword] = useState(false);
-
-    // Credentials State (Password Login)
-    const [credentials, setCredentials] = useState({ username: '', password: '', role: 'VILLAGE_ADMIN' });
 
     // OTP State
     const [mobileNumber, setMobileNumber] = useState('');
@@ -17,12 +13,12 @@ const AdminLoginPage = () => {
     const [otpSent, setOtpSent] = useState(false);
     const [timer, setTimer] = useState(0);
     const [feedbackMessage, setFeedbackMessage] = useState(null);
+    const otpInputRef = useRef(null); // Ref for auto-focus
 
-    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     // Timer Effect
-    React.useEffect(() => {
+    useEffect(() => {
         let interval;
         if (timer > 0) {
             interval = setInterval(() => {
@@ -32,15 +28,19 @@ const AdminLoginPage = () => {
         return () => clearInterval(interval);
     }, [timer]);
 
-    const handleChange = (e) => {
-        setCredentials({ ...credentials, [e.target.name]: e.target.value });
-    };
+    // Auto-focus Effect
+    useEffect(() => {
+        if (otpSent && otpInputRef.current) {
+            otpInputRef.current.focus();
+        }
+    }, [otpSent]);
 
-    const handleSendOTP = async () => {
+    const handleSendOTP = async (e) => {
+        if (e) e.preventDefault();
         setFeedbackMessage(null);
-        setError('');
+
         if (!mobileNumber || mobileNumber.length !== 10) {
-            setError('Please enter a valid 10-digit mobile number');
+            setFeedbackMessage({ type: 'error', text: 'Please enter a valid 10-digit mobile number' });
             return;
         }
 
@@ -53,23 +53,23 @@ const AdminLoginPage = () => {
             setFeedbackMessage({ type: 'success', text: data.message || 'OTP sent successfully!' });
         } catch (err) {
             const msg = err.response?.data?.message || 'Failed to send OTP';
-            setError(msg);
+            setFeedbackMessage({ type: 'error', text: msg });
         } finally {
             setLoading(false);
         }
     };
 
     const handleVerifyOTP = async (e) => {
-        e.preventDefault(); // In case it's in a form
+        e.preventDefault();
         setLoading(true);
-        setError('');
+        setFeedbackMessage(null);
         try {
             const { data } = await API.post('/auth/verify-otp', { mobile: mobileNumber, otp, userType: 'MEMBER' });
 
             // Check if user is actually an admin
             const adminRoles = ['SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN'];
             if (!adminRoles.includes(data.role)) {
-                setError('Access Denied. You are not an Admin.');
+                setFeedbackMessage({ type: 'error', text: 'Access Denied. You are not an Admin.' });
                 setLoading(false);
                 return;
             }
@@ -77,237 +77,146 @@ const AdminLoginPage = () => {
             localStorage.setItem('adminInfo', JSON.stringify(data));
             navigate('/admin/dashboard', { replace: true });
         } catch (err) {
-            setError(err.response?.data?.message || 'Invalid OTP');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        // OTP Login Handling
-        if (loginMethod === 'otp') {
-            if (otpSent) {
-                handleVerifyOTP(e);
-            } else {
-                handleSendOTP();
-            }
-            return;
-        }
-
-        // Password Login Handling
-        setLoading(true);
-        setError('');
-        try {
-            const { data } = await API.post('/auth/login', credentials);
-            localStorage.setItem('adminInfo', JSON.stringify(data));
-            navigate('/admin/dashboard', { replace: true });
-        } catch (err) {
-            setError(err.response?.data?.message || 'Invalid Credentials');
+            setFeedbackMessage({ type: 'error', text: err.response?.data?.message || 'Invalid OTP' });
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] font-sans px-4">
-
-            {/* Card Container */}
-            <div className="max-w-[420px] w-full bg-white rounded-3xl p-8 md:p-10 shadow-sm border border-gray-100">
+        <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] p-4 font-sans text-gray-800">
+            <div className="w-full max-w-[420px] bg-white rounded-3xl shadow-xl border border-white p-8 sm:p-10 flex flex-col items-center">
 
                 {/* Logo Section */}
-                <div className="flex flex-col items-center mb-8">
-                    <div className="w-16 h-16 bg-[#274472] rounded-xl flex items-center justify-center text-white text-2xl mb-4 shadow-md">
-                        <FaUsers />
+                <div className="mb-6 flex flex-col items-center text-center">
+                    <div className="w-20 h-20 bg-[#1e2a4a] rounded-2xl flex items-center justify-center shadow-md mb-4">
+                        {/* Use img if available, else icon */}
+                        {mewsLogo ? (
+                            <img src={mewsLogo} alt="MEWS" className="w-16 h-16 object-contain" />
+                        ) : (
+                            <FaUsers className="text-white text-3xl" />
+                        )}
                     </div>
-                    <h1 className="text-2xl font-bold text-[#1e2a4a] mb-1">MEWS</h1>
-                    <p className="text-sm font-medium text-gray-800 text-center">Mala Educational Welfare Society</p>
-                    <p className="text-xs text-gray-500 mt-1">Community Support at Your Fingertips</p>
+                    <h1 className="text-[#1e2a4a] text-2xl font-extrabold tracking-tight">MEWS</h1>
+                    <h2 className="text-[#1e2a4a] text-sm font-semibold tracking-wide uppercase mt-1">Mala Educational Welfare Society</h2>
+                    <p className="text-gray-500 text-xs mt-1">Community Support at Your Fingertips</p>
                 </div>
 
-                {/* Login Form */}
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    {error && <div className="text-red-500 text-xs text-center font-bold bg-red-50 p-2 rounded-lg">{error}</div>}
-                    {feedbackMessage && <div className="text-emerald-600 text-xs text-center font-bold bg-emerald-50 p-2 rounded-lg">{feedbackMessage.text}</div>}
-
-                    {/* Role Selector (Common to both) */}
-                    <div className="relative">
-                        <label className="text-xs font-semibold text-gray-600 mb-1.5 block ml-1">Select Role</label>
-                        <div className="relative">
-                            <select
-                                name="role"
-                                value={credentials.role}
-                                onChange={handleChange}
-                                className="w-full bg-gray-100 text-gray-700 text-sm rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#274472] appearance-none border-0 transition-all font-medium"
-                            >
-                                <option value="VILLAGE_ADMIN">Village Admin</option>
-                                <option value="MANDAL_ADMIN">Mandal Admin</option>
-                                <option value="DISTRICT_ADMIN">District Admin</option>
-                                <option value="STATE_ADMIN">State Admin</option>
-                                <option value="SUPER_ADMIN">Super Admin</option>
-                            </select>
-                            <FaChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
-                        </div>
+                {/* Form Section */}
+                <div className="w-full space-y-5">
+                    {/* Admin Login Header */}
+                    <div className="text-center mb-2">
+                        <h2 className="text-xl font-bold text-[#1e2a4a]">Admin Login</h2>
                     </div>
 
-                    {loginMethod === 'password' ? (
+                    {!otpSent ? (
                         <>
-                            {/* Username Input */}
-                            <div>
-                                <label className="text-xs font-semibold text-gray-600 mb-1.5 block ml-1">User Name/ID</label>
-                                <input
-                                    type="text"
-                                    name="username"
-                                    value={credentials.username}
-                                    onChange={handleChange}
-                                    placeholder="Enter user name or ID"
-                                    className="w-full bg-gray-100 text-gray-800 text-sm rounded-lg px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#274472] transition-all placeholder:text-gray-400"
-                                    required
-                                />
-                            </div>
-
-                            {/* Password Input */}
-                            <div>
-                                <label className="text-xs font-semibold text-gray-600 mb-1.5 block ml-1">Password</label>
+                            {/* Mobile Input */}
+                            <div className="space-y-1.5">
+                                <label className="block text-sm font-semibold text-gray-600 pl-1">Mobile Number</label>
                                 <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                        <span className="text-gray-500 font-medium">+91</span>
+                                    </div>
                                     <input
-                                        type={showPassword ? "text" : "password"}
-                                        name="password"
-                                        value={credentials.password}
-                                        onChange={handleChange}
-                                        placeholder="Enter password"
-                                        className="w-full bg-gray-100 text-gray-800 text-sm rounded-lg px-4 py-3.5 pr-10 focus:outline-none focus:ring-2 focus:ring-[#274472] transition-all placeholder:text-gray-400"
-                                        required
+                                        type="tel"
+                                        value={mobileNumber}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            if (val.length <= 10) setMobileNumber(val);
+                                        }}
+                                        placeholder="Enter 10-digit mobile number"
+                                        className="w-full bg-gray-100 border-none text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-[#1e2a4a] focus:bg-white block pl-12 p-3.5 placeholder-gray-400 font-medium transition-all"
                                     />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                                    >
-                                        {showPassword ? <FaEyeSlash /> : <FaEye />}
-                                    </button>
                                 </div>
                             </div>
 
-                            {/* Remember Me */}
-                            <div className="flex items-center ml-1">
-                                <input
-                                    id="remember-me"
-                                    type="checkbox"
-                                    className="w-4 h-4 text-[#274472] bg-gray-100 border-gray-300 rounded focus:ring-[#274472] focus:ring-2"
-                                />
-                                <label htmlFor="remember-me" className="ml-2 text-xs font-medium text-gray-600">Remember me</label>
-                            </div>
+                            {/* Feedback Message (Mobile Screen) */}
+                            {feedbackMessage && !otpSent && (
+                                <div className={`p-3 rounded-lg text-xs font-bold text-center mb-2 ${feedbackMessage.type === 'success'
+                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                                    : 'bg-red-50 text-red-600 border border-red-200'
+                                    }`}>
+                                    {feedbackMessage.text}
+                                </div>
+                            )}
 
-                            {/* Login Button */}
+                            {/* Send OTP Button */}
                             <button
-                                type="submit"
+                                onClick={handleSendOTP}
                                 disabled={loading}
-                                className={`w-full bg-[#274472] text-white font-bold py-3.5 rounded-lg shadow-lg hover:bg-[#1a335d] hover:shadow-xl transition-all transform hover:-translate-y-0.5 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                className="w-full bg-[#1e2a4a] hover:bg-[#2c3e66] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#1e2a4a]/20 transition-all transform active:scale-[0.98] mt-2 text-sm disabled:opacity-70"
                             >
-                                {loading ? 'Logging in...' : 'Login'}
+                                {loading ? 'Sending...' : 'Send OTP'}
                             </button>
                         </>
                     ) : (
                         <>
-                            {/* Mobile Number Input (OTP Mode) */}
-                            <div>
-                                <label className="text-xs font-semibold text-gray-600 mb-1.5 block ml-1">Mobile Number</label>
-                                <input
-                                    type="tel"
-                                    value={mobileNumber}
-                                    onChange={(e) => {
-                                        const val = e.target.value.replace(/\D/g, '');
-                                        if (val.length <= 10) setMobileNumber(val);
-                                    }}
-                                    placeholder="Enter 10-digit mobile number"
-                                    className="w-full bg-gray-100 text-gray-800 text-sm rounded-lg px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#274472] transition-all placeholder:text-gray-400"
-                                    disabled={otpSent}
-                                />
-                            </div>
-
-                            {/* OTP Input */}
-                            {otpSent && (
-                                <div>
-                                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block ml-1">One Time Password (OTP)</label>
-                                    <input
-                                        type="text"
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                                        placeholder="Enter 4-digit OTP"
-                                        maxLength={4}
-                                        className="w-full bg-white border-2 border-[#274472] text-gray-800 text-lg tracking-widest text-center rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#274472] transition-all"
-                                    />
-                                    <div className="text-right mt-2">
-                                        {timer > 0 ? (
-                                            <span className="text-xs text-gray-500 font-medium">Resend in {timer}s</span>
-                                        ) : (
-                                            <button
-                                                type="button"
-                                                onClick={handleSendOTP}
-                                                className="text-xs font-bold text-[#274472] hover:underline"
-                                            >
-                                                Resend OTP
-                                            </button>
-                                        )}
-                                    </div>
+                            {/* Feedback Message */}
+                            {feedbackMessage && (
+                                <div className={`p-3 rounded-lg text-xs font-bold text-center mb-2 ${feedbackMessage.type === 'success'
+                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                                    : 'bg-red-50 text-red-600 border border-red-200'
+                                    }`}>
+                                    {feedbackMessage.text}
                                 </div>
                             )}
 
+                            {/* OTP Input */}
+                            <div className="space-y-1.5">
+                                <label className="block text-sm font-semibold text-gray-600 pl-1">Enter OTP</label>
+                                <input
+                                    ref={otpInputRef}
+                                    type="text"
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value)}
+                                    placeholder="Enter 4-digit OTP"
+                                    maxLength={4}
+                                    className="w-full bg-gray-100 border-none text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-[#1e2a4a] focus:bg-white block p-3.5 placeholder-gray-400 font-medium transition-all text-center tracking-widest text-lg"
+                                />
+                            </div>
+
+                            {/* Resend Timer / Button */}
+                            <div className="text-right">
+                                {timer > 0 ? (
+                                    <span className="text-xs text-gray-500 font-medium">Resend OTP in {timer}s</span>
+                                ) : (
+                                    <button
+                                        onClick={handleSendOTP}
+                                        type="button"
+                                        className="text-xs font-bold text-[#1e2a4a] hover:underline"
+                                    >
+                                        Resend OTP
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Verify Button */}
                             <button
-                                type="submit"
+                                onClick={handleVerifyOTP}
                                 disabled={loading}
-                                className={`w-full bg-[#274472] text-white font-bold py-3.5 rounded-lg shadow-lg hover:bg-[#1a335d] transition-all ${loading ? 'opacity-70' : ''}`}
+                                className="w-full bg-[#1e2a4a] hover:bg-[#2c3e66] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#1e2a4a]/20 transition-all transform active:scale-[0.98] mt-2 text-sm disabled:opacity-70"
                             >
-                                {loading ? 'Processing...' : (otpSent ? 'Login' : 'Send OTP')}
+                                {loading ? 'Verifying...' : 'Verify & Login'}
                             </button>
 
-                            {otpSent && (
-                                <button
-                                    type="button"
-                                    onClick={() => setOtpSent(false)}
-                                    className="w-full text-center text-xs text-gray-500 hover:text-[#274472]"
-                                >
-                                    Change Mobile Number
-                                </button>
-                            )}
+                            <button
+                                onClick={() => setOtpSent(false)}
+                                className="w-full text-center text-xs text-gray-500 hover:text-[#1e2a4a] mt-2"
+                            >
+                                Change Mobile Number
+                            </button>
                         </>
                     )}
-                </form>
-
-                {/* Divider */}
-                <div className="flex items-center my-6">
-                    <div className="flex-grow border-t border-gray-200"></div>
-                    <span className="flex-shrink-0 mx-4 text-xs font-medium text-gray-400 uppercase">OR</span>
-                    <div className="flex-grow border-t border-gray-200"></div>
                 </div>
 
-                {/* Toggle Login Method Button */}
-                <button
-                    type="button"
-                    onClick={() => {
-                        setLoginMethod(loginMethod === 'password' ? 'otp' : 'password');
-                        setError('');
-                        setFeedbackMessage(null);
-                    }}
-                    className="w-full bg-gray-50 text-[#274472] font-bold py-3.5 rounded-lg border border-gray-100 hover:bg-gray-100 transition-all text-sm mb-8"
-                >
-                    {loginMethod === 'password' ? 'Login with OTP' : 'Login with Password'}
-                </button>
-
-                {/* Footer Links */}
-                <div className="text-center">
-                    <a href="#" className="text-xs font-semibold text-[#274472] hover:underline mb-2 block">Forgot Password?</a>
-
-
-                    <div className="mt-8 flex flex-col items-center gap-2">
-                        <span className="text-[10px] text-gray-300">Version 1.0.2</span>
-                        <div className="flex gap-4 text-[10px] text-[#274472]">
-                            <a href="#" className="hover:underline">Privacy Policy</a>
-                            <span className="text-gray-300">•</span>
-                            <a href="#" className="hover:underline">Terms of Service</a>
-                        </div>
+                {/* Footer */}
+                <div className="mt-10 text-center space-y-2">
+                    <p className="text-[10px] text-gray-300 font-medium">Version 1.0.2</p>
+                    <div className="flex gap-3 justify-center text-[10px] text-[#1e2a4a] font-medium">
+                        <a href="#" className="hover:underline">Privacy Policy</a>
+                        <span>•</span>
+                        <a href="#" className="hover:underline">Terms of Service</a>
                     </div>
                 </div>
 

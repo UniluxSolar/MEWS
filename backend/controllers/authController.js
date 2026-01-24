@@ -258,7 +258,7 @@ const requestOtp = asyncHandler(async (req, res) => {
         formattedMobile = `+91${formattedMobile}`;
     }
 
-    const smsResult = await sendSms(formattedMobile, `Your MEWS ${userType === 'INSTITUTION' ? 'Institution' : 'Member'} Login OTP is: ${otp}. Valid for 5 minutes.`);
+    const smsResult = await sendSms(formattedMobile, `Your MEWS ${userType === 'INSTITUTION' ? 'Institution' : 'Member'} Login Verification Code is: ${otp}. Valid for 5 minutes.`);
 
     console.log(`[OTP] Generated for ${mobile} (${userType}): ${otp} | SMS Result:`, smsResult);
 

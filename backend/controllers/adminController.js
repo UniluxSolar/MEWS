@@ -13,18 +13,34 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 
     let institutionQuery = {};
 
-    // If user has an assigned location
-    if (req.user.assignedLocation) {
-        const location = await Location.findById(req.user.assignedLocation);
+    // If user has an assigned location OR if a specific locationId is requested (Drill Down)
+    let targetLocationId = req.user.assignedLocation;
+
+    // DRILL DOWN OVERRIDE
+    if (req.query.locationId) {
+        // TODO: Validate if user is allowed to view this location (Hierarchy check)
+        // For now, assuming UI only shows valid links for authorized users.
+        targetLocationId = req.query.locationId;
+        console.log(`[DASHBOARD] Drill Down requested for LocationID: ${targetLocationId}`);
+    }
+
+    if (targetLocationId) {
+        const location = await Location.findById(targetLocationId);
         if (location) {
             locationName = location.name;
-            console.log(`[DASHBOARD] User: ${req.user.email}, Role: ${req.user.role}, LocationID: ${req.user.assignedLocation}`);
-            console.log(`[DASHBOARD] Location Found: ${location.name} (${location._id})`);
+            console.log(`[DASHBOARD] User: ${req.user.email}, Role: ${req.user.role}, Target: ${locationName} (${location.type})`);
+
+            // Determine Context Role based on Target Location Type
+            // If I am State Admin viewing a District, I want "District Admin" style breakdown stats.
+            let contextRole = req.user.role;
+            if (location.type === 'DISTRICT') contextRole = 'DISTRICT_ADMIN';
+            if (location.type === 'MANDAL') contextRole = 'MANDAL_ADMIN';
+            if (location.type === 'VILLAGE') contextRole = 'VILLAGE_ADMIN';
 
             // Common regex filter for unstructured address fields (Institution/SOS)
             const locationRegex = { $regex: location.name, $options: 'i' };
 
-            if (req.user.role === 'VILLAGE_ADMIN') {
+            if (contextRole === 'VILLAGE_ADMIN') {
                 // STRICT: Use ID match for members to prevent CastError
                 // Handle duplicate location entries (e.g. multiple "Annaram" IDs)
                 // Use robust regex to match name with potential whitespace in DB
@@ -40,7 +56,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                 // Use Regex for Institution (fullAddress is String)
                 institutionQuery = { fullAddress: locationRegex };
 
-            } else if (req.user.role === 'MANDAL_ADMIN') {
+            } else if (contextRole === 'MANDAL_ADMIN') {
                 // Robust Fix: Handle duplicate Location IDs by Name
                 const escapedName = location.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const matchingMandals = await Location.find({
@@ -72,7 +88,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                     const instCount = await Institution.countDocuments({ fullAddress: { $regex: village.name, $options: 'i' } });
 
                     return {
-                        id: village._id,
+                        id: village._id.toString(),
                         name: village.name,
                         members: mCount,
                         pending: pCount,
@@ -81,7 +97,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                         status: 'Active'
                     };
                 }));
-            } else if (req.user.role === 'DISTRICT_ADMIN') {
+            } else if (contextRole === 'DISTRICT_ADMIN') {
                 memberQuery = { 'address.district': location._id };
 
                 // Get Mandals for breakdown
@@ -107,7 +123,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 
                     const instCount = await Institution.countDocuments({ fullAddress: { $regex: mandal.name, $options: 'i' } });
                     return {
-                        id: mandal._id,
+                        id: mandal._id.toString(),
                         name: mandal.name,
                         members: mCount,
                         pending: pCount, // Added pending count
@@ -119,7 +135,9 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                 // Attach to response object
                 req.mandalsData = mandalsData;
 
-            } else if (req.user.role === 'STATE_ADMIN') {
+            } else if (contextRole === 'STATE_ADMIN' || contextRole === 'SUPER_ADMIN') {
+                // Determine logic for State Dashboard
+                // Usually State Admin sees Districts Breakdown
                 // Robust Fix: Get all districts and query per district instead of relying on address.state
                 const districts = await Location.find({ parent: location._id, type: 'DISTRICT' });
                 const districtIds = districts.map(d => d._id);
@@ -139,7 +157,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                     const instCount = await Institution.countDocuments({ fullAddress: { $regex: district.name, $options: 'i' } });
 
                     return {
-                        id: district._id,
+                        id: district._id.toString(),
                         name: district.name,
                         members: mCount,
                         pending: pCount,
@@ -209,54 +227,71 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
     let locationName = 'All Locations';
 
     // Standardized Role-Based Filtering (Matches memberController.js)
-    if (req.user.assignedLocation) {
-        const locationId = req.user.assignedLocation;
-        // Fetch location name for naming
-        const locationDoc = await Location.findById(locationId);
-        if (locationDoc) locationName = locationDoc.name;
+    let targetLocationId = req.user.assignedLocation;
 
-        if (req.user.role === 'VILLAGE_ADMIN') {
-            // STRICT: Use ID match for members to prevent CastError
-            // Handle duplicate location entries (Resolve by Name) - ROBUST FIX
-            const escapedName = locationDoc.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const relatedLocations = await Location.find({
-                name: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
-                type: 'VILLAGE'
-            });
-            const locIds = relatedLocations.map(l => l._id);
-            memberQuery = { 'address.village': { $in: locIds } };
-        } else if (req.user.role === 'MANDAL_ADMIN') {
-            // Robust Fix: Handle duplicate Location IDs by Name
-            const escapedName = locationDoc.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const matchingMandals = await Location.find({
-                name: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
-                type: 'MANDAL'
-            });
-            const mandalIds = matchingMandals.map(m => m._id);
-            memberQuery = { 'address.mandal': { $in: mandalIds } };
-        } else if (req.user.role === 'DISTRICT_ADMIN') {
-            memberQuery = { 'address.district': locationId };
-        } else if (req.user.role === 'STATE_ADMIN') {
-            // Find all districts under this state
-            const districts = await Location.find({ parent: locationId, type: 'DISTRICT' }).select('_id');
-            const districtIds = districts.map(d => d._id);
-            memberQuery = { 'address.district': { $in: districtIds } };
-        }
-        // SUPER_ADMIN (with assignedLocation??) -> Shows all or restricted?
-        // memberController allows SUPER_ADMIN to see all despite assignedLocation.
-        else if (req.user.role === 'SUPER_ADMIN') {
-            memberQuery = {}; // Show All
-        }
+    // DRILL DOWN OVERRIDE
+    if (req.query.locationId) {
+        targetLocationId = req.query.locationId;
+    }
 
-    } else {
-        // No assigned location
-        if (req.user.role !== 'SUPER_ADMIN') {
-            // Force empty result for safety if non-super admin has no location
-            // But if memberController allows it/blocks it... memberController blocks it.
-            // Let's block it here too to be safe.
-            memberQuery = { _id: null };
+    if (targetLocationId) {
+        const locationDoc = await Location.findById(targetLocationId);
+
+        if (locationDoc) {
+            locationName = locationDoc.name;
+            let contextRole = req.user.role;
+            // Adjust scope based on target location type
+            if (locationDoc.type === 'DISTRICT') contextRole = 'DISTRICT_ADMIN';
+            if (locationDoc.type === 'MANDAL') contextRole = 'MANDAL_ADMIN';
+            if (locationDoc.type === 'VILLAGE') contextRole = 'VILLAGE_ADMIN';
+
+            if (contextRole === 'VILLAGE_ADMIN') {
+                // STRICT: Use ID match for members to prevent CastError
+                // Handle duplicate location entries (Resolve by Name) - ROBUST FIX
+                const escapedName = locationDoc.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const relatedLocations = await Location.find({
+                    name: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
+                    type: 'VILLAGE'
+                });
+                const locIds = relatedLocations.map(l => l._id);
+                memberQuery = { 'address.village': { $in: locIds } };
+            } else if (contextRole === 'MANDAL_ADMIN') {
+                // Robust Fix: Handle duplicate Location IDs by Name
+                const escapedName = locationDoc.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const matchingMandals = await Location.find({
+                    name: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
+                    type: 'MANDAL'
+                });
+                const mandalIds = matchingMandals.map(m => m._id);
+                memberQuery = { 'address.mandal': { $in: mandalIds } };
+            } else if (contextRole === 'DISTRICT_ADMIN') {
+                memberQuery = { 'address.district': targetLocationId };
+            } else if (contextRole === 'STATE_ADMIN' || contextRole === 'SUPER_ADMIN') {
+                // Find all districts under this state
+                const districts = await Location.find({ parent: targetLocationId, type: 'DISTRICT' }).select('_id');
+                const districtIds = districts.map(d => d._id);
+                memberQuery = { 'address.district': { $in: districtIds } };
+            }
+            // SUPER_ADMIN (with assignedLocation??) -> Shows all or restricted?
+            // memberController allows SUPER_ADMIN to see all despite assignedLocation.
+            else if (req.user.role === 'SUPER_ADMIN') {
+                memberQuery = {}; // Show All
+            }
+
+        } else {
+            // No assigned location
+            if (req.user.role !== 'SUPER_ADMIN') {
+                // Force empty result for safety if non-super admin has no location
+                // But if memberController allows it/blocks it... memberController blocks it.
+                // Let's block it here too to be safe.
+                memberQuery = { _id: null };
+            }
+            // If SUPER_ADMIN, memberQuery remains {} -> Show All
         }
-        // If SUPER_ADMIN, memberQuery remains {} -> Show All
+    }
+
+    if (!targetLocationId && req.user.role !== 'SUPER_ADMIN') {
+        memberQuery = { _id: null };
     }
 
     console.log(`[ANALYTICS] Role: ${req.user.role}, Query:`, JSON.stringify(memberQuery));

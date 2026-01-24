@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useParams } from 'react-router-dom';
 import {
     FaUsers, FaBuilding, FaExclamationTriangle, FaFileAlt,
     FaMapMarkerAlt, FaClock, FaTable, FaThLarge, FaMapMarkedAlt,
@@ -30,53 +30,57 @@ L.Icon.Default.mergeOptions({
 
 // --- COMPONENTS ---
 
-const VillagePerformanceCard = ({ name, members, institutions, status, pending }) => (
-    <Link
-        to={`/admin/members?villages=${encodeURIComponent(name)}`}
-        className="block bg-white rounded-xl border border-slate-200 shadow-sm p-5 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group"
-    >
-        {/* Status Indicator Bar */}
-        <div className={`absolute left-0 top-0 bottom-0 w-1 ${status === 'Active' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+const VillagePerformanceCard = ({ id, name, members, institutions, status, pending }) => {
+    const navigate = useNavigate();
+    return (
+        <div
+            onClick={() => navigate(`/admin/dashboard/village/${id}`)}
+            className="block bg-white rounded-xl border border-slate-200 shadow-sm p-5 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group cursor-pointer"
+        >
+            {/* Status Indicator Bar */}
+            <div className={`absolute left-0 top-0 bottom-0 w-1 ${status === 'Active' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
 
-        {/* Header */}
-        <div className="flex justify-between items-start mb-4 pl-2">
-            <div>
-                <h3 className="font-bold text-[#1e2a4a] text-lg group-hover:text-blue-600 transition-colors flex items-center gap-2">
-                    {name}
-                    <FaChevronRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-500" />
-                </h3>
-                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                    {status}
-                </span>
+            {/* Header */}
+            <div className="flex justify-between items-start mb-4 pl-2">
+                <div>
+                    <h3 className="font-bold text-[#1e2a4a] text-lg group-hover:text-blue-600 transition-colors flex items-center gap-2">
+                        {name}
+                        <FaChevronRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-500" />
+                    </h3>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                        {status}
+                    </span>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
+                    <FaUsers size={16} />
+                </div>
             </div>
-            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
-                <FaUsers size={16} />
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-3 pl-2">
+                <div className="bg-slate-50 rounded-lg p-2 text-center border border-slate-100">
+                    <div className="text-xl font-bold text-slate-800">{members.toLocaleString()}</div>
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">Members</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-2 text-center border border-slate-100">
+                    <div className="text-xl font-bold text-slate-800">{institutions}</div>
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">Institutions</div>
+                </div>
             </div>
+
+            {/* Pending Alerts */}
+            {pending > 0 && (
+                <div className="mt-4 flex items-center gap-2 text-xs font-bold text-orange-600 bg-orange-50 px-3 py-2 rounded-lg border border-orange-100 animate-pulse">
+                    <FaClock /> {pending} Verification{pending !== 1 && 's'} Pending
+                </div>
+            )}
         </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 pl-2">
-            <div className="bg-slate-50 rounded-lg p-2 text-center border border-slate-100">
-                <div className="text-xl font-bold text-slate-800">{members.toLocaleString()}</div>
-                <div className="text-[10px] text-slate-500 font-bold uppercase">Members</div>
-            </div>
-            <div className="bg-slate-50 rounded-lg p-2 text-center border border-slate-100">
-                <div className="text-xl font-bold text-slate-800">{institutions}</div>
-                <div className="text-[10px] text-slate-500 font-bold uppercase">Institutions</div>
-            </div>
-        </div>
-
-        {/* Pending Alerts */}
-        {pending > 0 && (
-            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-orange-600 bg-orange-50 px-3 py-2 rounded-lg border border-orange-100 animate-pulse">
-                <FaClock /> {pending} Verification{pending !== 1 && 's'} Pending
-            </div>
-        )}
-    </Link>
-);
+    );
+};
 
 const MandalDashboard = () => {
     const navigate = useNavigate();
+    const { id } = useParams(); // URL Param
     const [stats, setStats] = useState({
         locationName: 'Mandal',
         members: 0,
@@ -93,12 +97,14 @@ const MandalDashboard = () => {
         const fetchData = async () => {
             try {
                 const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
-                setUserName(adminInfo?.name || 'Admin');
+                setUserName(adminInfo?.name || 'Mandal Admin');
+
+                const query = id ? `?locationId=${id}` : ''; // API Drill Down
 
                 // Parallel Fetching for speed
                 const [statsRes, analyticsRes] = await Promise.all([
-                    API.get('/admin/dashboard-stats'),
-                    API.get('/admin/analytics')
+                    API.get(`/admin/dashboard-stats${query}`),
+                    API.get(`/admin/analytics${query}`)
                 ]);
 
                 // Set Basic Stats
@@ -126,7 +132,7 @@ const MandalDashboard = () => {
 
     // 1. Village Member Distribution (Bar Chart)
     const villageChartData = stats.villages
-        .map(v => ({ name: v.name, members: v.members }))
+        .map(v => ({ id: v.id, name: v.name, members: v.members }))
         .sort((a, b) => b.members - a.members) // Sort by member count descending
         .slice(0, 10); // Top 10 villages
 
@@ -182,6 +188,7 @@ const MandalDashboard = () => {
                 <AdminSidebar activePage="dashboard" />
 
                 <main id="admin-dashboard-content" className="flex-1 overflow-y-auto bg-slate-50">
+                    <LiveUpdatesTicker />
                     <div id="location-card-scroll-target">
                         <DashboardHeader
                             title={`Mandal Overview`}
@@ -245,7 +252,18 @@ const MandalDashboard = () => {
                                         </div>
                                         <div className="h-64 w-full">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={villageChartData} layout="vertical" margin={{ left: 40 }}>
+                                                <BarChart
+                                                    data={villageChartData}
+                                                    layout="vertical"
+                                                    margin={{ left: 40 }}
+                                                    onClick={(data) => {
+                                                        if (data && data.activePayload && data.activePayload[0]) {
+                                                            const id = data.activePayload[0].payload.id;
+                                                            if (id) navigate(`/admin/dashboard/village/${id}`);
+                                                        }
+                                                    }}
+                                                    style={{ cursor: 'pointer' }}
+                                                >
                                                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.5} />
                                                     <XAxis type="number" hide />
                                                     <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fontWeight: 'bold' }} />
@@ -280,6 +298,12 @@ const MandalDashboard = () => {
                                                         paddingAngle={5}
                                                         dataKey="value"
                                                         label={({ value }) => value}
+                                                        onClick={(data) => {
+                                                            if (data && data.name) {
+                                                                navigate(`/admin/members?gender=${data.name}`);
+                                                            }
+                                                        }}
+                                                        style={{ cursor: 'pointer' }}
                                                     >
                                                         {genderData.map((entry, index) => (
                                                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -341,6 +365,7 @@ const MandalDashboard = () => {
                                                 {stats.villages.map((village, idx) => (
                                                     <VillagePerformanceCard
                                                         key={idx}
+                                                        id={village.id}
                                                         name={village.name}
                                                         members={village.members}
                                                         institutions={village.institutions}
@@ -363,13 +388,17 @@ const MandalDashboard = () => {
                                                                 <th className="px-6 py-4 text-center">Institutions</th>
                                                                 <th className="px-6 py-4 text-center">Pending Verifications</th>
                                                                 <th className="px-6 py-4 text-center">Status</th>
-                                                                <th className="px-6 py-4 text-right">Action</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y divide-slate-100">
                                                             {stats.villages.map((village, idx) => (
                                                                 <tr key={idx} className="hover:bg-blue-50/50 transition-colors group">
-                                                                    <td className="px-6 py-4 font-bold text-[#1e2a4a]">{village.name}</td>
+                                                                    <td
+                                                                        className="px-6 py-4 font-bold text-[#1e2a4a] hover:text-blue-600 cursor-pointer transition-colors"
+                                                                        onClick={() => navigate(`/admin/dashboard/village/${village.id}`)}
+                                                                    >
+                                                                        {village.name}
+                                                                    </td>
                                                                     <td className="px-6 py-4 text-center text-slate-600 font-medium">{village.members}</td>
                                                                     <td className="px-6 py-4 text-center text-slate-600 font-medium">{village.institutions}</td>
                                                                     <td className="px-6 py-4 text-center">
@@ -385,14 +414,6 @@ const MandalDashboard = () => {
                                                                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${village.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
                                                                             {village.status}
                                                                         </span>
-                                                                    </td>
-                                                                    <td className="px-6 py-4 text-right">
-                                                                        <Link
-                                                                            to={`/admin/members?villages=${encodeURIComponent(village.name)}`}
-                                                                            className="text-blue-600 hover:text-blue-800 font-bold text-xs inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                        >
-                                                                            View Details <FaChevronRight size={10} />
-                                                                        </Link>
                                                                     </td>
                                                                 </tr>
                                                             ))}
@@ -429,8 +450,8 @@ const MandalDashboard = () => {
                                                                         <div className="bg-blue-50 p-1 rounded">Mem: <b>{village.members}</b></div>
                                                                         <div className="bg-slate-50 p-1 rounded">Inst: <b>{village.institutions}</b></div>
                                                                     </div>
-                                                                    <Link to={`/admin/members?villages=${encodeURIComponent(village.name)}`} className="block w-full bg-[#1e2a4a] text-white text-[10px] font-bold py-1 px-2 rounded hover:bg-blue-800 transition">
-                                                                        View Members
+                                                                    <Link to={`/admin/dashboard/village/${village.id}`} className="block w-full bg-[#1e2a4a] text-white text-[10px] font-bold py-1 px-2 rounded hover:bg-blue-800 transition">
+                                                                        View Dashboard
                                                                     </Link>
                                                                 </div>
                                                             </Popup>

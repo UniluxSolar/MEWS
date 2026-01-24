@@ -72,23 +72,18 @@ const sendRegistrationNotification = async (member) => {
     const appFormUrl = `${frontendUrl}/dashboard/member/application/${_id}`;
     const idCardUrl = `${frontendUrl}/dashboard/member/id-card/${_id}`;
 
-    const messageBody = `Dear ${name} ${member.surname || ''},
+    const messageBody = `Dear ${name} ${member.surname || ''} ,
 
-Thank you for registering with MEWS.
-
-Member ID: ${mewsId}
+Thank you for registering with MEWS, Your Member ID: ${mewsId} 
 
 You can access your details using the links below:
 
-📄 Application Form:
-${appFormUrl}
-
-🪪 Digital ID Card:
-${idCardUrl}
+1. Application Form : ${appFormUrl}
+2. Digital ID Card : ${idCardUrl}
 
 We appreciate your registration with MEWS and welcome you to the community.
 
-– Team MEWS`;
+– MEWS`;
 
     // 1. Send SMS
     try {
@@ -101,18 +96,51 @@ We appreciate your registration with MEWS and welcome you to the community.
     } catch (e) {
         console.error(`[Notify] SMS failed for ${formattedMobile}: ${e.message}`);
     }
+};
 
-    // 2. Send WhatsApp
+/**
+ * Sends a notification when a member is promoted to an Admin role.
+ * @param {Object} member - The member document.
+ * @param {Object} user - The user document (contains username/role).
+ * @param {String} locationName - Name of the assigned location.
+ */
+const sendAdminPromotionNotification = async (member, user, locationName) => {
+    if (!client) return;
+
+    const { mobileNumber, name } = member;
+    if (!mobileNumber) return;
+
+    const formattedMobile = mobileNumber.startsWith('+') ? mobileNumber : `+91${mobileNumber}`;
+
+    // Links
+    const loginLink = `${frontendUrl}/login`;
+    const idCardUrl = `${frontendUrl}/dashboard/member/id-card/${member._id}`;
+
+    const roleName = user.role.replace('_', ' ');
+    const locationStr = locationName ? ` for ${locationName}` : '';
+
+    const messageBody = `Dear ${name} ,
+
+Congratulations! You have been appointed as ${roleName}${locationStr}.
+
+You can now login using your registered mobile number:
+Login: ${loginLink}
+ID Card: ${idCardUrl}
+
+Welcome to the Admin Team!
+– MEWS`;
+
+    // Send SMS
     try {
-        const waMsg = await client.messages.create({
+        await client.messages.create({
             body: messageBody,
-            from: whatsappFrom.startsWith('whatsapp:') ? whatsappFrom : `whatsapp:${whatsappFrom}`,
-            to: `whatsapp:${formattedMobile}`
+            from: fromNumber,
+            to: formattedMobile
         });
-        console.log(`[Notify] WhatsApp sent to ${formattedMobile} (SID: ${waMsg.sid})`);
+        console.log(`[Notify] Admin Promo SMS sent to ${formattedMobile}`);
     } catch (e) {
-        console.error(`[Notify] WhatsApp failed for ${formattedMobile}: ${e.message}`);
+        console.error(`[Notify] Admin Promo SMS failed: ${e.message}`);
     }
 };
 
-module.exports = { sendRegistrationNotification };
+module.exports = { sendRegistrationNotification, sendAdminPromotionNotification };

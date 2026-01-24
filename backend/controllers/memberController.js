@@ -467,6 +467,12 @@ const getMembers = asyncHandler(async (req, res) => {
         }
     });
 
+    // --- Location Filters (Explicit from Frontend) ---
+    // Allow frontend to request specific locations. Admin logic below will validate/intersect.
+    if (req.query['address.village']) query['address.village'] = req.query['address.village'];
+    if (req.query['address.mandal']) query['address.mandal'] = req.query['address.mandal'];
+    if (req.query['address.district']) query['address.district'] = req.query['address.district'];
+
     // Caste Filter (Deep match)
     if (req.query.subCaste) {
         query['casteDetails.subCaste'] = req.query.subCaste;
@@ -571,34 +577,41 @@ const getMembers = asyncHandler(async (req, res) => {
                 if (!query.$and) query.$and = [];
                 query.$and.push(villageConstraint);
             } else {
-                query['address.village'] = locationId; // Fallback
+                query['address.village'] = locationId; // Fallback - overwrites user choice, correct for Village Admin
             }
         }
         else if (req.user.role === 'MANDAL_ADMIN') {
             // STRICT: Must match the assigned Mandal ID
-            const assignedLoc = await Location.findById(locationId);
-            if (assignedLoc) {
-                // Resolve name to IDs just in case (though Mandal duplicates are rarer within same parent, but let's stick to ID)
-                // Actually, for Mandals/Districts, we can trust the ID. 
-                // We CANNOT use regex on the ObjectId field.
-                query['address.mandal'] = locationId;
-            } else {
-                query['address.mandal'] = locationId;
-            }
+            query['address.mandal'] = locationId; // Overwrites user choice, correct for Mandal Admin
         }
         else if (req.user.role === 'DISTRICT_ADMIN') {
             // STRICT: Must match the assigned District ID
-            query['address.district'] = locationId;
+            query['address.district'] = locationId; // Overwrites user choice, correct for District Admin
         }
         else if (req.user.role === 'STATE_ADMIN') {
             // STRICT: Must match any District under the assigned State
             // Find all districts where parent is the State ID
             const districts = await Location.find({ parent: locationId, type: 'DISTRICT' }).select('_id');
             const districtIds = districts.map(d => d._id);
-            query['address.district'] = { $in: districtIds };
+
+            // Intersect with user request
+            if (query['address.district']) {
+                const requested = query['address.district'];
+                // Check if requested is in allowed list
+                const isAllowed = districtIds.some(dId => dId.toString() === requested.toString());
+                if (isAllowed) {
+                    // Keep user request (it's valid)
+                } else {
+                    // Invalid request (outside state) - return nothing
+                    query['address.district'] = null;
+                }
+            } else {
+                // No specific filter, show all in state
+                query['address.district'] = { $in: districtIds };
+            }
         }
         else if (req.user.role === 'SUPER_ADMIN') {
-            // Show All - No Filter
+            // No Constraints. Query already built from params.
         }
 
         console.log(`[GET MEMBERS] Query applied:`, JSON.stringify(query));
@@ -607,11 +620,9 @@ const getMembers = asyncHandler(async (req, res) => {
         // Assuming Super Admin might not have assignedLocation.
         if (req.user.role !== 'SUPER_ADMIN') {
             console.warn(`[GET MEMBERS] User ${req.user.username} (${req.user.role}) has no assigned location. Showing nothing.`);
-            // query = { _id: null }; // Force empty result? Or just let them see all if misconfigured? 
-            // Better to fail safe.
-            // But for now, let's assume valid configuration.
-            if (req.user.role === 'VILLAGE_ADMIN' || req.user.role === 'MANDAL_ADMIN' || req.user.role === 'DISTRICT_ADMIN') {
-                query = { _id: null }; // Block access
+            // Block access for admin roles without location
+            if (req.user.role === 'VILLAGE_ADMIN' || req.user.role === 'MANDAL_ADMIN' || req.user.role === 'DISTRICT_ADMIN' || req.user.role === 'STATE_ADMIN') {
+                query = { _id: null };
             }
         }
     }

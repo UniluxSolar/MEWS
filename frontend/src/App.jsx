@@ -5,6 +5,10 @@ import LoginPage from './pages/LoginPage';
 import InstitutionLoginPage from './pages/InstitutionLoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminDashboard from './pages/AdminDashboard';
+import DistrictDashboard from './pages/DistrictDashboard';
+import MandalDashboard from './pages/MandalDashboard';
+import VillageDashboard from './pages/VillageDashboard';
+import AssignAdmin from './pages/AssignAdmin';
 import AdminManagement from './pages/AdminManagement';
 import MemberManagement from './pages/MemberManagement';
 import MemberRegistration from './pages/MemberRegistration';
@@ -75,6 +79,12 @@ function App() {
                 {/* Protected Admin Routes */}
                 <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'VILLAGE_ADMIN', 'MANDAL_ADMIN', 'DISTRICT_ADMIN', 'STATE_ADMIN']} />}>
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    {/* Drill-Down Dashboard Routes */}
+                    <Route path="/admin/dashboard/district/:id" element={<DistrictDashboard />} />
+                    <Route path="/admin/dashboard/mandal/:id" element={<MandalDashboard />} />
+                    <Route path="/admin/dashboard/village/:id" element={<VillageDashboard />} />
+
+                    <Route path="/admin/assign-admin" element={<AssignAdmin />} />
                     <Route path="/admin/management" element={<AdminManagement />} />
                     <Route path="/admin/members" element={<MemberManagement />} />
                     <Route path="/admin/members/new" element={<MemberRegistration />} />

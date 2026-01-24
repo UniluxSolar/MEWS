@@ -278,13 +278,13 @@ const CommunitySupportHub = () => {
     );
 };
 
-import LiveUpdates from '../components/LiveUpdates';
+import LiveUpdatesTicker from '../components/LiveUpdatesTicker';
 
 const UserLandingPage = () => {
     return (
         <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-secondary selection:text-white">
             <ConnectNavbar />
-            <LiveUpdates />
+            <LiveUpdatesTicker />
             <main className="space-y-0">
                 <ConnectHero />
                 <ImpactDashboard />

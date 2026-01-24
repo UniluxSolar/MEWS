@@ -66,8 +66,16 @@ const getSubordinateAdmins = asyncHandler(async (req, res) => {
 
     const admins = await User.find(query)
         .select('-passwordHash')
-        .populate('assignedLocation', 'name type')
-        .populate('memberId', 'name surname mobileNumber photoUrl')
+        .populate('assignedLocation', 'name type ancestors parent')
+        .populate({
+            path: 'memberId',
+            select: 'name surname mobileNumber photoUrl gender fatherName address',
+            populate: [
+                { path: 'address.village', select: 'name' },
+                { path: 'address.mandal', select: 'name' },
+                { path: 'address.district', select: 'name' }
+            ]
+        })
         .sort({ role: 1, createdAt: -1 });
 
     res.json(admins);
@@ -256,23 +264,57 @@ const getChildLocations = asyncHandler(async (req, res) => {
 const searchMember = asyncHandler(async (req, res) => {
     const { mobileNumber } = req.body;
     const Member = require('../models/Member');
+    const Location = require('../models/Location');
 
     if (!mobileNumber) {
         res.status(400);
         throw new Error('Mobile number is required');
     }
 
-    const member = await Member.findOne({ mobileNumber }).select('name surname mobileNumber photoUrl role assignedLocation');
+    const member = await Member.findOne({ mobileNumber })
+        .select('name surname mobileNumber photoUrl role assignedLocation address email')
+        .populate('assignedLocation', 'name type')
+        .populate('address.village', 'name type')
+        .populate('address.mandal', 'name type')
+        .populate({
+            path: 'address.district',
+            select: 'name type parent',
+            populate: {
+                path: 'parent',
+                select: 'name type' // Fetch State details from District's parent
+            }
+        });
 
     if (!member) {
         res.status(404);
         throw new Error('Member not found');
     }
 
-    // Populate existing location name if any
-    await member.populate('assignedLocation', 'name type');
+    // Convert to object to attach extra properties
+    const memberObj = member.toObject();
 
-    res.json(member);
+    // 1. Derive State if missing (From District -> Parent)
+    if (!memberObj.address) memberObj.address = {};
+
+    if (!memberObj.address.state && memberObj.address.district?.parent?.type === 'STATE') {
+        memberObj.address.state = memberObj.address.district.parent.name;
+        // Also attach the stateLocation object for role assignment
+        memberObj.address.stateLocation = memberObj.address.district.parent;
+    }
+    // Fallback: If state is string but we need ID (Already handled in previous step, checking again)
+    else if (memberObj.address.state && !memberObj.address.stateLocation) {
+        // Case-insensitive exact match for State
+        const stateLocation = await Location.findOne({
+            name: { $regex: new RegExp(`^${memberObj.address.state}$`, 'i') },
+            type: 'STATE'
+        }).select('_id name type');
+
+        if (stateLocation) {
+            memberObj.address.stateLocation = stateLocation;
+        }
+    }
+
+    res.json(memberObj);
 });
 
 // @desc    Promote member to admin
@@ -303,6 +345,12 @@ const promoteMember = asyncHandler(async (req, res) => {
     if (!member) {
         res.status(404);
         throw new Error('Member not found');
+    }
+
+    // 3. Unique Admin Role Check
+    if (member.role && member.role !== 'MEMBER') {
+        res.status(400);
+        throw new Error(`This member is already assigned as a ${member.role.replace('_', ' ')}. Multiple admin roles are not allowed.`);
     }
 
     // Check if trying to demote higher or equal role (Optional safety)
@@ -344,6 +392,21 @@ const promoteMember = asyncHandler(async (req, res) => {
     member.role = role;
     member.assignedLocation = assignedLocation;
     await member.save();
+
+    // 5. Send Notification
+    try {
+        let locationName = '';
+        if (assignedLocation) {
+            const loc = await Location.findById(assignedLocation).select('name');
+            if (loc) locationName = loc.name;
+        }
+
+        const { sendAdminPromotionNotification } = require('../utils/notificationService');
+        await sendAdminPromotionNotification(member, user, locationName);
+    } catch (notifErr) {
+        console.error("Failed to send admin promotion notification:", notifErr);
+        // Do not fail the request, just log error
+    }
 
     res.json({
         message: 'Member promoted successfully',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
     FaThLarge, FaUsers, FaBuilding, FaExclamationTriangle, FaFileAlt,
     FaHandHoldingUsd, FaChartLine, FaCog, FaQuestionCircle, FaBullhorn,
@@ -19,6 +19,7 @@ import DashboardHeader from '../components/common/DashboardHeader';
 
 const VillageDashboard = () => {
     const navigate = useNavigate();
+    const { id } = useParams(); // URL Param if drill-down
 
     const handleChartClick = (data, type) => {
         if (!data) return;
@@ -56,7 +57,17 @@ const VillageDashboard = () => {
                 query = `?employmentStatus=${encodeURIComponent(label)}`;
                 break;
         }
-        if (query) navigate(`/admin/members${query}`);
+
+        // Preserve Village Context when clicking charts
+        if (query) {
+            // If we are viewing a specific village (via drill-down `id` or just implicit),
+            // we should ideally filter the members list by this village.
+            // Using stats.locationName to set 'villages' filter which AdminMembers supports.
+            if (stats.locationName && stats.locationName !== 'Village') {
+                query += `&villages=${encodeURIComponent(stats.locationName)}`;
+            }
+            navigate(`/admin/members${query}`);
+        }
     };
 
     const [stats, setStats] = useState({
@@ -76,9 +87,11 @@ const VillageDashboard = () => {
         const fetchStats = async () => {
             try {
                 // Parallel fetching of dashboard stats and analytics
+                const query = id ? `?locationId=${id}` : ''; // API Drill Down
+
                 const [statsRes, analyticsRes] = await Promise.all([
-                    API.get('/admin/dashboard-stats'),
-                    API.get('/admin/analytics')
+                    API.get(`/admin/dashboard-stats${query}`),
+                    API.get(`/admin/analytics${query}`)
                 ]);
 
                 const data = statsRes.data;
