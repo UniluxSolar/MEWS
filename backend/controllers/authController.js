@@ -202,6 +202,15 @@ const requestOtp = asyncHandler(async (req, res) => {
         const Institution = require('../models/Institution');
         user = await Institution.findOne({ mobileNumber: mobile });
         foundUserType = 'INSTITUTION';
+    } else if (userType === 'ADMIN') {
+        user = await User.findOne({
+            $or: [
+                { mobileNumber: mobile },
+                { username: mobile }, // For promoted admins where username is mobile
+                { username: mobile.replace('+91', '') } // handle potential format diff
+            ]
+        });
+        foundUserType = 'ADMIN';
     } else {
         // Fallback: Check Member first, then Institution (Legacy behavior)
         user = await Member.findOne({
@@ -258,7 +267,7 @@ const requestOtp = asyncHandler(async (req, res) => {
         formattedMobile = `+91${formattedMobile}`;
     }
 
-    const smsResult = await sendSms(formattedMobile, `Your MEWS ${userType === 'INSTITUTION' ? 'Institution' : 'Member'} Login Verification Code is: ${otp}. Valid for 5 minutes.`);
+    const smsResult = await sendSms(formattedMobile, `Your MEWS ${userType ? userType : 'User'} Login Verification Code is: ${otp}. Valid for 5 minutes.`);
 
     console.log(`[OTP] Generated for ${mobile} (${userType}): ${otp} | SMS Result:`, smsResult);
 
@@ -312,6 +321,15 @@ const verifyOtp = asyncHandler(async (req, res) => {
         const Institution = require('../models/Institution');
         user = await Institution.findOne({ mobileNumber: mobile });
         foundUserType = 'INSTITUTION';
+    } else if (userType === 'ADMIN') {
+        user = await User.findOne({
+            $or: [
+                { mobileNumber: mobile },
+                { username: mobile }, // For promoted admins where username is mobile
+                { username: mobile.replace('+91', '') }
+            ]
+        });
+        foundUserType = 'ADMIN';
     } else {
         // Fallback
         user = await Member.findOne({
@@ -374,6 +392,17 @@ const verifyOtp = asyncHandler(async (req, res) => {
         memberType: 'HEAD'
     };
 
+    if (foundUserType === 'ADMIN') {
+        loggedInMember = {
+            _id: user._id,
+            name: user.username, // Admins might not have separate name field
+            surname: '',
+            mobileNumber: user.mobileNumber,
+            photoUrl: '', // Admins might not have photo
+            memberType: 'ADMIN'
+        };
+    }
+
     if (userType === 'MEMBER') {
         if (user.mobileNumber === mobile) {
             // Head is logging in
@@ -413,7 +442,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
     res.json({
         _id: user.id, // Keep main ID for token/API compatibility
         ...loggedInMember, // Spread specific details (overwrites name/mobile if dependent)
-        role: finalRole, // Return actual role (e.g. VILLAGE_ADMIN)
+        role: user.role || finalRole, // Return actual role (e.g. VILLAGE_ADMIN)
         assignedLocation: user.assignedLocation, // Send assigned location ID
         institutionType: user.type, // Optional: if Institution, send type
         isFamilyLogin: loggedInMember.memberType === 'DEPENDENT',

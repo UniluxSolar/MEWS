@@ -12,6 +12,16 @@ const UserSchema = new mongoose.Schema({
         trim: true,
         lowercase: true
     },
+    mobileNumber: {
+        type: String,
+        trim: true,
+        unique: true, // Optional: if you want unique mobile numbers for admins
+        sparse: true // Allows null/undefined to coexist with unique constraint
+    },
+    isPhoneVerified: {
+        type: Boolean,
+        default: false
+    },
     passwordHash: {
         type: String,
         required: true
@@ -43,7 +53,11 @@ const UserSchema = new mongoose.Schema({
     twoFactorEnabled: {
         type: Boolean,
         default: false
-    }
+    },
+    // OTP Fields for Admin Login
+    otpHash: String,
+    otpExpires: Date,
+    otpLastSent: Date
 }, {
     timestamps: true
 });

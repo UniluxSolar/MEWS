@@ -46,8 +46,7 @@ const AdminLoginPage = () => {
 
         try {
             setLoading(true);
-            // Use userType='MEMBER' because Admins are promoted Members
-            const { data } = await API.post('/auth/request-otp', { mobile: mobileNumber, userType: 'MEMBER' });
+            const { data } = await API.post('/auth/request-otp', { mobile: mobileNumber, userType: 'ADMIN' });
             setOtpSent(true);
             setTimer(60);
             setFeedbackMessage({ type: 'success', text: data.message || 'OTP sent successfully!' });
@@ -64,7 +63,7 @@ const AdminLoginPage = () => {
         setLoading(true);
         setFeedbackMessage(null);
         try {
-            const { data } = await API.post('/auth/verify-otp', { mobile: mobileNumber, otp, userType: 'MEMBER' });
+            const { data } = await API.post('/auth/verify-otp', { mobile: mobileNumber, otp, userType: 'ADMIN' });
 
             // Check if user is actually an admin
             const adminRoles = ['SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN'];

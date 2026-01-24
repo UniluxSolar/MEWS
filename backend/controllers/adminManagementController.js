@@ -85,7 +85,7 @@ const getSubordinateAdmins = asyncHandler(async (req, res) => {
 // @route   POST /api/admin/management
 // @access  Private (Restricted)
 const createAdmin = asyncHandler(async (req, res) => {
-    const { username, email, password, role, assignedLocation } = req.body;
+    const { username, email, password, role, assignedLocation, mobileNumber } = req.body;
     const currentUser = req.user;
 
     // 1. Hierarchy Check
@@ -125,15 +125,30 @@ const createAdmin = asyncHandler(async (req, res) => {
         passwordHash: hashedPassword,
         role,
         assignedLocation,
+        mobileNumber,
         isActive: true
     });
 
     if (user) {
+        // Send Welcome SMS
+        if (mobileNumber) {
+            try {
+                const { sendSms } = require('../utils/smsService');
+                const formattedMobile = mobileNumber.startsWith('+') ? mobileNumber : `+91${mobileNumber}`;
+                const messageBody = `Welcome to MEWS Admin Team.\n\nYou have been registered as ${role.replace('_', ' ')}.\nUsername: ${username}\nMobile: ${mobileNumber}\n\nPlease login to complete your setup.`;
+
+                await sendSms(formattedMobile, messageBody);
+            } catch (smsErr) {
+                console.error("Failed to send admin creation SMS:", smsErr);
+            }
+        }
+
         res.status(201).json({
             _id: user.id,
             username: user.username,
             role: user.role,
-            assignedLocation: user.assignedLocation
+            assignedLocation: user.assignedLocation,
+            mobileNumber: user.mobileNumber
         });
     } else {
         res.status(400);
