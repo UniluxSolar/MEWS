@@ -11,6 +11,7 @@ import AdminHeader from '../components/AdminHeader';
 import StatCard from '../components/common/StatCard';
 import ActionCard from '../components/common/ActionCard';
 import DashboardHeader from '../components/common/DashboardHeader';
+import LiveUpdatesTicker from '../components/LiveUpdatesTicker';
 import {
     PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
     BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList
@@ -86,7 +87,8 @@ const DistrictDashboard = () => {
         members: 0,
         institutions: 0,
         sos: 0,
-        mandals: []
+        mandals: [],
+        municipalities: []
     });
     const [analytics, setAnalytics] = useState(null); // For charts
     const [loading, setLoading] = useState(true);
@@ -113,7 +115,8 @@ const DistrictDashboard = () => {
                     members: statsRes.data.members,
                     institutions: statsRes.data.institutions || 0,
                     sos: statsRes.data.sosAlerts || 0,
-                    mandals: statsRes.data.mandals || []
+                    mandals: statsRes.data.mandals || [],
+                    municipalities: statsRes.data.municipalities || []
                 });
 
                 // Set Analytics for Charts
@@ -198,6 +201,7 @@ const DistrictDashboard = () => {
                                     icon={FaUsers}
                                     color="bg-[#1e2a4a]" // Navy
                                     textColor="text-white"
+                                    onClick={() => navigate('/admin/members')}
                                 />
                                 <StatCard
                                     title="Total Institutions"
@@ -207,6 +211,7 @@ const DistrictDashboard = () => {
                                     color="bg-white"
                                     textColor="text-[#1e2a4a]"
                                     border={true}
+                                    onClick={() => navigate('/admin/institutions')}
                                 />
                                 <StatCard
                                     title="Pending Approvals"
@@ -215,6 +220,7 @@ const DistrictDashboard = () => {
                                     icon={FaClock}
                                     color="bg-[#f59e0b]" // Orange
                                     textColor="text-white"
+                                    onClick={() => navigate('/admin/members?status=Pending')}
                                 />
                                 <StatCard
                                     title="Active Mandals"
@@ -223,6 +229,7 @@ const DistrictDashboard = () => {
                                     icon={FaMapMarkedAlt}
                                     color="bg-indigo-500"
                                     textColor="text-white"
+                                    onClick={() => document.getElementById('mandal-breakdown')?.scrollIntoView({ behavior: 'smooth' })}
                                 />
                             </div>
 
@@ -305,7 +312,7 @@ const DistrictDashboard = () => {
                             )}
 
                             {/* 3. MANDAL PERFORMANCE GRID */}
-                            <div className="space-y-4">
+                            <div className="space-y-4" id="mandal-breakdown">
                                 <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
                                     <h2 className="text-xl font-bold text-[#1e2a4a] border-l-4 border-[#f59e0b] pl-3">
                                         Mandal Breakdown
@@ -446,6 +453,46 @@ const DistrictDashboard = () => {
                                                 </MapContainer>
                                             </div>
                                         )}
+                                    </>
+                                )}
+                            </div>
+
+                            {/* 4. MUNICIPALITY PERFORMANCE GRID */}
+                            <div className="space-y-4" id="municipality-breakdown">
+                                <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
+                                    <h2 className="text-xl font-bold text-[#1e2a4a] border-l-4 border-blue-500 pl-3">
+                                        Municipality Breakdown
+                                    </h2>
+                                </div>
+
+                                {/* CONTENT AREA */}
+                                {loading ? (
+                                    <div className="p-12 text-center text-slate-500 bg-white rounded-xl border border-slate-200 animate-pulse">
+                                        Loading municipality data...
+                                    </div>
+                                ) : stats.municipalities.length === 0 ? (
+                                    <div className="p-12 text-center text-slate-400 bg-white rounded-xl border border-dashed border-slate-300">
+                                        No municipalities found in this district.
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* CARDS VIEW */}
+                                        {viewMode === 'cards' && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                                {stats.municipalities.map((mun, idx) => (
+                                                    <MandalPerformanceCard
+                                                        key={`mun-${idx}`}
+                                                        id={mun.id}
+                                                        name={mun.name}
+                                                        members={mun.members}
+                                                        institutions={mun.institutions}
+                                                        status={mun.status}
+                                                        pending={mun.pending}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                        {/* Reuse Table/Map view logic if needed, or keep it simple for now */}
                                     </>
                                 )}
                             </div>

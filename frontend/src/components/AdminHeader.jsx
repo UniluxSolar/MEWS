@@ -23,16 +23,24 @@ const AdminHeader = (props) => { // props now contains locationName
             setAdminName(parsed.name || parsed.username || 'Admin');
 
             let r = parsed.role || '';
-            if (r === 'VILLAGE_ADMIN') {
-                setRoleText('Village Admin Portal');
+            if (r === 'STATE_ADMIN') {
+                setRoleText('State Admin Portal');
+                setProfileLogo(mewsLogo);
+            }
+            else if (r === 'DISTRICT_ADMIN') {
+                setRoleText('District Admin Portal');
                 setProfileLogo(mewsLogo);
             }
             else if (r === 'MANDAL_ADMIN') {
                 setRoleText('Mandal Admin Portal');
                 setProfileLogo(mewsLogo);
             }
-            else if (r === 'DISTRICT_ADMIN') {
-                setRoleText('District Admin Portal');
+            else if (r === 'MUNICIPALITY_ADMIN') {
+                setRoleText('Municipality Admin Portal');
+                setProfileLogo(mewsLogo);
+            }
+            else if (r === 'VILLAGE_ADMIN') {
+                setRoleText('Village Admin Portal');
                 setProfileLogo(mewsLogo);
             }
             else {
@@ -45,11 +53,13 @@ const AdminHeader = (props) => { // props now contains locationName
             // If locationName is missing but we have a token, fetch it
             if (!locName && parsed.token) {
                 API.get('/admin/settings').then(res => {
-                    const { villageName, mandal, district } = res.data;
+                    const { villageName, mandal, district, stateName, municipalityName } = res.data;
                     let fetchedName = '';
-                    if (parsed.role === 'VILLAGE_ADMIN') fetchedName = villageName;
-                    else if (parsed.role === 'MANDAL_ADMIN') fetchedName = mandal;
+                    if (parsed.role === 'STATE_ADMIN') fetchedName = stateName;
                     else if (parsed.role === 'DISTRICT_ADMIN') fetchedName = district;
+                    else if (parsed.role === 'MANDAL_ADMIN') fetchedName = mandal;
+                    else if (parsed.role === 'MUNICIPALITY_ADMIN') fetchedName = municipalityName;
+                    else if (parsed.role === 'VILLAGE_ADMIN') fetchedName = villageName;
 
                     if (fetchedName) {
                         setLocationName(fetchedName);
@@ -122,7 +132,7 @@ const AdminHeader = (props) => { // props now contains locationName
                         100% { transform: translateX(-250px); } /* Move to left edge */
                     }
                     .animate-marquee {
-                        animation: marquee 10s linear infinite;
+                        animation: marquee 5s linear infinite;
                     }
                     /* Pause on hover */
                     .animate-marquee:hover {

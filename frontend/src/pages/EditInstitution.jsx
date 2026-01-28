@@ -103,12 +103,12 @@ const EditInstitution = () => {
                                             required
                                         >
                                             <option value="">Select Type</option>
-                                            <option value="School">School</option>
+                                            <option value="Bank">Bank</option>
                                             <option value="College">College</option>
                                             <option value="Hospital">Hospital</option>
-                                            <option value="Bank">Bank</option>
-                                            <option value="Temple">Temple</option>
                                             <option value="Other">Other</option>
+                                            <option value="School">School</option>
+                                            <option value="Temple">Temple</option>
                                         </select>
                                     </div>
                                     <div className="md:col-span-2">

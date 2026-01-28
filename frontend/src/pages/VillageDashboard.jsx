@@ -16,6 +16,7 @@ import AdminHeader from '../components/AdminHeader';
 import StatCard from '../components/common/StatCard';
 import ActionCard from '../components/common/ActionCard';
 import DashboardHeader from '../components/common/DashboardHeader';
+import LiveUpdatesTicker from '../components/LiveUpdatesTicker';
 
 const VillageDashboard = () => {
     const navigate = useNavigate();
@@ -165,6 +166,7 @@ const VillageDashboard = () => {
 
                 {/* Main Content */}
                 <main id="admin-dashboard-content" className="flex-1 overflow-y-auto">
+                    <LiveUpdatesTicker />
                     {/* Welcome Header with Gradient */}
                     <div id="location-card-scroll-target">
                         <DashboardHeader
@@ -182,6 +184,10 @@ const VillageDashboard = () => {
                                 subtext="Registered & Verified"
                                 icon={FaUsers}
                                 color="bg-emerald-500"
+                                onClick={() => {
+                                    const query = stats.locationName && stats.locationName !== 'Village' ? `?villages=${encodeURIComponent(stats.locationName)}` : '';
+                                    navigate(`/admin/members${query}`);
+                                }}
                             />
                             <StatCard
                                 title="Institutions"
@@ -189,6 +195,10 @@ const VillageDashboard = () => {
                                 subtext="Registered & Verified"
                                 icon={FaBuilding}
                                 color="bg-blue-500"
+                                onClick={() => {
+                                    const query = stats.locationName && stats.locationName !== 'Village' ? `?villages=${encodeURIComponent(stats.locationName)}` : '';
+                                    navigate(`/admin/institutions${query}`);
+                                }}
                             />
                             <StatCard
                                 title="Total Families"
@@ -196,6 +206,10 @@ const VillageDashboard = () => {
                                 subtext="Registered Households"
                                 icon={FaUsers}
                                 color="bg-orange-500"
+                                onClick={() => {
+                                    const query = stats.locationName && stats.locationName !== 'Village' ? `?villages=${encodeURIComponent(stats.locationName)}` : '';
+                                    navigate(`/admin/members${query}`);
+                                }}
                             />
                         </div>
 

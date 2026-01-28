@@ -4,13 +4,15 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { FaUsers } from 'react-icons/fa';
 import mewsLogo from '../assets/mews_main_logo_new.png';
 import API from '../api';
-
+import PopupCarousel from '../components/common/PopupCarousel';
 const InstitutionLoginPage = () => {
     const navigate = useNavigate();
 
     // State
     // State
     const [mobile, setMobile] = useState('');
+    const [isPopupOpen, setIsPopupOpen] = useState(false); // Default closed
+    const [pendingNavigation, setPendingNavigation] = useState(null);
     const [otp, setOtp] = useState('');
     const [otpSent, setOtpSent] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -69,7 +71,9 @@ const InstitutionLoginPage = () => {
             setLoading(true);
             const { data } = await API.post('/auth/verify-otp', { mobile, otp, userType: 'INSTITUTION' });
             localStorage.setItem('adminInfo', JSON.stringify(data)); // Store member info as adminInfo for compatibility
-            navigate(redirectPath, { replace: true });
+
+            setPendingNavigation(redirectPath);
+            setIsPopupOpen(true);
         } catch (error) {
             alert(error.response?.data?.message || 'Invalid OTP');
         } finally {
@@ -78,8 +82,19 @@ const InstitutionLoginPage = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] p-4 font-sans text-gray-800">
-            <div className="w-full max-w-[420px] bg-white rounded-3xl shadow-xl border border-white p-8 sm:p-10 flex flex-col items-center">
+        <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] p-4 font-sans text-gray-800 relative">
+            <PopupCarousel
+                isOpen={isPopupOpen}
+                onClose={() => {
+                    setIsPopupOpen(false);
+                    if (pendingNavigation) {
+                        navigate(pendingNavigation, { replace: true });
+                        setPendingNavigation(null);
+                    }
+                }}
+            // No storageKey means it shows every time
+            />
+            <div className={`w-full max-w-[420px] bg-white rounded-3xl shadow-xl border border-white p-8 sm:p-10 flex flex-col items-center transition-all duration-300 ${isPopupOpen ? 'blur-sm pointer-events-none select-none' : ''}`}>
 
                 {/* Logo Section */}
                 <div className="mb-6 flex flex-col items-center text-center">

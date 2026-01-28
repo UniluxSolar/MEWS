@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FaUserShield, FaSearch, FaArrowLeft, FaMapMarkerAlt, FaCheckCircle, FaUsers } from 'react-icons/fa';
 import API from '../api';
 import AdminHeader from '../components/AdminHeader';
 import AdminSidebar from '../components/AdminSidebar';
 import { useNavigate } from 'react-router-dom';
+import MultiSelect from '../components/common/MultiSelect';
+import { FaUserShield, FaSearch, FaArrowLeft, FaMapMarkerAlt, FaCheckCircle, FaUsers, FaCheckSquare, FaCity, FaTree } from 'react-icons/fa';
 
 const AssignAdmin = () => {
     const navigate = useNavigate();
@@ -12,9 +13,10 @@ const AssignAdmin = () => {
 
     // Hierarchy Definitions
     const HIERARCHY = {
-        'SUPER_ADMIN': 5,
-        'STATE_ADMIN': 4,
-        'DISTRICT_ADMIN': 3,
+        'SUPER_ADMIN': 6,
+        'STATE_ADMIN': 5,
+        'DISTRICT_ADMIN': 4,
+        'MUNICIPALITY_ADMIN': 3, // New Role
         'MANDAL_ADMIN': 2,
         'VILLAGE_ADMIN': 1
     };
@@ -22,11 +24,14 @@ const AssignAdmin = () => {
     const ROLE_LABELS = {
         'STATE_ADMIN': 'State Admin',
         'DISTRICT_ADMIN': 'District Admin',
+        'MUNICIPALITY_ADMIN': 'Municipality Admin',
         'MANDAL_ADMIN': 'Mandal Admin',
         'VILLAGE_ADMIN': 'Village Admin'
     };
 
-    const allowedRoles = Object.keys(HIERARCHY).filter(r => HIERARCHY[r] < HIERARCHY[userRole]);
+    const allowedRoles = Object.keys(HIERARCHY)
+        .filter(r => HIERARCHY[r] < HIERARCHY[userRole])
+        .sort((a, b) => ROLE_LABELS[a].localeCompare(ROLE_LABELS[b]));
 
     // Role Selection
     const [selectedRole, setSelectedRole] = useState('');
@@ -36,22 +41,16 @@ const AssignAdmin = () => {
     const [targetDistricts, setTargetDistricts] = useState([]);
     const [targetMandals, setTargetMandals] = useState([]);
     const [targetVillages, setTargetVillages] = useState([]);
+    const [targetMunicipalities, setTargetMunicipalities] = useState([]); // New
 
     const [targetState, setTargetState] = useState('');
     const [targetDistrict, setTargetDistrict] = useState('');
     const [targetMandal, setTargetMandal] = useState('');
     const [targetVillage, setTargetVillage] = useState('');
+    const [targetMunicipality, setTargetMunicipality] = useState(''); // New
 
-    // --- MEMBER SELECTION SCOPE (Where to find the member) ---
-    const [filterStates, setFilterStates] = useState([]);
-    const [filterDistricts, setFilterDistricts] = useState([]);
-    const [filterMandals, setFilterMandals] = useState([]);
-    const [filterVillages, setFilterVillages] = useState([]);
-
-    const [filterState, setFilterState] = useState('');
-    const [filterDistrict, setFilterDistrict] = useState('');
-    const [filterMandal, setFilterMandal] = useState('');
-    const [filterVillage, setFilterVillage] = useState('');
+    // Area Type Toggle (Rural vs Urban)
+    const [areaType, setAreaType] = useState('Rural'); // 'Rural' or 'Urban'
 
     // Pre-filled User Info
     const [userLocationHierarchy, setUserLocationHierarchy] = useState(null);
@@ -59,11 +58,33 @@ const AssignAdmin = () => {
     // Data & Filters
     const [members, setMembers] = useState([]);
     const [loadingMembers, setLoadingMembers] = useState(false);
-    const [filteredMembers, setFilteredMembers] = useState([]);
-    const [searchMobile, setSearchMobile] = useState('');
-    const [searchName, setSearchName] = useState('');
-    const [selectedMember, setSelectedMember] = useState(null);
+    const [totalResults, setTotalResults] = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [limit, setLimit] = useState(10);
+
+    // Member Search & Filters
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedAgeRanges, setSelectedAgeRanges] = useState([]);
+    const [selectedCategories, setSelectedCategories] = useState([]);
+    const [selectedBloodGroups, setSelectedBloodGroups] = useState([]);
+    const [selectedGenders, setSelectedGenders] = useState({ All: true, Male: false, Female: false, Other: false });
+
+    const [selectedMembers, setSelectedMembers] = useState([]);
     const [loadingAssign, setLoadingAssign] = useState(false);
+
+    // Helper to get safe location name
+    const getLocationName = (data) => {
+        if (data === null || data === undefined) return '';
+        if (typeof data === 'string') return data;
+        if (typeof data === 'object') {
+            if (data.name) {
+                return typeof data.name === 'object' ? JSON.stringify(data.name) : String(data.name);
+            }
+            return '';
+        }
+        return String(data);
+    };
 
 
     // --- INITIALIZATION ---
@@ -75,8 +96,8 @@ const AssignAdmin = () => {
         try {
             if (userRole === 'SUPER_ADMIN') {
                 const { data } = await API.get('/locations?type=STATE');
-                setTargetStates(data);
-                setFilterStates(data); // Initially same available options
+                const sortedStates = [...data].sort((a, b) => a.name.localeCompare(b.name));
+                setTargetStates(sortedStates);
             } else {
                 if (adminInfo.assignedLocation) {
                     const { data } = await API.get(`/locations/${adminInfo.assignedLocation}`);
@@ -96,279 +117,245 @@ const AssignAdmin = () => {
             // Populate Target Dropdowns based on Hierarchy
             if (loc.type === 'STATE') {
                 setTargetStates([loc]); setTargetState(loc._id);
-                setFilterStates([loc]); setFilterState(loc._id);
-                fetchLocations(loc._id, 'DISTRICT', true);
-                fetchLocations(loc._id, 'DISTRICT', false);
+                fetchLocations(loc._id, 'DISTRICT');
             } else if (loc.type === 'DISTRICT') {
                 setTargetDistricts([loc]); setTargetDistrict(loc._id);
-                setFilterDistricts([loc]); setFilterDistrict(loc._id);
-                fetchLocations(loc._id, 'MANDAL', true);
-                fetchLocations(loc._id, 'MANDAL', false);
+                fetchLocations(loc._id, 'MANDAL');
+                fetchLocations(loc._id, 'MUNICIPALITY'); // Fetch both
             } else if (loc.type === 'MANDAL') {
+                setAreaType('Rural');
                 setTargetMandals([loc]); setTargetMandal(loc._id);
-                setFilterMandals([loc]); setFilterMandal(loc._id);
-                fetchLocations(loc._id, 'VILLAGE', true);
-                fetchLocations(loc._id, 'VILLAGE', false);
+                fetchLocations(loc._id, 'VILLAGE');
+            } else if (loc.type === 'MUNICIPALITY') {
+                setAreaType('Urban');
+                setTargetMunicipalities([loc]); setTargetMunicipality(loc._id);
             } else if (loc.type === 'VILLAGE') {
+                setAreaType('Rural');
                 setTargetVillages([loc]); setTargetVillage(loc._id);
-                setFilterVillages([loc]); setFilterVillage(loc._id);
             }
         }
     }, [userLocationHierarchy]);
 
 
     // --- GENERIC LOCATION FETCH ---
-    const fetchLocations = async (parentId, type, isTargetScope) => {
+    const fetchLocations = async (parentId, type) => {
         if (!parentId) {
-            // Clear downstream if parent is removed
-            if (isTargetScope) {
-                if (type === 'DISTRICT') setTargetDistricts([]); // And clear lower? Yes, ideally
-                if (type === 'MANDAL') setTargetMandals([]);
-                if (type === 'VILLAGE') setTargetVillages([]);
-            } else {
-                if (type === 'DISTRICT') setFilterDistricts([]);
-                if (type === 'MANDAL') setFilterMandals([]);
-                if (type === 'VILLAGE') setFilterVillages([]);
-            }
+            // Clear downstream if parent is removed area-specifically
+            if (type === 'DISTRICT') setTargetDistricts([]);
+            if (type === 'MANDAL') setTargetMandals([]);
+            if (type === 'VILLAGE') setTargetVillages([]);
+            if (type === 'MUNICIPALITY') setTargetMunicipalities([]);
             return;
         }
         try {
             const { data } = await API.get(`/locations?parent=${parentId}`);
-            if (isTargetScope) {
-                if (type === 'DISTRICT') setTargetDistricts(data);
-                if (type === 'MANDAL') setTargetMandals(data);
-                if (type === 'VILLAGE') setTargetVillages(data);
-            } else {
-                if (type === 'DISTRICT') setFilterDistricts(data);
-                if (type === 'MANDAL') setFilterMandals(data);
-                if (type === 'VILLAGE') setFilterVillages(data);
-            }
-        } catch (e) { console.error(e); }
+            // Filter by type to be safe
+            const filteredData = data.filter(d => d.type === type);
+            const sortedData = [...filteredData].sort((a, b) => a.name.localeCompare(b.name));
+
+            if (type === 'DISTRICT') setTargetDistricts(sortedData);
+            if (type === 'MANDAL') setTargetMandals(sortedData);
+            if (type === 'VILLAGE') setTargetVillages(sortedData);
+            if (type === 'MUNICIPALITY') setTargetMunicipalities(sortedData);
+        } catch (e) {
+            console.error(e);
+        }
     };
 
-
-    // --- AUTO-FILL LOGIC (Target -> Filter) ---
-    useEffect(() => {
-        if (targetState) {
-            setFilterState(targetState);
-            fetchLocations(targetState, 'DISTRICT', false);
-        } else {
-            setFilterState('');
-            setFilterDistrict(''); setFilterMandal(''); setFilterVillage('');
-        }
-    }, [targetState]);
-
-    useEffect(() => {
-        if (targetDistrict) {
-            setFilterDistrict(targetDistrict);
-            fetchLocations(targetDistrict, 'MANDAL', false);
-        } else {
-            setFilterDistrict('');
-            setFilterMandal(''); setFilterVillage('');
-        }
-    }, [targetDistrict]);
-
-    useEffect(() => {
-        if (targetMandal) {
-            setFilterMandal(targetMandal);
-            fetchLocations(targetMandal, 'VILLAGE', false);
-        } else {
-            setFilterMandal('');
-            setFilterVillage('');
-        }
-    }, [targetMandal]);
-
-    useEffect(() => {
-        if (targetVillage) {
-            setFilterVillage(targetVillage);
-        } else {
-            setFilterVillage('');
-        }
-    }, [targetVillage]);
-
-
     // --- HANDLERS: TARGET SCOPE ---
-    const handleRoleChange = (e) => setSelectedRole(e.target.value);
+    const handleRoleChange = (e) => {
+        const role = e.target.value;
+        setSelectedRole(role);
+
+        // Auto-switch area types based on role intent
+        if (role === 'MUNICIPALITY_ADMIN') setAreaType('Urban');
+        if (['MANDAL_ADMIN', 'VILLAGE_ADMIN'].includes(role)) setAreaType('Rural');
+    };
 
     const handleTargetStateChange = (e) => {
         const val = e.target.value;
         setTargetState(val);
-        setTargetDistrict(''); setTargetMandal(''); setTargetVillage('');
-        fetchLocations(val, 'DISTRICT', true);
+        setTargetDistrict(''); setTargetMandal(''); setTargetVillage(''); setTargetMunicipality('');
+        fetchLocations(val, 'DISTRICT');
     };
 
     const handleTargetDistrictChange = (e) => {
         const val = e.target.value;
         setTargetDistrict(val);
-        setTargetMandal(''); setTargetVillage('');
-        fetchLocations(val, 'MANDAL', true);
+        setTargetMandal(''); setTargetVillage(''); setTargetMunicipality('');
+        fetchLocations(val, 'MANDAL');
+        fetchLocations(val, 'MUNICIPALITY');
     };
 
     const handleTargetMandalChange = (e) => {
         const val = e.target.value;
         setTargetMandal(val);
         setTargetVillage('');
-        fetchLocations(val, 'VILLAGE', true);
+        fetchLocations(val, 'VILLAGE');
     };
 
     const handleTargetVillageChange = (e) => {
         setTargetVillage(e.target.value);
     };
 
-
-    // --- HANDLERS: FILTER SCOPE ---
-    // Strict Hierarchical Update: Reset lower levels on change
-    const handleFilterStateChange = (e) => {
-        const val = e.target.value;
-        setFilterState(val);
-        setFilterDistrict(''); setFilterMandal(''); setFilterVillage('');
-        fetchLocations(val, 'DISTRICT', false);
+    const handleTargetMunicipalityChange = (e) => {
+        setTargetMunicipality(e.target.value);
     };
 
-    const handleFilterDistrictChange = (e) => {
-        const val = e.target.value;
-        setFilterDistrict(val);
-        setFilterMandal(''); setFilterVillage('');
-        fetchLocations(val, 'MANDAL', false);
+    const handleGenderChange = (type) => {
+        setSelectedGenders(prev => {
+            if (type === 'All') return { All: true, Male: false, Female: false, Other: false };
+            const newState = { ...prev, All: false, [type]: !prev[type] };
+            if (!newState.Male && !newState.Female && !newState.Other) newState.All = true;
+            return newState;
+        });
     };
 
-    const handleFilterMandalChange = (e) => {
-        const val = e.target.value;
-        setFilterMandal(val);
-        setFilterVillage('');
-        fetchLocations(val, 'VILLAGE', false);
-    };
-
-    const handleFilterVillageChange = (e) => {
-        setFilterVillage(e.target.value);
+    const clearFilters = () => {
+        setSearchTerm('');
+        setSelectedAgeRanges([]);
+        setSelectedCategories([]);
+        setSelectedBloodGroups([]);
+        setSelectedGenders({ All: true, Male: false, Female: false, Other: false });
+        setCurrentPage(1);
     };
 
 
-    // --- MEMBER FETCHING ---
-    // Trigger on any filter change that is valid
-    useEffect(() => {
-        setMembers([]);
-        setFilteredMembers([]);
-        setSelectedMember(null);
-
-        // Logic: Fetch based on the deepest selected filter
-        let locId = '';
-        let locType = '';
-
-        if (filterVillage) { locId = filterVillage; locType = 'VILLAGE'; }
-        else if (filterMandal) { locId = filterMandal; locType = 'MANDAL'; }
-        else if (filterDistrict) { locId = filterDistrict; locType = 'DISTRICT'; }
-        else if (filterState) { locId = filterState; locType = 'STATE'; } // Optional: might be too broad
-
-        // We only fetch if we have at least District or Mandal level?
-        // Or if State is selected and we want to show all (limit by pagination?)
-        // Let's allow fetching even at State level but backend might limit results.
-
-        if (!locId) return;
-
+    // --- MEMBER FETCHING (Server Side) ---
+    const fetchMembers = async () => {
         setLoadingMembers(true);
-        const fetchM = async () => {
-            try {
-                let params = {};
-                // STRICT FILTERING: Backend expects these exact keys
-                if (locType === 'VILLAGE') params['address.village'] = locId;
-                if (locType === 'MANDAL') params['address.mandal'] = locId;
-                if (locType === 'DISTRICT') params['address.district'] = locId;
-                // If STATE: We might need backend logic to handle 'address.district.parent' or similar.
-                // Assuming backend controller handles this or we iterate districts?
-                // The prompt says "If State only is selected -> show members from that State".
-                // Our simple getMembers API checks address fields which are ObjectIDs for Village/Mandal/District.
-                // It doesn't natively support State ID in 'address.state' because schema might just have text.
-                // But let's pass it anyway if controller supports it, or rely on District.
-                // Actually, let's skip fetching for just 'State' if it's too broad, OR use query param 'stateId' if backend supports.
-                // Based on `memberController.js` we saw, it checks:
-                // address.village, address.mandal, address.district.
-                // Does it check State? It iterates if State Admin.
-                // Let's pass query params clearly.
+        try {
+            let params = {
+                page: currentPage,
+                limit: limit,
+                search: searchTerm
+            };
 
-                // HACK: To support State filtering without direct StateID in schema, we might rely on the fact that
-                // if we don't pass params, it returns all? No.
-                // If locType is STATE, we might be stuck unless we fetch all children districts.
-                // However, usually User selects at least District or Mandal.
-                // Let's proceed with lower levels being primary.
-
-                const { data } = await API.get('/members', { params });
-                setMembers(data);
-                setFilteredMembers(data);
-            } catch (err) {
-                console.error("Fetch members failed", err);
-            } finally {
-                setLoadingMembers(false);
+            // Hierarchical Location Filtering from Target Scope
+            // Depends on Area Type
+            if (areaType === 'Rural') {
+                if (targetVillage) params['address.village'] = targetVillage;
+                else if (targetMandal) params['address.mandal'] = targetMandal;
+            } else if (areaType === 'Urban') {
+                if (targetMunicipality) params['address.municipality'] = targetMunicipality;
             }
-        };
-        fetchM();
 
-    }, [filterState, filterDistrict, filterMandal, filterVillage]);
+            // Fallback to District/State if lower levels not selected
+            // But only if we haven't selected a specific leaf yet
+            // If explicit Municipality or Village isn't selected, check higher levels
+            const hasLeafSelection = (areaType === 'Rural' && (targetVillage || targetMandal)) || (areaType === 'Urban' && targetMunicipality);
 
+            if (!hasLeafSelection) {
+                if (targetDistrict) params['address.district'] = targetDistrict;
+                else if (targetState) params['address.stateID'] = targetState;
+            }
 
-    // --- FRONTEND FILTERING (Search & Role) ---
+            // Extra Filters
+            if (selectedAgeRanges.length > 0) params.ageRange = selectedAgeRanges[0];
+            if (selectedCategories.length > 0) params.occupation = selectedCategories[0];
+            if (selectedBloodGroups.length > 0) params.bloodGroup = selectedBloodGroups[0];
+
+            if (!selectedGenders.All) {
+                if (selectedGenders.Male) params.gender = 'Male';
+                else if (selectedGenders.Female) params.gender = 'Female';
+                else if (selectedGenders.Other) params.gender = 'Other';
+            }
+
+            const { data } = await API.get('/members', { params });
+            console.log("[DEBUG] Members API Response:", data);
+            setMembers(data.members || []);
+            setTotalResults(data.total || 0);
+            setTotalPages(data.pages || 1);
+        } catch (err) {
+            console.error("Fetch members failed", err);
+        } finally {
+            setLoadingMembers(false);
+        }
+    };
+
     useEffect(() => {
-        if (!members.length) {
-            setFilteredMembers([]);
+        fetchMembers();
+    }, [currentPage, targetState, targetDistrict, targetMandal, targetVillage, targetMunicipality, areaType, selectedAgeRanges, selectedCategories, selectedBloodGroups, selectedGenders]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (currentPage !== 1) setCurrentPage(1);
+            else fetchMembers();
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    // --- HANDLERS: SELECTION ---
+    const handleToggleMember = (member) => {
+        if (member.role && member.role !== 'MEMBER') {
+            alert(`This person is already an Admin at ${member.role.replace('_', ' ')}. Cannot assign as Admin again.`);
             return;
         }
 
-        let res = members;
-        // 1. Hierarchy Filter (Exclude higher admins)
-        if (selectedRole) {
-            const targetRank = HIERARCHY[selectedRole];
-            res = res.filter(m => {
-                if (!m.role || m.role === 'MEMBER') return true;
-                const memberRank = HIERARCHY[m.role] || 0;
-                return memberRank < targetRank;
-            });
-        }
-
-        // 2. Text Search
-        if (searchMobile) {
-            res = res.filter(m => m.mobileNumber.includes(searchMobile));
-        }
-        if (searchName) {
-            const term = searchName.toLowerCase();
-            res = res.filter(m =>
-                (m.name && m.name.toLowerCase().includes(term)) ||
-                (m.surname && m.surname.toLowerCase().includes(term))
-            );
-        }
-
-        setFilteredMembers(res);
-    }, [members, searchMobile, searchName, selectedRole]);
-
+        setSelectedMembers(prev => {
+            const exists = prev.find(m => m._id === member._id);
+            if (exists) {
+                return prev.filter(m => m._id !== member._id);
+            } else {
+                return [...prev, member];
+            }
+        });
+    };
 
     // --- ASSIGN ---
     const handleAssign = async () => {
-        if (!selectedMember || !selectedRole) return;
+        if (selectedMembers.length === 0 || !selectedRole) return;
 
-        // Determine Final Target ID based on Role
         let finalAssignId = '';
         if (selectedRole === 'STATE_ADMIN') finalAssignId = targetState;
         if (selectedRole === 'DISTRICT_ADMIN') finalAssignId = targetDistrict;
+
+        if (selectedRole === 'MUNICIPALITY_ADMIN') finalAssignId = targetMunicipality;
+
         if (selectedRole === 'MANDAL_ADMIN') finalAssignId = targetMandal;
         if (selectedRole === 'VILLAGE_ADMIN') finalAssignId = targetVillage;
 
         if (!finalAssignId) {
-            alert("Please complete the Target Location Scope selection.");
+            alert("Please complete the Target Location selection.");
             return;
         }
 
-        if (!window.confirm(`Promote ${selectedMember.name} to ${ROLE_LABELS[selectedRole]}?`)) return;
+        if (!window.confirm(`Promote ${selectedMembers.length} member(s) to ${ROLE_LABELS[selectedRole]}?`)) return;
 
         setLoadingAssign(true);
+        let successCount = 0;
+        let failCount = 0;
+
         try {
-            await API.post('/admin/management/promote-member', {
-                memberId: selectedMember._id,
-                role: selectedRole,
-                assignedLocation: finalAssignId
+            // Parallel Execution
+            const results = await Promise.allSettled(selectedMembers.map(member =>
+                API.post('/admin/management/promote-member', {
+                    memberId: member._id,
+                    role: selectedRole,
+                    assignedLocation: finalAssignId
+                })
+            ));
+
+            results.forEach(res => {
+                if (res.status === 'fulfilled') successCount++;
+                else {
+                    failCount++;
+                    console.error("Promotion failed for a member:", res.reason);
+                }
             });
-            alert("Success! Member promoted.");
-            navigate('/admin/management');
+
+            if (failCount === 0) {
+                alert(`Success! All ${successCount} members promoted.`);
+                navigate('/admin/management');
+            } else {
+                alert(`Operation Complete.\nSuccess: ${successCount}\nFailed: ${failCount}\nCheck console for details.`);
+                if (successCount > 0) {
+                    navigate('/admin/management');
+                }
+            }
+
         } catch (error) {
-            alert(error.response?.data?.message || "Operation failed");
+            alert("System Error: " + (error.response?.data?.message || error.message));
         } finally {
             setLoadingAssign(false);
         }
@@ -379,9 +366,13 @@ const AssignAdmin = () => {
         if (!userLocationHierarchy) return false;
         const type = userLocationHierarchy.type;
         if (level === 'state') return true;
-        if (level === 'district' && ['DISTRICT', 'MANDAL', 'VILLAGE'].includes(type)) return true;
+        if (level === 'district' && ['DISTRICT', 'MANDAL', 'VILLAGE', 'MUNICIPALITY'].includes(type)) return true;
         if (level === 'mandal' && ['MANDAL', 'VILLAGE'].includes(type)) return true;
         if (level === 'village' && ['VILLAGE'].includes(type)) return true;
+
+        // Municipality Lock Logic
+        if (level === 'municipality' && ['MUNICIPALITY'].includes(type)) return true;
+
         return false;
     };
 
@@ -424,7 +415,7 @@ const AssignAdmin = () => {
                                 <div className="animate-in fade-in slide-in-from-top-2">
                                     <div className="flex items-center gap-2 mb-4 border-t border-slate-100 pt-4">
                                         <FaUserShield className="text-blue-600 text-lg" />
-                                        <h2 className="text-lg font-bold text-slate-800">Target Location Scope</h2>
+                                        <h2 className="text-lg font-bold text-slate-800">Target Location</h2>
                                     </div>
                                     <p className="text-xs text-slate-500 mb-4">Select the exact location this new admin will manage.</p>
 
@@ -440,7 +431,7 @@ const AssignAdmin = () => {
                                             </select>
                                         </div>
 
-                                        {['DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN'].includes(selectedRole) && (
+                                        {['DISTRICT_ADMIN', 'MUNICIPALITY_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN'].includes(selectedRole) && (
                                             <div>
                                                 <label className="block text-xs text-slate-600 mb-1 font-semibold">District</label>
                                                 <select
@@ -453,32 +444,90 @@ const AssignAdmin = () => {
                                             </div>
                                         )}
 
-                                        {['MANDAL_ADMIN', 'VILLAGE_ADMIN'].includes(selectedRole) && (
-                                            <div>
-                                                <label className="block text-xs text-slate-600 mb-1 font-semibold">Mandal</label>
-                                                <select
-                                                    value={targetMandal} onChange={handleTargetMandalChange} disabled={!targetDistrict || isTargetLocked('mandal')}
-                                                    className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                                                >
-                                                    <option value="">Mandal</option>
-                                                    {targetMandals.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
-                                                </select>
-                                            </div>
-                                        )}
-
-                                        {['VILLAGE_ADMIN'].includes(selectedRole) && (
-                                            <div>
-                                                <label className="block text-xs text-slate-600 mb-1 font-semibold">Village</label>
-                                                <select
-                                                    value={targetVillage} onChange={handleTargetVillageChange} disabled={!targetMandal || isTargetLocked('village')}
-                                                    className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                                                >
-                                                    <option value="">Village</option>
-                                                    {targetVillages.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
-                                                </select>
-                                            </div>
-                                        )}
                                     </div>
+
+                                    {/* Sub-Location Selection (Mandal/Village OR Municipality) */}
+                                    {(targetDistrict && ['MANDAL_ADMIN', 'VILLAGE_ADMIN', 'MUNICIPALITY_ADMIN'].includes(selectedRole)) && (
+                                        <div className="mt-4 bg-slate-50 p-4 rounded-lg">
+                                            {/* Area Type Toggle (Only if Role allows choice or for Member Search context) - Actually Role dictates it largely */}
+                                            <div className="flex items-center gap-6 mb-4">
+                                                <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Area Type:</span>
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="areaType"
+                                                        value="Rural"
+                                                        checked={areaType === 'Rural'}
+                                                        onChange={() => setAreaType('Rural')}
+                                                        disabled={selectedRole === 'MUNICIPALITY_ADMIN'} // Locked for Muni Admin
+                                                        className="text-emerald-500 focus:ring-emerald-500"
+                                                    />
+                                                    <span className={`text-sm font-bold ${areaType === 'Rural' ? 'text-emerald-700' : 'text-slate-500'} flex items-center gap-1`}><FaTree size={12} /> Rural (Mandal/Village)</span>
+                                                </label>
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="areaType"
+                                                        value="Urban"
+                                                        checked={areaType === 'Urban'}
+                                                        onChange={() => setAreaType('Urban')}
+                                                        disabled={['MANDAL_ADMIN', 'VILLAGE_ADMIN'].includes(selectedRole)} // Locked for Rural Admins
+                                                        className="text-blue-500 focus:ring-blue-500"
+                                                    />
+                                                    <span className={`text-sm font-bold ${areaType === 'Urban' ? 'text-blue-700' : 'text-slate-500'} flex items-center gap-1`}><FaCity size={12} /> Urban (Municipality)</span>
+                                                </label>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {/* RURAL PATH */}
+                                                {areaType === 'Rural' && (
+                                                    <>
+                                                        <div>
+                                                            <label className="block text-xs text-slate-600 mb-1 font-semibold">Mandal</label>
+                                                            <select
+                                                                value={targetMandal} onChange={handleTargetMandalChange} disabled={!targetDistrict || isTargetLocked('mandal')}
+                                                                className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
+                                                            >
+                                                                <option value="">Select Mandal</option>
+                                                                {targetMandals.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        {selectedRole === 'VILLAGE_ADMIN' && (
+                                                            <div>
+                                                                <label className="block text-xs text-slate-600 mb-1 font-semibold">Village</label>
+                                                                <select
+                                                                    value={targetVillage} onChange={handleTargetVillageChange} disabled={!targetMandal || isTargetLocked('village')}
+                                                                    className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
+                                                                >
+                                                                    <option value="">Select Village</option>
+                                                                    {targetVillages.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
+                                                                </select>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+
+                                                {/* URBAN PATH */}
+                                                {areaType === 'Urban' && (
+                                                    <>
+                                                        <div>
+                                                            <label className="block text-xs text-slate-600 mb-1 font-semibold">Municipality</label>
+                                                            <select
+                                                                value={targetMunicipality} onChange={handleTargetMunicipalityChange} disabled={!targetDistrict || isTargetLocked('municipality')}
+                                                                className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                                                            >
+                                                                <option value="">Select Municipality</option>
+                                                                {targetMunicipalities.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        {/* Future: Ward Selection here if we have Ward Admins? For now, Municipality Admin manages the whole Muni */}
+                                                    </>
+                                                )}
+
+                                            </div>
+                                        </div>
+                                    )}
+
                                 </div>
                             )}
                         </div>
@@ -491,76 +540,71 @@ const AssignAdmin = () => {
                                 </div>
                                 <div className="flex items-center gap-2 mb-4">
                                     <FaUsers className="text-emerald-600 text-lg" />
-                                    <h2 className="text-lg font-bold text-slate-800">Member Selection Scope</h2>
+                                    <h2 className="text-lg font-bold text-slate-800">Target Member Selection</h2>
                                 </div>
                                 <p className="text-xs text-slate-500 mb-4">
                                     Use these filters to find the member you want to promote. (Auto-filled from Target, but valid to change).
                                 </p>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                                    <div>
-                                        <label className="block text-xs text-slate-600 mb-1 font-semibold">Filter State</label>
-                                        <select
-                                            value={filterState} onChange={handleFilterStateChange}
-                                            className="w-full p-2 border rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500"
-                                        >
-                                            <option value="">State</option>
-                                            {filterStates.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
-                                        </select>
+                                <div className="space-y-6">
+                                    <div className="relative">
+                                        <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search by name, phone..."
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                        />
                                     </div>
-                                    <div>
-                                        <label className="block text-xs text-slate-600 mb-1 font-semibold">Filter District</label>
-                                        <select
-                                            value={filterDistrict} onChange={handleFilterDistrictChange} disabled={!filterState}
-                                            className="w-full p-2 border rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100"
-                                        >
-                                            <option value="">District</option>
-                                            {filterDistricts.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-slate-600 mb-1 font-semibold">Filter Mandal</label>
-                                        <select
-                                            value={filterMandal} onChange={handleFilterMandalChange} disabled={!filterDistrict}
-                                            className="w-full p-2 border rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100"
-                                        >
-                                            <option value="">Mandal</option>
-                                            {filterMandals.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-slate-600 mb-1 font-semibold">Filter Village</label>
-                                        <select
-                                            value={filterVillage} onChange={handleFilterVillageChange} disabled={!filterMandal}
-                                            className="w-full p-2 border rounded-lg text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100"
-                                        >
-                                            <option value="">Village</option>
-                                            {filterVillages.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
 
-                                {/* Search Bars */}
-                                <div className="flex flex-col md:flex-row gap-4 border-t border-slate-100 pt-4">
-                                    <div className="flex-1 relative">
-                                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input
-                                            type="text"
-                                            placeholder="Search by Mobile"
-                                            className="w-full pl-9 p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500"
-                                            value={searchMobile}
-                                            onChange={e => setSearchMobile(e.target.value)}
-                                        />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div>
+                                            <MultiSelect
+                                                label="Age Range"
+                                                options={['18-25', '26-40', '41-60', '60+']}
+                                                selected={selectedAgeRanges}
+                                                onChange={setSelectedAgeRanges}
+                                                placeholder="Select Age Ranges"
+                                            />
+                                        </div>
+                                        <div>
+                                            <MultiSelect
+                                                label="Occupation"
+                                                options={['Farmer', 'Student', 'Business', 'Private Job']}
+                                                selected={selectedCategories}
+                                                onChange={setSelectedCategories}
+                                                placeholder="Select Occupations"
+                                            />
+                                        </div>
+                                        <div>
+                                            <MultiSelect
+                                                label="Blood Group"
+                                                options={['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']}
+                                                selected={selectedBloodGroups}
+                                                onChange={setSelectedBloodGroups}
+                                                placeholder="Select Blood Groups"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                            <span className="text-xs font-bold text-slate-600">Gender</span>
+                                            <div className="flex items-center gap-2 flex-wrap h-auto min-h-[40px]">
+                                                {['All', 'Male', 'Female', 'Other'].map(type => (
+                                                    <label key={type} className="flex items-center gap-2 cursor-pointer select-none">
+                                                        <div
+                                                            className={`w-4 h-4 border rounded flex items-center justify-center transition-colors ${selectedGenders[type] ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300 bg-white'}`}
+                                                            onClick={(e) => { e.preventDefault(); handleGenderChange(type); }}
+                                                        >
+                                                            {selectedGenders[type] && <FaCheckSquare size={10} />}
+                                                        </div>
+                                                        <span className="text-sm text-slate-600">{type}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex-1 relative">
-                                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input
-                                            type="text"
-                                            placeholder="Search by Name"
-                                            className="w-full pl-9 p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-emerald-500"
-                                            value={searchName}
-                                            onChange={e => setSearchName(e.target.value)}
-                                        />
+                                    <div className="flex justify-end pt-2">
+                                        <button onClick={clearFilters} className="bg-white border border-slate-200 text-slate-600 px-5 py-2 rounded-lg text-xs font-bold hover:bg-slate-50 transition h-10">Clear All Filters</button>
                                     </div>
                                 </div>
 
@@ -570,37 +614,89 @@ const AssignAdmin = () => {
                                         <div className="text-center p-8 text-slate-500">Loading Members...</div>
                                     ) : (
                                         <div className="border rounded-lg border-slate-200 overflow-hidden">
-                                            <div className="bg-slate-50 p-3 text-xs font-bold text-slate-500 border-b border-slate-200 flex justify-between">
-                                                <span>Found {filteredMembers.length} Members</span>
+                                            <div className="bg-slate-50 p-3 text-xs font-bold text-slate-500 border-b border-slate-200 flex justify-between items-center">
+                                                <span>Showing {members.length} of {totalResults} Members</span>
+                                                {totalPages > 1 && (
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            disabled={currentPage === 1}
+                                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                                            className="px-2 py-1 border rounded hover:bg-white disabled:opacity-30"
+                                                        >Prev</button>
+                                                        <span>Page {currentPage} of {totalPages}</span>
+                                                        <button
+                                                            disabled={currentPage === totalPages}
+                                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                                            className="px-2 py-1 border rounded hover:bg-white disabled:opacity-30"
+                                                        >Next</button>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className="max-h-[300px] overflow-y-auto">
-                                                {filteredMembers.length === 0 ? (
+                                            <div className="max-h-[500px] overflow-y-auto">
+                                                {members.length === 0 ? (
                                                     <div className="p-8 text-center text-slate-400 text-sm">
                                                         No members found for this strict filter. Try searching higher levels or adjusting scope.
                                                     </div>
                                                 ) : (
-                                                    <table className="w-full text-left text-sm">
-                                                        <tbody className="divide-y divide-slate-100">
-                                                            {filteredMembers.map(m => (
-                                                                <tr
-                                                                    key={m._id}
-                                                                    onClick={() => setSelectedMember(m)}
-                                                                    className={`hover:bg-emerald-50 cursor-pointer transition ${selectedMember?._id === m._id ? 'bg-emerald-50 ring-1 ring-emerald-300' : ''}`}
-                                                                >
-                                                                    <td className="p-3 w-10">
-                                                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedMember?._id === m._id ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300'}`}>
-                                                                            {selectedMember?._id === m._id && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}
-                                                                        </div>
-                                                                    </td>
-                                                                    <td className="p-3 font-semibold text-slate-700">{m.name} {m.surname}</td>
-                                                                    <td className="p-3 font-mono text-slate-500 text-xs">{m.mobileNumber}</td>
-                                                                    <td className="p-3 text-right">
-                                                                        {m.role && m.role !== 'MEMBER' ? (
-                                                                            <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded">{m.role.replace('_', ' ')}</span>
-                                                                        ) : <span className="text-slate-400 text-[10px]">Member</span>}
-                                                                    </td>
-                                                                </tr>
-                                                            ))}
+                                                    <table className="w-full text-left text-sm border-collapse">
+                                                        <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
+                                                            <tr>
+                                                                <th className="p-3 w-10"></th>
+                                                                <th className="p-3 font-bold text-slate-600">Name</th>
+                                                                <th className="p-3 font-bold text-slate-600">Phone</th>
+                                                                <th className="p-3 font-bold text-slate-600">State</th>
+                                                                <th className="p-3 font-bold text-slate-600">District</th>
+                                                                <th className="p-3 font-bold text-slate-600">Mandal/Muni.</th>
+                                                                <th className="p-3 font-bold text-slate-600">Village/Ward</th>
+                                                                <th className="p-3 font-bold text-slate-600 text-right">Role</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-100 bg-white">
+                                                            {members.map(m => {
+                                                                const isSelected = selectedMembers.some(sel => sel._id === m._id);
+                                                                const isAlreadyAdmin = m.role && m.role !== 'MEMBER';
+
+                                                                return (
+                                                                    <tr
+                                                                        key={m._id}
+                                                                        onClick={() => handleToggleMember(m)}
+                                                                        className={`transition border-b border-slate-50 last:border-0
+                                                                            ${isAlreadyAdmin
+                                                                                ? 'bg-slate-50 opacity-60 cursor-not-allowed hover:bg-slate-50'
+                                                                                : `hover:bg-emerald-50 cursor-pointer ${isSelected ? 'bg-emerald-50 ring-1 ring-emerald-300' : ''}`
+                                                                            }
+                                                                        `}
+                                                                    >
+                                                                        <td className="p-3 w-10">
+                                                                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all 
+                                                                                ${isAlreadyAdmin ? 'border-slate-200 bg-slate-100' :
+                                                                                    isSelected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300 bg-white'
+                                                                                }
+                                                                            `}>
+                                                                                {isSelected && <FaCheckCircle size={12} />}
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="p-3">
+                                                                            <div className="font-semibold text-slate-700">{m.name} {m.surname}</div>
+                                                                            <div className="text-[10px] text-slate-400">{m.mewsId || 'No ID'}</div>
+                                                                        </td>
+                                                                        <td className="p-3 font-mono text-slate-500 text-xs">{m.mobileNumber}</td>
+                                                                        <td className="p-3 text-xs text-slate-600">{m.address?.state || 'TS'}</td>
+                                                                        <td className="p-3 text-xs text-slate-600">{getLocationName(m.address?.district)}</td>
+                                                                        <td className="p-3 text-xs text-slate-600">
+                                                                            {m.address?.municipality ? getLocationName(m.address.municipality) : getLocationName(m.address?.mandal)}
+                                                                        </td>
+                                                                        <td className="p-3 text-xs text-slate-600">
+                                                                            {m.address?.municipality ? (m.address.wardNumber ? `Ward ${m.address.wardNumber}` : 'Urban') : getLocationName(m.address?.village)}
+                                                                        </td>
+                                                                        <td className="p-3 text-right">
+                                                                            {m.role && m.role !== 'MEMBER' ? (
+                                                                                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded whitespace-nowrap">{m.role.replace('_', ' ')}</span>
+                                                                            ) : <span className="text-slate-400 text-[10px]">Member</span>}
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
                                                         </tbody>
                                                     </table>
                                                 )}
@@ -613,10 +709,10 @@ const AssignAdmin = () => {
                                 <div className="mt-6 flex justify-end">
                                     <button
                                         onClick={handleAssign}
-                                        disabled={!selectedMember || loadingAssign}
+                                        disabled={selectedMembers.length === 0 || loadingAssign}
                                         className="px-6 py-3 bg-slate-900 text-white rounded-lg font-bold hover:bg-black transition shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        {loadingAssign ? 'Assigning...' : 'Confirm Assignment'}
+                                        {loadingAssign ? 'Assigning...' : `Confirm Role Assignment (${selectedMembers.length})`}
                                         <FaCheckCircle className={loadingAssign ? 'hidden' : ''} />
                                     </button>
                                 </div>

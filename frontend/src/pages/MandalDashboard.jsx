@@ -11,6 +11,7 @@ import AdminHeader from '../components/AdminHeader';
 import StatCard from '../components/common/StatCard';
 import ActionCard from '../components/common/ActionCard';
 import DashboardHeader from '../components/common/DashboardHeader';
+import LiveUpdatesTicker from '../components/LiveUpdatesTicker';
 import {
     PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
     BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList
@@ -212,6 +213,7 @@ const MandalDashboard = () => {
                                     icon={FaUsers}
                                     color="bg-[#1e2a4a]" // Navy
                                     textColor="text-white"
+                                    onClick={() => navigate(`/admin/members?mandal=${stats.locationName}`)}
                                 />
                                 <StatCard
                                     title="Total Institutions"
@@ -221,6 +223,7 @@ const MandalDashboard = () => {
                                     color="bg-white"
                                     textColor="text-[#1e2a4a]"
                                     border={true}
+                                    onClick={() => navigate('/admin/institutions')}
                                 />
                                 <StatCard
                                     title="Pending Approvals"
@@ -229,6 +232,7 @@ const MandalDashboard = () => {
                                     icon={FaClock}
                                     color="bg-[#f59e0b]" // Orange
                                     textColor="text-white"
+                                    onClick={() => navigate(`/admin/members?status=Pending&mandal=${stats.locationName}`)}
                                 />
                                 <StatCard
                                     title="Active Villages"
@@ -237,6 +241,7 @@ const MandalDashboard = () => {
                                     icon={FaMapMarkedAlt}
                                     color="bg-emerald-500"
                                     textColor="text-white"
+                                    onClick={() => document.getElementById('village-breakdown')?.scrollIntoView({ behavior: 'smooth' })}
                                 />
                             </div>
 
@@ -319,7 +324,7 @@ const MandalDashboard = () => {
                             )}
 
                             {/* 3. VILLAGE PERFORMANCE GRID */}
-                            <div className="space-y-4">
+                            <div className="space-y-4" id="village-breakdown">
                                 <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
                                     <h2 className="text-xl font-bold text-[#1e2a4a] border-l-4 border-[#f59e0b] pl-3">
                                         Active Villages Overview

@@ -312,21 +312,21 @@ const EditMember = () => {
                             <FormInput label="S/o, W/o, D/o" name="fatherName" value={formData.fatherName} onChange={handleChange} />
                             <FormInput label="Date of Birth" name="dob" value={formData.dob} onChange={handleChange} type="date" />
                             <FormInput label="Age" name="age" value={formData.age} onChange={handleChange} />
-                            <FormSelect label="Gender" name="gender" value={formData.gender} onChange={handleChange} options={['Male', 'Female', 'Other']} />
+                            <FormSelect label="Gender" name="gender" value={formData.gender} onChange={handleChange} options={['Female', 'Male', 'Other']} />
                             <FormInput label="Mobile" name="mobile" value={formData.mobile} onChange={handleChange} />
                             <FormInput label="Alt Mobile" name="alternateMobile" value={formData.alternateMobile} onChange={handleChange} />
                             <FormInput label="Email" name="email" value={formData.email} onChange={handleChange} />
-                            <FormSelect label="Blood Group" name="bloodGroup" value={formData.bloodGroup} onChange={handleChange} options={['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']} />
+                            <FormSelect label="Blood Group" name="bloodGroup" value={formData.bloodGroup} onChange={handleChange} options={['A+', 'A-', 'AB+', 'AB-', 'B+', 'B-', 'O+', 'O-', 'Oh (Bombay Blood Group)']} />
                             <FormInput label="Aadhaar Number" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleChange} />
-                            <FormSelect label="Marital Status" name="maritalStatus" value={formData.maritalStatus} onChange={handleChange} options={['Unmarried', 'Married', 'Widowed', 'Divorced']} />
+                            <FormSelect label="Marital Status" name="maritalStatus" value={formData.maritalStatus} onChange={handleChange} options={['Divorced', 'Married', 'Unmarried', 'Widowed']} />
 
                             {/* New Fields */}
-                            <FormSelect label="Education Level" name="educationLevel" value={formData.educationLevel} onChange={handleChange} options={["Primary School", "High School", "Intermediate", "Vocational / ITI", "Polytechnic / Diploma", "Engineering & Technology", "Degree", "PG", "Research / Doctoral Studies (PhD)"]} />
-                            <FormSelect label="Occupation" name="occupation" value={formData.occupation} onChange={handleChange} options={["Farmer", "Student", "Unemployed", "Private Job", "Government Employee", "Business", "Daily Wage Worker", "Self Employed", "Retired Govt. Employee", "Retired Private Employee", "Homemaker"]} />
+                            <FormSelect label="Education Level" name="educationLevel" value={formData.educationLevel} onChange={handleChange} options={["Degree", "Engineering & Technology", "High School", "Intermediate", "PG", "Polytechnic / Diploma", "Primary School", "Research / Doctoral Studies (PhD)", "Vocational / ITI"]} />
+                            <FormSelect label="Occupation" name="occupation" value={formData.occupation} onChange={handleChange} options={["Business", "Daily Wage Worker", "Farmer", "Government Employee", "Homemaker", "Private Job", "Retired Govt. Employee", "Retired Private Employee", "Self Employed", "Student", "Unemployed"]} />
 
                             {formData.occupation === 'Government Employee' && (
                                 <>
-                                    <FormSelect label="Job Category" name="jobCategory" value={formData.jobSector} onChange={handleChange} options={["State Government", "Central Government", "Public Sector Undertaking (PSU)"]} />
+                                    <FormSelect label="Job Category" name="jobCategory" value={formData.jobSector} onChange={handleChange} options={["Central Government", "Public Sector Undertaking (PSU)", "State Government"]} />
                                     {/* Note: In Registration we had dynamic sub-categories. For Edit, keeping it simple text or basic select if complex logic not ported */}
                                 </>
                             )}
@@ -441,7 +441,7 @@ const EditMember = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <FormInput label="Ration Card No" name="rationCardNumber" value={formData.rationCardNumber} onChange={handleChange} />
                             <FormInput label="Ration Card Holder" name="rationCardHolder" value={formData.rationCardHolder} onChange={handleChange} />
-                            <FormSelect label="Card Type" name="rationCardType" value={formData.rationCardType} onChange={handleChange} options={['WAP (White)', 'PAP (Pink)', 'AAY (Antyodaya)']} />
+                            <FormSelect label="Card Type" name="rationCardType" value={formData.rationCardType} onChange={handleChange} options={['AAY (Antyodaya)', 'PAP (Pink)', 'WAP (White)']} />
 
                             <FormInput label="Voter EPIC No" name="voterEpic" value={formData.voterEpic} onChange={handleChange} />
                             <FormInput label="Name on Voter ID" name="voterName" value={formData.voterName} onChange={handleChange} />

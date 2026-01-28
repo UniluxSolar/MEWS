@@ -44,7 +44,16 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Enabled
 //     res.send('MEWS API is running...');
 // });
 
+// Debug Middleware to log all API requests
+app.use((req, res, next) => {
+    if (req.path.startsWith('/api')) {
+        console.log(`[API Request] ${req.method} ${req.path}`);
+    }
+    next();
+});
+
 // Define Routes
+app.use('/api/carousel', require('./routes/carouselRoutes')); // Moved to top for debugging
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/locations', require('./routes/locationRoutes'));
 app.use('/api/members', require('./routes/memberRoutes'));
@@ -55,6 +64,7 @@ app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/fund-requests', require('./routes/fundRequestRoutes'));
 app.use('/api/donations', require('./routes/donationRoutes'));
+
 
 // Proxy Endpoint for Images (Fixes CORS for html2canvas & Private GCS Buckets)
 const axios = require('axios');
@@ -94,7 +104,21 @@ app.get('/api/proxy-image', async (req, res) => {
     const { url } = req.query;
     if (!url) return res.status(400).send('URL is required');
 
+    // SECURITY: Whitelist allowed domains to prevent full SSRF (Open Proxy)
+    const allowedDomains = [
+        'storage.googleapis.com',
+        'lh3.googleusercontent.com', // Google Profile Photos
+        'lh5.googleusercontent.com',
+        'drive.google.com'
+    ];
+
     try {
+        const parsedUrl = new URL(url);
+        if (!allowedDomains.some(domain => parsedUrl.hostname.endsWith(domain))) {
+            console.warn(`[Proxy Blocked] Unauthorized domain: ${parsedUrl.hostname}`);
+            return res.status(403).send('Forbidden: Domain not whitelisted');
+        }
+
         let servedViaGcs = false;
 
         // AUTHENTICATED GCS HANDLING (Attempt First)
@@ -140,7 +164,8 @@ app.get('/api/proxy-image', async (req, res) => {
             const response = await axios({
                 url,
                 method: 'GET',
-                responseType: 'stream'
+                responseType: 'stream',
+                timeout: 5000 // 5 second timeout to prevent hanging
             });
 
             res.setHeader('Content-Type', response.headers['content-type']);

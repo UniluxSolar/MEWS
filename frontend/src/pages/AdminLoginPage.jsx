@@ -3,12 +3,15 @@ import API from '../api';
 import { useNavigate } from 'react-router-dom';
 import { FaUsers } from 'react-icons/fa';
 import mewsLogo from '../assets/mews_main_logo_new.png';
+import PopupCarousel from '../components/common/PopupCarousel';
 
 const AdminLoginPage = () => {
     const navigate = useNavigate();
 
     // OTP State
     const [mobileNumber, setMobileNumber] = useState('');
+    const [isPopupOpen, setIsPopupOpen] = useState(false); // Default closed, opens on successful login
+    const [pendingNavigation, setPendingNavigation] = useState(null); // Store target path
     const [otp, setOtp] = useState('');
     const [otpSent, setOtpSent] = useState(false);
     const [timer, setTimer] = useState(0);
@@ -74,7 +77,9 @@ const AdminLoginPage = () => {
             }
 
             localStorage.setItem('adminInfo', JSON.stringify(data));
-            navigate('/admin/dashboard', { replace: true });
+
+            setPendingNavigation('/admin/dashboard');
+            setIsPopupOpen(true); // Open popup
         } catch (err) {
             setFeedbackMessage({ type: 'error', text: err.response?.data?.message || 'Invalid OTP' });
         } finally {
@@ -83,8 +88,20 @@ const AdminLoginPage = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] p-4 font-sans text-gray-800">
-            <div className="w-full max-w-[420px] bg-white rounded-3xl shadow-xl border border-white p-8 sm:p-10 flex flex-col items-center">
+        <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] p-4 font-sans text-gray-800 relative">
+            <PopupCarousel
+                isOpen={isPopupOpen}
+                onClose={() => {
+                    setIsPopupOpen(false);
+                    if (pendingNavigation) {
+                        navigate(pendingNavigation, { replace: true });
+                        setPendingNavigation(null);
+                    }
+                }}
+            // No storageKey for login pages to ensure it shows every time
+            />
+
+            <div className={`w-full max-w-[420px] bg-white rounded-3xl shadow-xl border border-white p-8 sm:p-10 flex flex-col items-center transition-all duration-300 ${isPopupOpen ? 'blur-sm pointer-events-none select-none' : ''}`}>
 
                 {/* Logo Section */}
                 <div className="mb-6 flex flex-col items-center text-center">

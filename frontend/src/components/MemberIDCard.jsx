@@ -71,6 +71,22 @@ const MemberIDCard = ({ member }) => {
     const effectiveRole = member.role || 'MEMBER';
     const headerColor = roleColors[effectiveRole] || roleColors['MEMBER'];
 
+    // Helper to proxy image URLs to avoid CORS issues with html2canvas (and GCS)
+    const getProxyImageUrl = (url) => {
+        if (!url) return null;
+        if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+
+        if (url.startsWith('http')) {
+            return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(url)}`;
+        }
+
+        const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+        return `${baseUrl}${cleanUrl}`;
+    };
+
     return (
         <div className="flex flex-col items-center gap-6">
             <div className="flex justify-end w-full max-w-[850px]">
@@ -119,7 +135,7 @@ const MemberIDCard = ({ member }) => {
                             <div className="w-[90px] h-[110px] bg-gray-100 border border-gray-300 shadow-sm p-0.5 relative overflow-hidden flex items-center justify-center">
                                 {member.photoUrl ? (
                                     <img
-                                        src={member.photoUrl}
+                                        src={getProxyImageUrl(member.photoUrl)}
                                         alt="Member"
                                         className="w-full h-full object-cover"
                                         crossOrigin="anonymous"
@@ -153,7 +169,7 @@ const MemberIDCard = ({ member }) => {
 
                             {/* Digital Signature */}
                             <div className="mt-auto w-full flex justify-end items-end relative z-20">
-                                <div className="relative right-[0px] bottom-[5px] bg-white/95 border-2 border-gray-300 p-1 px-2 w-fit max-w-[145px] rounded-sm shadow-sm scale-95 origin-bottom-right">
+                                <div className="relative right-[6px] bottom-[10px] bg-white/95 border-2 border-gray-300 p-1 px-2 w-fit max-w-[145px] rounded-sm shadow-sm scale-95 origin-bottom-right">
                                     <div className="relative z-10 text-right">
                                         <span className="text-[11px] font-bold text-black leading-none block mb-0.5 text-left">Signature valid</span>
                                         <div className="text-[6px] text-black font-medium leading-[1.1] text-left">

@@ -458,6 +458,28 @@ const registerMember = asyncHandler(async (req, res) => {
 // @access  Private (Admin)
 const getMembers = asyncHandler(async (req, res) => {
     let query = {};
+    const mongoose = require('mongoose');
+    const toId = (id) => {
+        if (!id) return null;
+        try { return new mongoose.Types.ObjectId(id); } catch (e) { return id; }
+    };
+    // --- Pagination Params ---
+    const page = parseInt(req.query.page) || 1;
+    const rawLimit = req.query.limit === 'all' ? 0 : parseInt(req.query.limit);
+    const limit = (rawLimit === 0 || rawLimit === -1) ? 0 : (rawLimit || 50);
+    const skip = (page - 1) * limit;
+
+    // --- Search Logic (Broad Text Search) ---
+    if (req.query.search) {
+        const search = req.query.search;
+        const searchRegex = new RegExp(search, 'i');
+        query.$or = [
+            { name: { $regex: searchRegex } },
+            { surname: { $regex: searchRegex } },
+            { mobileNumber: { $regex: searchRegex } },
+            { mewsId: { $regex: searchRegex } }
+        ];
+    }
 
     // --- Standard Filters ---
     const filterFields = ['gender', 'maritalStatus', 'bloodGroup', 'educationLevel', 'occupation'];
@@ -468,10 +490,28 @@ const getMembers = asyncHandler(async (req, res) => {
     });
 
     // --- Location Filters (Explicit from Frontend) ---
-    // Allow frontend to request specific locations. Admin logic below will validate/intersect.
-    if (req.query['address.village']) query['address.village'] = req.query['address.village'];
-    if (req.query['address.mandal']) query['address.mandal'] = req.query['address.mandal'];
-    if (req.query['address.district']) query['address.district'] = req.query['address.district'];
+    // Handle both flat "address.district" and nested { address: { district: ... } }
+    const q = req.query;
+    const getParam = (path) => {
+        if (q[path]) return q[path];
+        const parts = path.split('.');
+        let val = q;
+        for (const p of parts) {
+            if (!val || typeof val !== 'object') return null;
+            val = val[p];
+        }
+        return val;
+    };
+
+    const village = getParam('address.village');
+    const mandal = getParam('address.mandal');
+    const district = getParam('address.district');
+    const stateID = getParam('address.stateID');
+
+    if (village) query['address.village'] = toId(village);
+    if (mandal) query['address.mandal'] = toId(mandal);
+    if (district) query['address.district'] = toId(district);
+    if (stateID) query['address.stateID'] = toId(stateID);
 
     // Caste Filter (Deep match)
     if (req.query.subCaste) {
@@ -573,45 +613,47 @@ const getMembers = asyncHandler(async (req, res) => {
                 console.log(`[GET MEMBERS] Resolved ${assignedLoc.name} to IDs:`, locIds);
 
                 const villageConstraint = { 'address.village': { $in: locIds } };
-
                 if (!query.$and) query.$and = [];
                 query.$and.push(villageConstraint);
             } else {
-                query['address.village'] = locationId; // Fallback - overwrites user choice, correct for Village Admin
+                query['address.village'] = locationId;
             }
         }
         else if (req.user.role === 'MANDAL_ADMIN') {
-            // STRICT: Must match the assigned Mandal ID
-            query['address.mandal'] = locationId; // Overwrites user choice, correct for Mandal Admin
+            query['address.mandal'] = locationId;
         }
         else if (req.user.role === 'DISTRICT_ADMIN') {
-            // STRICT: Must match the assigned District ID
-            query['address.district'] = locationId; // Overwrites user choice, correct for District Admin
+            query['address.district'] = locationId;
         }
         else if (req.user.role === 'STATE_ADMIN') {
-            // STRICT: Must match any District under the assigned State
-            // Find all districts where parent is the State ID
-            const districts = await Location.find({ parent: locationId, type: 'DISTRICT' }).select('_id');
-            const districtIds = districts.map(d => d._id);
-
-            // Intersect with user request
-            if (query['address.district']) {
-                const requested = query['address.district'];
-                // Check if requested is in allowed list
-                const isAllowed = districtIds.some(dId => dId.toString() === requested.toString());
-                if (isAllowed) {
-                    // Keep user request (it's valid)
-                } else {
-                    // Invalid request (outside state) - return nothing
-                    query['address.district'] = null;
-                }
+            // RBAC: Must be within assigned State
+            const stateId = locationId;
+            if (query['address.stateID'] && query['address.stateID'] !== stateId.toString()) {
+                console.log(`[GET MEMBERS] State Admin ${req.user.username} trying to access state ${req.query['address.stateID']} outside assigned state ${stateId}. Blocking.`);
+                query = { _id: null };
             } else {
-                // No specific filter, show all in state
-                query['address.district'] = { $in: districtIds };
+                // Priority: Village > Mandal > District > State
+                if (query['address.village'] || query['address.mandal']) {
+                    // Village and Mandal already use refs
+                } else if (query['address.district']) {
+                    const isValid = await Location.findOne({ _id: query['address.district'], parent: stateId });
+                    console.log(`[GET MEMBERS] STATE_ADMIN Check: District ${query['address.district']} under State ${stateId} -> ${isValid ? 'VALID' : 'INVALID'}`);
+                    if (!isValid) query['address.district'] = null;
+                } else {
+                    const districts = await Location.find({ parent: stateId, type: 'DISTRICT' }).select('_id');
+                    query['address.district'] = { $in: districts.map(d => d._id) };
+                }
+                delete query['address.stateID'];
             }
         }
         else if (req.user.role === 'SUPER_ADMIN') {
-            // No Constraints. Query already built from params.
+            // If stateID is requested, resolve it ONLY if no more specific location filters are present
+            if (query['address.stateID'] && !query['address.district'] && !query['address.mandal'] && !query['address.village']) {
+                const stateId = query['address.stateID'];
+                const districts = await Location.find({ parent: stateId, type: 'DISTRICT' }).select('_id');
+                query['address.district'] = { $in: districts.map(d => d._id) };
+            }
+            delete query['address.stateID'];
         }
 
         console.log(`[GET MEMBERS] Query applied:`, JSON.stringify(query));
@@ -627,13 +669,19 @@ const getMembers = asyncHandler(async (req, res) => {
         }
     }
 
-    const members = await Member.find(query)
+    const total = await Member.countDocuments(query);
+
+    let membersQuery = Member.find(query)
         .populate('address.village')
         .populate('address.mandal')
         .populate('address.district') // Populate to show names
         .sort({ createdAt: -1 });
 
-    console.log(`[GET MEMBERS] Found ${members.length} records. Signing URLs...`);
+    if (limit > 0) {
+        membersQuery = membersQuery.skip(skip).limit(limit);
+    }
+
+    const members = await membersQuery;
 
     // SIGN URLs for all members (Fault Tolerant)
     const signedMembers = await Promise.all(members.map(async (m) => {
@@ -645,7 +693,12 @@ const getMembers = asyncHandler(async (req, res) => {
         }
     }));
 
-    res.json(signedMembers);
+    res.json({
+        members: signedMembers,
+        total,
+        page: limit > 0 ? page : 1,
+        pages: limit > 0 ? Math.ceil(total / limit) : 1
+    });
 });
 
 // @desc    Get member by ID

@@ -9,22 +9,22 @@ import {
 import FileUploader from '../components/FileUploader';
 
 const TELANGANA_BANKS = [
-    "State Bank of India",
-    "Union Bank of India",
+    "Andhra Pradesh Grameena Vikas Bank",
+    "Axis Bank",
+    "Bank of Baroda",
+    "Bank of India",
+    "Canara Bank",
+    "Central Bank of India",
     "HDFC Bank",
     "ICICI Bank",
-    "Axis Bank",
-    "Canara Bank",
-    "Bank of Baroda",
-    "Punjab National Bank",
-    "Kotak Mahindra Bank",
+    "IDBI Bank",
     "Indian Bank",
-    "Telangana Grameena Bank",
-    "Andhra Pradesh Grameena Vikas Bank",
     "Indian Overseas Bank",
-    "Bank of India",
-    "Central Bank of India",
-    "IDBI Bank"
+    "Kotak Mahindra Bank",
+    "Punjab National Bank",
+    "State Bank of India",
+    "Telangana Grameena Bank",
+    "Union Bank of India"
 ];
 
 const NewApplication = () => {
@@ -143,13 +143,13 @@ const NewApplication = () => {
             border: 'border-blue-200'
         },
         {
-            id: 'Health',
-            title: 'Medical Assistance',
-            description: 'Support for hospital bills, surgeries, medicines, and critical health emergencies.',
-            icon: FaHeartbeat,
-            color: 'text-red-500',
-            bg: 'bg-red-50',
-            border: 'border-red-200'
+            id: 'Employment',
+            title: 'Employment Support',
+            description: 'Help with skill development, training programs, tools for trade, or job placement.',
+            icon: FaBriefcase,
+            color: 'text-amber-500',
+            bg: 'bg-amber-50',
+            border: 'border-amber-200'
         },
         {
             id: 'Legal',
@@ -161,6 +161,15 @@ const NewApplication = () => {
             border: 'border-purple-200'
         },
         {
+            id: 'Health',
+            title: 'Medical Assistance',
+            description: 'Support for hospital bills, surgeries, medicines, and critical health emergencies.',
+            icon: FaHeartbeat,
+            color: 'text-red-500',
+            bg: 'bg-red-50',
+            border: 'border-red-200'
+        },
+        {
             id: 'Welfare',
             title: 'Social Welfare',
             description: 'General support for basic needs, housing, food, or community welfare projects.',
@@ -168,15 +177,6 @@ const NewApplication = () => {
             color: 'text-green-500',
             bg: 'bg-green-50',
             border: 'border-green-200'
-        },
-        {
-            id: 'Employment',
-            title: 'Employment Support',
-            description: 'Help with skill development, training programs, tools for trade, or job placement.',
-            icon: FaBriefcase,
-            color: 'text-amber-500',
-            bg: 'bg-amber-50',
-            border: 'border-amber-200'
         }
     ];
 

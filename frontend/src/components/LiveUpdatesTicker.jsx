@@ -2,15 +2,28 @@ import React from 'react';
 import { FaBullhorn, FaHeart } from 'react-icons/fa';
 
 const LiveUpdatesTicker = () => {
+    const adminInfo = localStorage.getItem('adminInfo') ? JSON.parse(localStorage.getItem('adminInfo')) : null;
+    const locationName = adminInfo?.locationName || 'MEWS';
+    const role = adminInfo?.role || 'ADMIN';
+
+    // Helper to get location type display
+    const getLocType = () => {
+        if (role === 'STATE_ADMIN') return 'Districts';
+        if (role === 'DISTRICT_ADMIN') return 'Mandals';
+        if (role === 'MANDAL_ADMIN') return 'Villages';
+        if (role === 'MUNICIPALITY_ADMIN') return 'Wards';
+        return 'Village';
+    };
+
     const updates = [
-        { text: "Anonymous gave ₹500 to Ravi's surgery", icon: <FaHeart className="text-red-400" /> },
-        { text: "Village % of highest registrations", isRegistration: true },
-        { text: "Priya M. donated ₹200 for flood relief", icon: <FaHeart className="text-blue-400" /> },
-        { text: "100% registrations completed (20 Villages)", isRegistration: true },
-        { text: "Ram Singh donated ₹1000 to Education Fund", icon: <FaHeart className="text-green-400" /> },
-        { text: "100% registrations completed (20 Mandals)", isRegistration: true },
-        { text: "New Campaign \"Clean Water for School\" verified", icon: <FaHeart className="text-purple-400" /> },
-        { text: "100% registrations completed (20 Districts)", isRegistration: true }
+        { text: `Welcome to ${locationName} Admin Portal. System operational.`, icon: <FaHeart className="text-red-400" /> },
+        { text: `95% Registration completed in ${locationName} ${getLocType()}`, isRegistration: true },
+        { text: `New member verified from ${locationName} sector`, icon: <FaHeart className="text-blue-400" /> },
+        { text: `100% registrations completed (Active ${getLocType()})`, isRegistration: true },
+        { text: `${locationName} Support Fund received a new donation`, icon: <FaHeart className="text-green-400" /> },
+        { text: `System-wide update: New verification standard applied to ${getLocType()}`, isRegistration: true },
+        { text: `New CSR Campaign for ${locationName} verified`, icon: <FaHeart className="text-purple-400" /> },
+        { text: `Registration phase 2 starting soon in ${locationName}`, isRegistration: true }
     ];
 
     return (
@@ -53,7 +66,7 @@ const LiveUpdatesTicker = () => {
 
             <style>{`
                 .animate-marquee {
-                    animation: marquee 40s linear infinite;
+                    animation: marquee 20s linear infinite;
                 }
                 @keyframes marquee {
                     0% { transform: translateX(0); }

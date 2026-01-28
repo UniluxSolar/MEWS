@@ -176,6 +176,8 @@ const MemberManagement = () => {
     // Filter States - Multi-Select (Arrays)
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedVillages, setSelectedVillages] = useState([]);
+    const [selectedMandals, setSelectedMandals] = useState([]);
+    const [selectedDistricts, setSelectedDistricts] = useState([]);
     const [selectedAgeRanges, setSelectedAgeRanges] = useState([]);
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [selectedGenders, setSelectedGenders] = useState({ All: true, Male: false, Female: false, Other: false });
@@ -184,6 +186,7 @@ const MemberManagement = () => {
     const [selectedSubCaste, setSelectedSubCaste] = useState('');
     const [selectedVoterStatus, setSelectedVoterStatus] = useState('');
     const [selectedEmploymentStatus, setSelectedEmploymentStatus] = useState('');
+    const [selectedStatus, setSelectedStatus] = useState('');
 
     const location = useLocation();
 
@@ -197,8 +200,11 @@ const MemberManagement = () => {
         const ageRange = params.get('ageRange');
         const occupation = params.get('occupation');
         const villages = params.get('villages');
+        const mandals = params.get('mandals') || params.get('mandal');
+        const districts = params.get('districts') || params.get('district');
         const voterStatus = params.get('voterStatus');
         const employmentStatus = params.get('employmentStatus');
+        const status = params.get('status');
 
         // Gender Reset
         if (gender) {
@@ -219,8 +225,11 @@ const MemberManagement = () => {
         setSelectedAgeRanges(ageRange ? ageRange.split(',').filter(Boolean) : []);
         setSelectedCategories(occupation ? occupation.split(',').filter(Boolean) : []);
         setSelectedVillages(villages ? villages.split(',').filter(Boolean) : []);
+        setSelectedMandals(mandals ? mandals.split(',').filter(Boolean) : []);
+        setSelectedDistricts(districts ? districts.split(',').filter(Boolean) : []);
         setSelectedVoterStatus(voterStatus || '');
         setSelectedEmploymentStatus(employmentStatus || '');
+        setSelectedStatus(status || '');
 
     }, [location.search]);
 
@@ -248,13 +257,14 @@ const MemberManagement = () => {
     const fetchMembers = async () => {
         try {
             setLoading(true);
-            const response = await API.get(`/members?t=${new Date().getTime()}`);
+            const response = await API.get(`/members?limit=all&t=${new Date().getTime()}`);
 
             // Robust data extraction
             let data = response.data;
-            if (!Array.isArray(data) && response.data && Array.isArray(response.data.data)) {
-                // Handle paginated or wrapped response structure if it changed
-                data = response.data.data;
+            if (data && Array.isArray(data.members)) {
+                data = data.members;
+            } else if (!Array.isArray(data) && data && Array.isArray(data.data)) {
+                data = data.data;
             }
 
             console.log('[DEBUG] Fetched members data type:', typeof data, 'Is Array:', Array.isArray(data));
@@ -286,7 +296,6 @@ const MemberManagement = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
 
-    // Filter Logic
     const filteredMembers = useMemo(() => {
         const safeMembers = Array.isArray(members) ? members : [];
         return safeMembers.filter(member => {
@@ -297,11 +306,26 @@ const MemberManagement = () => {
                 if (!text.includes(term)) return false;
             }
 
+            // Status Filter
+            if (selectedStatus) {
+                const status = (member.verificationStatus || '').toLowerCase();
+                if (status !== selectedStatus.toLowerCase()) return false;
+            }
+
             // Multi-Select Filters
             if (selectedVillages.length > 0) {
-                const villageName = getLocationName(member.address?.village).trim();
-                // Use case-insensitive check
-                if (!selectedVillages.some(v => v.toLowerCase().trim() === villageName.toLowerCase())) return false;
+                const villageName = getLocationName(member.address?.village).trim().toLowerCase();
+                if (!selectedVillages.some(v => v.toLowerCase().trim() === villageName)) return false;
+            }
+
+            if (selectedMandals.length > 0) {
+                const mandalName = getLocationName(member.address?.mandal).trim().toLowerCase();
+                if (!selectedMandals.some(m => m.toLowerCase().trim() === mandalName)) return false;
+            }
+
+            if (selectedDistricts.length > 0) {
+                const districtName = getLocationName(member.address?.district).trim().toLowerCase();
+                if (!selectedDistricts.some(d => d.toLowerCase().trim() === districtName)) return false;
             }
 
             if (selectedAgeRanges.length > 0) {
@@ -372,7 +396,7 @@ const MemberManagement = () => {
 
             return true;
         });
-    }, [members, searchTerm, selectedVillages, selectedAgeRanges, selectedCategories, selectedBloodGroups, selectedGenders, selectedMaritalStatuses, selectedSubCaste, selectedVoterStatus, selectedEmploymentStatus]);
+    }, [members, searchTerm, selectedVillages, selectedMandals, selectedDistricts, selectedAgeRanges, selectedCategories, selectedBloodGroups, selectedGenders, selectedMaritalStatuses, selectedSubCaste, selectedVoterStatus, selectedEmploymentStatus, selectedStatus]);
 
     // Trigger geocoding when switching to map view or filtering
     // Trigger geocoding when switching to map view or filtering
@@ -491,18 +515,22 @@ const MemberManagement = () => {
 
     useEffect(() => {
         const newFilters = [];
-        if (selectedAgeRanges.length > 0) newFilters.push(`Age: ${selectedAgeRanges.length} selected`);
+        if (selectedDistricts.length > 0) newFilters.push(`Districts: ${selectedDistricts.length} selected`);
+        if (selectedMandals.length > 0) newFilters.push(`Mandals: ${selectedMandals.length} selected`);
         if (selectedVillages.length > 0) newFilters.push(`Villages: ${selectedVillages.length} selected`);
+        if (selectedAgeRanges.length > 0) newFilters.push(`Age: ${selectedAgeRanges.length} selected`);
         if (selectedCategories.length > 0) newFilters.push(`Occupation: ${selectedCategories.length} selected`);
         if (selectedBloodGroups.length > 0) newFilters.push(`Blood: ${selectedBloodGroups.length} selected`);
         if (selectedVoterStatus) newFilters.push(`Voter: ${selectedVoterStatus}`);
         if (selectedEmploymentStatus) newFilters.push(`Employment: ${selectedEmploymentStatus}`);
         setActiveFilters(newFilters);
         setCurrentPage(1);
-    }, [selectedVillages, selectedAgeRanges, selectedCategories, selectedGenders, selectedBloodGroups, selectedVoterStatus, selectedEmploymentStatus]);
+    }, [selectedDistricts, selectedMandals, selectedVillages, selectedAgeRanges, selectedCategories, selectedGenders, selectedBloodGroups, selectedVoterStatus, selectedEmploymentStatus]);
 
     const clearFilters = () => {
         setSearchTerm('');
+        setSelectedDistricts([]);
+        setSelectedMandals([]);
         setSelectedVillages([]);
         setSelectedAgeRanges([]);
         setSelectedCategories([]);
@@ -642,9 +670,22 @@ const MemberManagement = () => {
     };
 
     // Derived Data for Filters
+    const districts = useMemo(() => {
+        const safeMembers = Array.isArray(members) ? members : [];
+        const unique = [...new Set(safeMembers.map(m => getLocationName(m.address?.district)).filter(Boolean))];
+        return unique.sort((a, b) => a.localeCompare(b));
+    }, [members]);
+
+    const mandals = useMemo(() => {
+        const safeMembers = Array.isArray(members) ? members : [];
+        const unique = [...new Set(safeMembers.map(m => getLocationName(m.address?.mandal)).filter(Boolean))];
+        return unique.sort((a, b) => a.localeCompare(b));
+    }, [members]);
+
     const villages = useMemo(() => {
         const safeMembers = Array.isArray(members) ? members : [];
-        return [...new Set(safeMembers.map(m => getLocationName(m.address?.village)).filter(Boolean))];
+        const unique = [...new Set(safeMembers.map(m => getLocationName(m.address?.village)).filter(Boolean))];
+        return unique.sort((a, b) => a.localeCompare(b));
     }, [members]);
 
     const getOccupationColor = (occupation) => {
@@ -757,7 +798,25 @@ const MemberManagement = () => {
                             <div className="mb-6">
                                 <div className="relative"><FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" /><input type="text" placeholder="Search by name, phone, village..." className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+                                <div>
+                                    <MultiSelect
+                                        label="Districts"
+                                        options={districts}
+                                        selected={selectedDistricts}
+                                        onChange={setSelectedDistricts}
+                                        placeholder="Select Districts"
+                                    />
+                                </div>
+                                <div>
+                                    <MultiSelect
+                                        label="Mandals"
+                                        options={mandals}
+                                        selected={selectedMandals}
+                                        onChange={setSelectedMandals}
+                                        placeholder="Select Mandals"
+                                    />
+                                </div>
                                 <div>
                                     <MultiSelect
                                         label="Villages"
@@ -940,7 +999,7 @@ const MemberManagement = () => {
                                                                     const timestamp = member.updatedAt ? new Date(member.updatedAt).getTime() : '';
 
                                                                     if (photo.startsWith('http')) {
-                                                                        return photo;
+                                                                        return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(photo)}&t=${timestamp}`;
                                                                     }
                                                                     // Local file: Prepend BaseURL
                                                                     const cleanPath = photo.replace(/\\/g, '/').replace(/^\//, '');

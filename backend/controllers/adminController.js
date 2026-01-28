@@ -34,6 +34,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
             // If I am State Admin viewing a District, I want "District Admin" style breakdown stats.
             let contextRole = req.user.role;
             if (location.type === 'DISTRICT') contextRole = 'DISTRICT_ADMIN';
+            if (location.type === 'MUNICIPALITY') contextRole = 'MUNICIPALITY_ADMIN';
             if (location.type === 'MANDAL') contextRole = 'MANDAL_ADMIN';
             if (location.type === 'VILLAGE') contextRole = 'VILLAGE_ADMIN';
 
@@ -54,6 +55,18 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                 memberQuery = { 'address.village': { $in: locIds } };
 
                 // Use Regex for Institution (fullAddress is String)
+                institutionQuery = { fullAddress: locationRegex };
+
+            } else if (contextRole === 'MUNICIPALITY_ADMIN') {
+                // STRICT: Use ID match for members to prevent CastError
+                const escapedName = location.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const relatedLocations = await Location.find({
+                    name: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
+                    type: 'MUNICIPALITY'
+                });
+                const locIds = relatedLocations.map(l => l._id);
+
+                memberQuery = { 'address.municipality': { $in: locIds } };
                 institutionQuery = { fullAddress: locationRegex };
 
             } else if (contextRole === 'MANDAL_ADMIN') {
@@ -135,6 +148,29 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                 // Attach to response object
                 req.mandalsData = mandalsData;
 
+                // --- MUNICIPALITIES FETCHING ---
+                const municipalities = await Location.find({ parent: location._id, type: 'MUNICIPALITY' });
+                const municipalitiesData = await Promise.all(municipalities.map(async (mun) => {
+                    const mCount = await Member.countDocuments({
+                        'address.municipality': mun._id
+                    });
+                    const pCount = await Member.countDocuments({
+                        'address.municipality': mun._id,
+                        verificationStatus: 'PENDING'
+                    });
+                    const instCount = await Institution.countDocuments({ fullAddress: { $regex: mun.name, $options: 'i' } });
+                    return {
+                        id: mun._id.toString(),
+                        name: mun.name,
+                        members: mCount,
+                        pending: pCount,
+                        institutions: instCount,
+                        sos: 0,
+                        status: 'Active'
+                    };
+                }));
+                req.municipalitiesData = municipalitiesData;
+
             } else if (contextRole === 'STATE_ADMIN' || contextRole === 'SUPER_ADMIN') {
                 // Determine logic for State Dashboard
                 // Usually State Admin sees Districts Breakdown
@@ -207,6 +243,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
         locationName, // Send location name to frontend
         villages: villagesData, // Send breakdown for Mandal Admin
         mandals: req.mandalsData, // Send breakdown for District Admin
+        municipalities: req.municipalitiesData, // Send municipality breakdown for District Admin
         districts: req.districtsData, // Send breakdown for State Admin
         members: totalMembers,
         families: totalFamilies, // Corrected family count based on households
@@ -481,28 +518,49 @@ const getVillageSettings = asyncHandler(async (req, res) => {
         const loc = await Location.findById(locationId);
         if (!loc) return null;
 
-        let village = null;
-        let mandal = null;
+        let state = null;
         let district = null;
+        let mandal = null;
+        let municipality = null;
+        let village = null;
 
-        if (loc.type === 'VILLAGE') {
-            village = loc;
+        if (loc.type === 'STATE') {
+            state = loc;
+        } else if (loc.type === 'DISTRICT') {
+            district = loc;
             if (loc.parent) {
-                mandal = await Location.findById(loc.parent);
-                if (mandal && mandal.parent) {
-                    district = await Location.findById(mandal.parent);
+                state = await Location.findById(loc.parent);
+            }
+        } else if (loc.type === 'MUNICIPALITY') {
+            municipality = loc;
+            if (loc.parent) {
+                district = await Location.findById(loc.parent);
+                if (district && district.parent) {
+                    state = await Location.findById(district.parent);
                 }
             }
         } else if (loc.type === 'MANDAL') {
             mandal = loc;
             if (loc.parent) {
                 district = await Location.findById(loc.parent);
+                if (district && district.parent) {
+                    state = await Location.findById(district.parent);
+                }
             }
-        } else if (loc.type === 'DISTRICT') {
-            district = loc;
+        } else if (loc.type === 'VILLAGE') {
+            village = loc;
+            if (loc.parent) {
+                mandal = await Location.findById(loc.parent);
+                if (mandal && mandal.parent) {
+                    district = await Location.findById(mandal.parent);
+                    if (district && district.parent) {
+                        state = await Location.findById(district.parent);
+                    }
+                }
+            }
         }
 
-        return { village, mandal, district };
+        return { village, mandal, municipality, district, state };
     };
 
     const hierarchy = await getLocationHierarchy(req.user.assignedLocation);
@@ -511,7 +569,9 @@ const getVillageSettings = asyncHandler(async (req, res) => {
     res.json({
         villageName: hierarchy.village ? hierarchy.village.name : '',
         mandal: hierarchy.mandal ? hierarchy.mandal.name : '',
+        municipalityName: hierarchy.municipality ? hierarchy.municipality.name : '', // Add Municipality Name
         district: hierarchy.district ? hierarchy.district.name : '',
+        stateName: hierarchy.state ? hierarchy.state.name : '',
         email: req.user.email
     });
 });

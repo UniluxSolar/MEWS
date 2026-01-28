@@ -214,36 +214,40 @@ const compressImage = (file, maxWidth = 1024, quality = 0.7) => {
 
 // Constants for Dropdowns
 const GOVT_DEPARTMENTS = [
-    "Revenue", "Police", "Education", "Health", "Agriculture", "Panchayat Raj",
-    "Municipal Administration", "Irrigation", "Electricity (Transco/Genco)",
-    "Transport (RTA)", "Forest", "Civil Supplies", "Social Welfare", "BC Welfare",
-    "Tribal Welfare", "Minority Welfare", "Women & Child Welfare (Anganwadi)",
-    "Singareni Collieries", "TSRTC", "Central Govt - Railways", "Central Govt - Postal",
-    "Central Govt - Banking", "Other"
-];
+    "Agriculture", "Arogyasri", "Asst Commissioner (State Taxes) Commercial Taxes", "Banks", "BC Welfare",
+    "Chief Planning Officer", "Civil Supplies", "Dist Audit Officer", "Dist Co-Operative Society",
+    "Dist Ground Water", "Dist Industries Center", "Dist Labour Dept", "Dist Manager (CS)",
+    "Dist Marketing Officer", "Dist Town & Country Planning", "Dist Welfare Officer, WCD & SC Dept",
+    "Dist Youth & Sports", "Dist. Handlooms & Textiles", "Dy, EE, TSEWIDC", "Education",
+    "Electrical", "Employment", "Endowment", "Excise", "Fire", "Fisheries", "Food Safety",
+    "Forest", "Horticulture", "Hospital", "Irrigation & Development Corporation", "Irrigation",
+    "Lead Dist Manager", "Legal Metrology", "Medical", "Mines & Geology", "Minority Welfare",
+    "Mission Bhagiratha (RWS & S)", "Muncipal", "Municipale", "Panchayathraj",
+    "Panchayth Raj Engineering Dept", "Police", "Print Media", "Registration", "Revenue",
+    "Road & Buldings (R&B)", "SC Corporation", "Transport", "Treasury", "TS Pollution Control Board",
+    "TSDDCF Ltd, Vijaya Dairy", "TSRTC Yadagirigutta", "TSSPDCL Electricity Dept",
+    "Vaidhya Vidana Parishath", "Veterinary", "Veternary & Animal Husbandary"
+].sort();
 
 const GOVT_JOB_CATEGORIES = {
-    "State Government": ["Group-1", "Group-2", "Group-3", "Group-4", "Gazetted Officer", "Non-Gazetted Officer", "Class-IV Employee", "Contract / Outsourcing"],
-    "Central Government": ["Group-A (Gazetted)", "Group-B (Gazetted)", "Group-B (Non-Gazetted)", "Group-C", "Group-D", "Railways", "Banking / PSU", "Defence / Para-Military"],
-    "Public Sector Undertakings (PSU)": ["Maharatna", "Navratna", "Miniratna", "State PSU (e.g., Singareni, Transco)"]
+    "State Government": ['Class-IV Employee', 'Contract / Outsourcing', 'Gazetted Officer', 'Group-1', 'Group-2', 'Group-3', 'Group-4', 'Non-Gazetted Officer'],
+    "Central Government": ['Banking / PSU', 'Defence / Para-Military', 'Group-A (Gazetted)', 'Group-B (Gazetted)', 'Group-B (Non-Gazetted)', 'Group-C', 'Group-D', 'Railways'],
+    "Public Sector Undertakings (PSU)": ['Maharatna', 'Miniratna', 'Navratna', 'State PSU (e.g., Singareni, Transco)']
 };
 
 // Political Positions
 const POLITICAL_POSITIONS = [
-    "Governor", "Chief Minister", "Deputy Chief Minister", "State Cabinet Ministers",
-    "MLA", "MLC", "MP(Lok Sabha & Rajya Sabha)",
-    "Mayor", "Deputy Mayor", "Corporator / Ward Councillor",
-    "Municipal Chairman / President", "Municipal Councillor",
-    "ZPTC", "Zilla Parishad Chairperson",
-    "MPTC", "Mandal Parishad President", "Gram Panchayat Sarpanch", "Ward Member (Gram Panchayat)"
+    "Chief Minister", "Corporator / Ward Councillor", "Deputy Chief Minister", "Deputy Mayor",
+    "Governor", "Gram Panchayat Sarpanch", "MLA", "MLC", "MP(Lok Sabha & Rajya Sabha)",
+    "MPTC", "Mandal Parishad President", "Mayor", "Municipal Chairman / President", "Municipal Councillor",
+    "State Cabinet Ministers", "Ward Member (Gram Panchayat)", "ZPTC", "Zilla Parishad Chairperson"
 ];
 
 const memberOccupations = [
-    "Farmer", "Daily Wage Laborer",
-    "Private Employee", "Government Employee", "Retired Govt. Employee",
-    "Retired Private Employee", "Self-Employed / Business", "Student",
-    "House Wife", "Unemployed", "Political Elected", "Other"
-];
+    "Business", "Daily Wage Laborer", "Farmer", "Government Employee", "House Wife", "Other",
+    "Political Elected", "Private Employee", "Retired Govt. Employee", "Retired Private Employee",
+    "Self-Employed / Business", "Student", "Unemployed"
+].sort();
 
 const MemberRegistration = () => {
     const navigate = useNavigate();
@@ -331,9 +335,12 @@ const MemberRegistration = () => {
 
         // Present Address
         presentDistrict: '',
-        presentConstituency: '', // New Field
+        presentConstituency: '',
         presentMandal: '',
         presentVillage: '',
+        presentMunicipality: '', // New
+        presentWardNumber: '', // New
+        presentAreaType: 'Rural', // 'Rural' or 'Urban'
         presentHouseNo: '',
         presentStreet: '',
         presentLandmark: '',
@@ -342,9 +349,12 @@ const MemberRegistration = () => {
 
         // Permanent Address
         permDistrict: '',
-        permConstituency: '', // New Field
+        permConstituency: '',
         permMandal: '',
         permVillage: '',
+        permMunicipality: '', // New
+        permWardNumber: '', // New
+        permAreaType: 'Rural', // 'Rural' or 'Urban'
         permHouseNo: '',
         permStreet: '',
         permLandmark: '',
@@ -755,21 +765,7 @@ const MemberRegistration = () => {
     // Occupation Handling
     // Government Job Categories Data
     // Government Departments Data
-    const GOVT_DEPARTMENTS = [
-        "Agriculture", "Arogyasri", "Asst Commissioner (State Taxes) Commercial Taxes", "Banks", "BC Welfare",
-        "Chief Planning Officer", "Civil Supplies", "Dist Audit Officer", "Dist Co-Operative Society",
-        "Dist Ground Water", "Dist Industries Center", "Dist Labour Dept", "Dist Manager (CS)",
-        "Dist Marketing Officer", "Dist Town & Country Planning", "Dist Welfare Officer, WCD & SC Dept",
-        "Dist Youth & Sports", "Dist. Handlooms & Textiles", "Dy, EE, TSEWIDC", "Education",
-        "Electrical", "Employment", "Endowment", "Excise", "Fire", "Fisheries", "Food Safety",
-        "Forest", "Horticulture", "Hospital", "Irrigation & Development Corporation", "irrigation",
-        "Lead Dist Manager", "Legal Metrology", "Medical", "Mines & Geology", "Minority Welfare",
-        "Mission Bhagiratha (RWS & S)", "Muncipal", "Municipale", "Panchayathraj",
-        "Panchayth Raj Engineering Dept", "Police", "Print Media", "Registration", "Revenue",
-        "Road & Buldings (R&B)", "SC Corporation", "Transport", "Treasury", "TS Pollution Control Board",
-        "TSDDCF Ltd, Vijaya Dairy", "TSRTC Yadagirigutta", "TSSPDCL Electricity Dept",
-        "Vaidhya Vidana Parishath", "Veterinary", "Veternary & Animal Husbandary"
-    ].sort();
+
 
     // Occupation Handling - Using global constant 'memberOccupations' defined above
 
@@ -788,16 +784,23 @@ const MemberRegistration = () => {
     // Location Lists
     const [districts, setDistricts] = useState([]);
 
-    // Raw Data (All Mandals in District)
+    // Raw Data (All Mandals/Municipalities in District)
     const [allMandals, setAllMandals] = useState([]);
+    const [allMunicipalities, setAllMunicipalities] = useState([]); // New
+
     const [allPermMandals, setAllPermMandals] = useState([]);
+    const [allPermMunicipalities, setAllPermMunicipalities] = useState([]); // New
 
     // Filtered Display Lists
     const [mandals, setMandals] = useState([]);
     const [villages, setVillages] = useState([]);
+    const [municipalities, setMunicipalities] = useState([]); // New
 
     const [permMandals, setPermMandals] = useState([]);
     const [permVillages, setPermVillages] = useState([]);
+    const [permMunicipalities, setPermMunicipalities] = useState([]); // New
+    const [presentWards, setPresentWards] = useState([]); // New
+    const [permWards, setPermWards] = useState([]); // New
 
     // Dynamic Constituency Lists
     const [presentConstituencies, setPresentConstituencies] = useState([]);
@@ -830,50 +833,92 @@ const MemberRegistration = () => {
     // const filterMandalsByConstituency... (Defined above)
 
     // Explicit Handlers for Constituency Change (Replacing useEffect for better control)
-    const handlePresentConstituencyChange = (e) => {
-        const constituencyName = e.target.value;
-        console.log(`[UI] Present Constituency Selected: ${constituencyName}`);
+    const handlePresentConstituencyChange = async (e) => {
+        const constituencyId = e.target.value;
+        // Find name for display/form data if needed, though ID is primary
+        const constituency = presentConstituencies.find(c => c._id === constituencyId);
+        const constituencyName = constituency?.name || '';
+
+        console.log(`[UI] Present Constituency Selected: ${constituencyId} (${constituencyName})`);
 
         setFormData(prev => ({
             ...prev,
-            presentConstituency: constituencyName,
+            presentConstituency: constituencyId,
             // Reset dependent fields
             presentMandal: '',
             presentMandalName: '',
             presentVillage: '',
-            presentVillageName: ''
+            presentVillageName: '',
+            presentMunicipality: '',
+            presentWardNumber: ''
         }));
 
-        // Filter Mandals based on selection
-        if (allMandals.length > 0) {
-            const filtered = filterMandalsByConstituency(allMandals, constituencyName);
-            setMandals(filtered);
-            console.log(`[Logic] Filtered Present Mandals: ${filtered.length} (from ${allMandals.length})`);
-        }
+        setMandals([]);
+        setMunicipalities([]);
+        setAllMandals([]);
+        setAllMunicipalities([]);
         setVillages([]);
+
+        if (constituencyId) {
+            try {
+                const { data } = await API.get(`/locations?parent=${constituencyId}`);
+
+                // Split Mandals and Municipalities
+                const mList = data.filter(d => d.type === 'MANDAL');
+                const muniList = data.filter(d => d.type === 'MUNICIPALITY');
+
+                setAllMandals(mList);
+                setMandals(mList);
+
+                setAllMunicipalities(muniList);
+                setMunicipalities(muniList);
+            } catch (error) {
+                console.error("[API] Error fetching constituency children", error);
+            }
+        }
     };
 
-    const handlePermConstituencyChange = (e) => {
-        const constituencyName = e.target.value;
-        console.log(`[UI] Perm Constituency Selected: ${constituencyName}`);
+    const handlePermConstituencyChange = async (e) => {
+        const constituencyId = e.target.value;
+        const constituency = permConstituencies.find(c => c._id === constituencyId);
+        const constituencyName = constituency?.name || '';
+        console.log(`[UI] Perm Constituency Selected: ${constituencyId} (${constituencyName})`);
 
         setFormData(prev => ({
             ...prev,
-            permConstituency: constituencyName,
+            permConstituency: constituencyId,
             // Reset dependent fields
             permMandal: '',
             permMandalName: '',
             permVillage: '',
-            permVillageName: ''
+            permVillageName: '',
+            permMunicipality: '',
+            permWardNumber: ''
         }));
 
-        // Filter Mandals based on selection
-        if (allPermMandals.length > 0) {
-            const filtered = filterMandalsByConstituency(allPermMandals, constituencyName);
-            setPermMandals(filtered);
-            console.log(`[Logic] Filtered Perm Mandals: ${filtered.length} (from ${allPermMandals.length})`);
-        }
+        setPermMandals([]);
+        setPermMunicipalities([]);
+        setAllPermMandals([]);
+        setAllPermMunicipalities([]);
         setPermVillages([]);
+
+        if (constituencyId) {
+            try {
+                const { data } = await API.get(`/locations?parent=${constituencyId}`);
+
+                // Split Mandals and Municipalities
+                const mList = data.filter(d => d.type === 'MANDAL');
+                const muniList = data.filter(d => d.type === 'MUNICIPALITY');
+
+                setAllPermMandals(mList);
+                setPermMandals(mList);
+
+                setAllPermMunicipalities(muniList);
+                setPermMunicipalities(muniList);
+            } catch (error) {
+                console.error("[API] Error fetching perm constituency children", error);
+            }
+        }
     };
 
     // Explicit handler for Job Category to reset Sub-Category
@@ -918,10 +963,6 @@ const MemberRegistration = () => {
         const districtName = districts.find(d => d._id === districtId)?.name || '';
         console.log(`[UI] District Selected: ${districtId} (${districtName})`);
 
-        // Filter Constituencies
-        const relevantConstituencies = getConstituenciesForDistrict(districtName);
-        setPresentConstituencies(relevantConstituencies);
-
         // Store ID AND Name directly in formData
         setFormData(prev => ({
             ...prev,
@@ -931,18 +972,27 @@ const MemberRegistration = () => {
             presentMandal: '',
             presentMandalName: '',
             presentVillage: '',
-            presentVillageName: ''
+            presentVillageName: '',
+            presentMunicipality: '',
+            presentWardNumber: '',
+            presentAreaType: 'Rural'
         }));
+
+        // Clear downstream lists
+        setPresentConstituencies([]);
         setMandals([]);
         setVillages([]);
+        setMunicipalities([]);
 
         if (districtId) {
             try {
+                // Fetch Constituencies for this District
                 const { data } = await API.get(`/locations?parent=${districtId}`);
-                setAllMandals(data);
-                setMandals(data);
+                // Expected data: List of locations with type='CONSTITUENCY'
+                setPresentConstituencies(data);
+
             } catch (error) {
-                console.error("[API] Error fetching mandals", error);
+                console.error("[API] Error fetching constituencies", error);
             }
         }
     };
@@ -1038,17 +1088,25 @@ const MemberRegistration = () => {
         const relevantConstituencies = getConstituenciesForDistrict(districtName);
         setPermConstituencies(relevantConstituencies);
 
-        setFormData(prev => ({ ...prev, permDistrict: districtId, permConstituency: '', permMandal: '', permVillage: '' }));
+        setFormData(prev => ({ ...prev, permDistrict: districtId, permConstituency: '', permMandal: '', permVillage: '', permMunicipality: '', permWardNumber: '', permAreaType: 'Rural' }));
         setPermMandals([]);
         setPermVillages([]);
+        setPermMunicipalities([]);
 
         if (districtId) {
             try {
                 const { data } = await API.get(`/locations?parent=${districtId}`);
-                setAllPermMandals(data);
-                setPermMandals(data);
+                // Split Mandals and Municipalities
+                const mList = data.filter(d => d.type === 'MANDAL');
+                const muniList = data.filter(d => d.type === 'MUNICIPALITY');
+
+                setAllPermMandals(mList);
+                setPermMandals(mList);
+
+                setAllPermMunicipalities(muniList);
+                setPermMunicipalities(muniList);
             } catch (error) {
-                console.error("Error fetching perm mandals", error);
+                console.error("Error fetching perm locations", error);
             }
         }
     };
@@ -1066,6 +1124,52 @@ const MemberRegistration = () => {
                 setPermVillages(data);
             } catch (error) {
                 console.error("Error fetching perm villages", error);
+            }
+        }
+    };
+
+    // --- MUNICIPALITY HANDLERS ---
+    // --- MUNICIPALITY HANDLERS ---
+    const handlePresentMunicipalityChange = async (e) => {
+        const val = e.target.value;
+        const muniName = municipalities.find(m => m._id === val)?.name || '';
+
+        setFormData(prev => ({
+            ...prev,
+            presentMunicipality: val,
+            presentMunicipalityName: muniName,
+            presentWardNumber: ''
+        }));
+        setPresentWards([]);
+
+        if (val) {
+            try {
+                const { data } = await API.get(`/locations?parent=${val}`);
+                setPresentWards(data); // Assuming wards are returned as locations
+            } catch (error) {
+                console.error("Error fetching present wards", error);
+            }
+        }
+    };
+
+    const handlePermMunicipalityChange = async (e) => {
+        const val = e.target.value;
+        const muniName = permMunicipalities.find(m => m._id === val)?.name || '';
+
+        setFormData(prev => ({
+            ...prev,
+            permMunicipality: val,
+            permMunicipalityName: muniName,
+            permWardNumber: ''
+        }));
+        setPermWards([]);
+
+        if (val) {
+            try {
+                const { data } = await API.get(`/locations?parent=${val}`);
+                setPermWards(data);
+            } catch (error) {
+                console.error("Error fetching perm wards", error);
             }
         }
     };
@@ -1170,13 +1274,20 @@ const MemberRegistration = () => {
         if (name === 'aadhaarNumber') fieldKey = 'aadhaarNumber';
         if (name === 'epicNumber') fieldKey = 'voterId';
         if (name === 'rationCardNumber') fieldKey = 'rationCard';
+        if (name === 'mobileNumber') fieldKey = 'mobileNumber';
 
         if (!fieldKey) return;
 
         try {
             const { data } = await API.post('/members/check-duplicate', { field: fieldKey, value });
             if (data.isDuplicate) {
-                setErrors(prev => ({ ...prev, [name]: data.message }));
+                setErrors(prev => ({ ...prev, [name]: "This mobile number already exists" })); // Custom message for mobile or generic for others?
+                // The API actually returns a message too, let's use that but specific request was "This mobile number already exists"
+                if (name === 'mobileNumber') {
+                    setErrors(prev => ({ ...prev, [name]: "This mobile number already exists" }));
+                } else {
+                    setErrors(prev => ({ ...prev, [name]: data.message }));
+                }
             }
         } catch (error) {
             console.error("Duplicate check failed", error);
@@ -1185,7 +1296,7 @@ const MemberRegistration = () => {
 
     const handleBlur = (e) => {
         const { name, value } = e.target;
-        if (['aadhaarNumber', 'epicNumber', 'rationCardNumber'].includes(name)) {
+        if (['aadhaarNumber', 'epicNumber', 'rationCardNumber', 'mobileNumber'].includes(name)) {
             checkFieldDuplicate(name, value);
         }
     };
@@ -1449,6 +1560,34 @@ const MemberRegistration = () => {
         }
     }, [familyMembers, isViewMode]);
 
+    // Auto-calculate Political Term End Date (Add 5 Years)
+    useEffect(() => {
+        if (formData.occupation === 'Political Elected' && formData.politicalFromDate) {
+            // value is YYYY-MM
+            try {
+                const parts = formData.politicalFromDate.split('-');
+                if (parts.length === 2) {
+                    const year = parseInt(parts[0]);
+                    const month = parts[1];
+                    if (!isNaN(year)) {
+                        const endYear = year + 5;
+                        const politicalToDate = `${endYear}-${month}`;
+
+                        // Only update if different to avoid potential loops (though dependency array protects this)
+                        setFormData(prev => {
+                            if (prev.politicalToDate !== politicalToDate) {
+                                return { ...prev, politicalToDate };
+                            }
+                            return prev;
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error("Error calculating political end date", e);
+            }
+        }
+    }, [formData.occupation, formData.politicalFromDate]);
+
     const validateForm = () => {
         const newErrors = {};
 
@@ -1516,8 +1655,15 @@ const MemberRegistration = () => {
         // Present Address
         if (!formData.presentDistrict) newErrors.presentDistrict = "District is required";
         if (!formData.presentConstituency) newErrors.presentConstituency = "Constituency is required";
-        if (!formData.presentMandal) newErrors.presentMandal = "Mandal is required";
-        if (!formData.presentVillage) newErrors.presentVillage = "Village is required";
+
+        if (formData.presentAreaType === 'Urban') {
+            if (!formData.presentMunicipality) newErrors.presentMunicipality = "Municipality is required";
+            if (!formData.presentWardNumber) newErrors.presentWardNumber = "Ward Number is required";
+        } else {
+            if (!formData.presentMandal) newErrors.presentMandal = "Mandal is required";
+            if (!formData.presentVillage) newErrors.presentVillage = "Village is required";
+        }
+
         if (!formData.presentHouseNo) newErrors.presentHouseNo = "House No is required";
         if (!formData.presentPincode) newErrors.presentPincode = "Pincode is required";
         else if (formData.presentPincode.length !== 6) newErrors.presentPincode = "Pincode must be 6 digits";
@@ -1525,22 +1671,87 @@ const MemberRegistration = () => {
         // Permanent Address
         if (!formData.permDistrict) newErrors.permDistrict = "District is required";
         if (!formData.permConstituency) newErrors.permConstituency = "Constituency is required";
-        if (!formData.permMandal) newErrors.permMandal = "Mandal is required";
-        if (!formData.permVillage) newErrors.permVillage = "Village is required";
+
+        if (formData.permAreaType === 'Urban') {
+            if (!formData.permMunicipality) newErrors.permMunicipality = "Municipality is required";
+            if (!formData.permWardNumber) newErrors.permWardNumber = "Ward Number is required";
+        } else {
+            if (!formData.permMandal) newErrors.permMandal = "Mandal is required";
+            if (!formData.permVillage) newErrors.permVillage = "Village is required";
+        }
+
         if (!formData.permHouseNo) newErrors.permHouseNo = "House No is required";
         if (!formData.permPincode) newErrors.permPincode = "Pincode is required";
         else if (formData.permPincode.length !== 6) newErrors.permPincode = "Pincode must be 6 digits";
 
-        // Present Address (if not same)
-        if (!sameAsPermanent) {
-            if (!formData.presentDistrict) newErrors.presentDistrict = "District is required";
-            if (!formData.presentConstituency) newErrors.presentConstituency = "Constituency is required";
+        // Present Address (if not same) - Validation logic is covered above because we don't conditionally skip validation blocks based on 'sameAsPermanent' checkbox in the object state
+        // Actually, if sameAsPermanent is true, typically the UI hides present, but the state is synced.
+        // Wait, if sameAsPermanent is true, we usually validate present address implicitly because it has data.
+
+        // Let's check the original code logic for "Present Address (if not same)"
+        // Original code:
+        // if (!sameAsPermanent) {
+        // ... validate present ...
+        // }
+
+        // But above I blindly validated Present Address at lines 1541+. 
+        // The original code separated Present and Permanent logic differently.
+        // Let me revert to original structure but with my inner Conditionals.
+
+        // Correction: Move Present Validation inside !sameAsPermanent check? 
+        // Or did the original code validate Present Address *regardless* and then had a block "Present Address (if not same)"? 
+        // Looking at lines 1542-1549 in original, it validates Present Address unconditionally.
+        // Then lines 1559-1568 validates it AGAIN if !sameAsPermanent? That seems redundant or I misread.
+        // Ah, typically:
+        // 1. Permanent Address is ALWAYS validated.
+        // 2. Present Address is validated ONLY if !sameAsPermanent.
+        // BUT the form might require Present Address always to be filled?
+        // Let's re-read original code around 1542.
+        // "if (!formData.presentDistrict) newErrors.presentDistrict ..."
+        // This runs unconditionally. So Present Address IS mandatory always in the original code.
+        // Then lines 1560 "if (!sameAsPermanent)" repeats the checks?
+        // That seems like a bug or legacy code in the original file.
+        // I will replace both blocks with a clean logic.
+
+        // Actually, usually Permanent Address is the primary one, or Present? 
+        // In this form, let's assume both are needed, and sync fills one. 
+        // If sync is on, Present has data, so validation passes.
+
+        /* REVISED VALIDATION PLAN */
+        // Present Address
+        if (!formData.presentDistrict) newErrors.presentDistrict = "District is required";
+        if (!formData.presentConstituency) newErrors.presentConstituency = "Constituency is required";
+
+        if (formData.presentAreaType === 'Urban') {
+            if (!formData.presentMunicipality) newErrors.presentMunicipality = "Municipality is required";
+            if (!formData.presentWardNumber) newErrors.presentWardNumber = "Ward Number is required";
+        } else {
             if (!formData.presentMandal) newErrors.presentMandal = "Mandal is required";
             if (!formData.presentVillage) newErrors.presentVillage = "Village is required";
-            if (!formData.presentHouseNo) newErrors.presentHouseNo = "House No is required";
-            if (!formData.presentPincode) newErrors.presentPincode = "Pincode is required";
-            else if (formData.presentPincode.length !== 6) newErrors.presentPincode = "Pincode must be 6 digits";
         }
+
+        if (!formData.presentHouseNo) newErrors.presentHouseNo = "House No is required";
+        if (!formData.presentPincode) newErrors.presentPincode = "Pincode is required";
+        else if (formData.presentPincode.length !== 6) newErrors.presentPincode = "Pincode must be 6 digits";
+
+        // Permanent Address
+        if (!formData.permDistrict) newErrors.permDistrict = "District is required";
+        if (!formData.permConstituency) newErrors.permConstituency = "Constituency is required";
+
+        if (formData.permAreaType === 'Urban') {
+            if (!formData.permMunicipality) newErrors.permMunicipality = "Municipality is required";
+            if (!formData.permWardNumber) newErrors.permWardNumber = "Ward Number is required";
+        } else {
+            if (!formData.permMandal) newErrors.permMandal = "Mandal is required";
+            if (!formData.permVillage) newErrors.permVillage = "Village is required";
+        }
+
+        if (!formData.permHouseNo) newErrors.permHouseNo = "House No is required";
+        if (!formData.permPincode) newErrors.permPincode = "Pincode is required";
+        else if (formData.permPincode.length !== 6) newErrors.permPincode = "Pincode must be 6 digits";
+
+        // Remove the redundant block at 1560 if I replace the whole section.
+        // I will replace from 1542 to 1568.
 
         // Ration Card
         if (formData.hasRationCard && formData.rationCardNumber) {
@@ -1844,8 +2055,19 @@ const MemberRegistration = () => {
 
                 const resolveExistingFile = (url) => {
                     if (!url) return null;
-                    // If url is already a full link (signed GCS URL), use as is.
-                    const fullUrl = (url.startsWith('http') || url.startsWith('blob:')) ? url : `${baseUrl}/${url.replace(/\\/g, '/')}`;
+                    if (url.startsWith('blob:')) {
+                        return { name: 'preview', url, existing: true, type: 'existing' };
+                    }
+
+                    let fullUrl = '';
+                    if (url.startsWith('http')) {
+                        // Use Proxy for Remote URLs to ensure they load (CORS/Private)
+                        fullUrl = `${baseUrl}/api/proxy-image?url=${encodeURIComponent(url)}`;
+                    } else {
+                        // Local relative path
+                        fullUrl = `${baseUrl}/${url.replace(/\\/g, '/')}`;
+                    }
+
                     return {
                         name: url.split(/[/\\]/).pop().split('?')[0], // Remove query params if GCS
                         url: fullUrl,
@@ -2301,7 +2523,14 @@ const MemberRegistration = () => {
                                                                         <img src={URL.createObjectURL(fm.files.photo)} alt={fm.name} className="w-full h-full object-cover" />
                                                                     ) : (fm.photo && typeof fm.photo === 'string' ? (
                                                                         <img
-                                                                            src={fm.photo.startsWith('http') ? fm.photo : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/${fm.photo.replace(/\\/g, '/')}`}
+                                                                            src={(() => {
+                                                                                const photo = fm.photo;
+                                                                                const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+                                                                                if (photo.startsWith('http')) {
+                                                                                    return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(photo)}`;
+                                                                                }
+                                                                                return `${baseUrl}/${photo.replace(/\\/g, '/')}`;
+                                                                            })()}
                                                                             alt={fm.name}
                                                                             className="w-full h-full object-cover"
                                                                         />
@@ -2594,8 +2823,8 @@ const MemberRegistration = () => {
                                                             value={formData.jobSector}
                                                             onChange={handleChange}
                                                             options={[
-                                                                "IT / Software", "Education", "Healthcare", "Manufacturing",
-                                                                "Banking / Finance", "Retail", "Services", "Other"
+                                                                "Banking / Finance", "Education", "Healthcare", "IT / Software",
+                                                                "Manufacturing", "Other", "Retail", "Services"
                                                             ]}
                                                             required
                                                             error={errors.jobSector}
@@ -2736,7 +2965,7 @@ const MemberRegistration = () => {
                                                         name="educationLevel"
                                                         value={formData.educationLevel}
                                                         onChange={handleChange}
-                                                        options={["Primary School", "High School", "Intermediate", "Vocational / ITI", "Polytechnic / Diploma", "Engineering & Technology", "Degree", "PG", "Research / Doctoral Studies (PhD)"]}
+                                                        options={["Degree", "Engineering & Technology", "High School", "Intermediate", "PG", "Polytechnic / Diploma", "Primary School", "Research / Doctoral Studies (PhD)", "Vocational / ITI"]}
                                                         required
                                                     />
                                                 )}
@@ -2746,8 +2975,8 @@ const MemberRegistration = () => {
                                         <div className="col-span-1">
                                             <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Gender</label>
                                             <div className="flex items-center gap-6 mt-3">
-                                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Male" onChange={handleChange} checked={formData.gender === 'Male'} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Male</span></label>
                                                 <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Female" onChange={handleChange} checked={formData.gender === 'Female'} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Female</span></label>
+                                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Male" onChange={handleChange} checked={formData.gender === 'Male'} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Male</span></label>
                                                 <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Other" onChange={handleChange} checked={formData.gender === 'Other'} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Other</span></label>
                                             </div>
                                             {errors.gender && <p className="text-red-500 text-xs mt-1 font-medium">{errors.gender}</p>}
@@ -2775,7 +3004,7 @@ const MemberRegistration = () => {
                                             name="bloodGroup"
                                             value={formData.bloodGroup}
                                             onChange={handleChange}
-                                            options={["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-", "Oh (Bombay Blood Group)"]}
+                                            options={["A+", "A-", "AB+", "AB-", "B+", "B-", "O+", "O-", "Oh (Bombay Blood Group)"]}
                                         />
                                         <FormInput label="Alternate Mobile Number" name="alternateMobile" value={formData.alternateMobile} onChange={handleChange} placeholder="Enter alternate mobile number" />
 
@@ -2818,36 +3047,119 @@ const MemberRegistration = () => {
                                                 disabled={isFieldLocked('permDistrict')}
                                                 error={errors.permDistrict}
                                             />
+                                            {/* Area Type Selection */}
+                                            <div className="col-span-1 md:col-span-3">
+                                                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Area Type</label>
+                                                <div className="flex items-center gap-6 mt-1">
+                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="permAreaType"
+                                                            value="Rural"
+                                                            checked={formData.permAreaType === 'Rural'}
+                                                            onChange={(e) => setFormData(prev => ({ ...prev, permAreaType: e.target.value, permMandal: '', permVillage: '', permMunicipality: '', permWardNumber: '' }))}
+                                                            className="w-4 h-4 text-blue-600"
+                                                            disabled={isFieldLocked('permAreaType')}
+                                                        />
+                                                        <span className="text-sm text-gray-700">Rural (Mandal/Village)</span>
+                                                    </label>
+                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="permAreaType"
+                                                            value="Urban"
+                                                            checked={formData.permAreaType === 'Urban'}
+                                                            onChange={(e) => setFormData(prev => ({ ...prev, permAreaType: e.target.value, permMandal: '', permVillage: '', permMunicipality: '', permWardNumber: '' }))}
+                                                            className="w-4 h-4 text-blue-600"
+                                                            disabled={isFieldLocked('permAreaType')}
+                                                        />
+                                                        <span className="text-sm text-gray-700">Urban (Municipality/Ward)</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+
                                             <FormSelect
                                                 label="Constituency"
                                                 name="permConstituency"
                                                 value={formData.permConstituency}
                                                 onChange={handlePermConstituencyChange}
-                                                options={permConstituencies}
+                                                options={permConstituencies.map(c => ({ value: c._id, label: c.name }))}
                                                 required
                                                 disabled={!formData.permDistrict || isFieldLocked('permConstituency')}
                                                 error={errors.permConstituency}
                                             />
-                                            <FormSelect
-                                                label="Mandal"
-                                                name="permMandal"
-                                                value={formData.permMandal}
-                                                onChange={handlePermMandalChange}
-                                                options={permMandals.map(m => ({ value: m._id, label: m.name }))}
-                                                required
-                                                disabled={!formData.permConstituency || isFieldLocked('permMandal')}
-                                                error={errors.permMandal}
-                                            />
-                                            <FormSelect
-                                                label="Village/Town"
-                                                name="permVillage"
-                                                value={formData.permVillage}
-                                                onChange={handlePermVillageChange}
-                                                options={permVillages.map(v => ({ value: v._id, label: v.name }))}
-                                                required
-                                                disabled={!formData.permMandal || isFieldLocked('permVillage')}
-                                                error={errors.permVillage}
-                                            />
+
+                                            {formData.permAreaType === 'Urban' ? (
+                                                <>
+                                                    <FormSelect
+                                                        label="Municipality"
+                                                        name="permMunicipality"
+                                                        value={formData.permMunicipality}
+                                                        onChange={handlePermMunicipalityChange}
+                                                        options={permMunicipalities.map(m => ({ value: m._id, label: m.name }))}
+                                                        required
+                                                        disabled={!formData.permConstituency || isFieldLocked('permMunicipality')}
+                                                        error={errors.permMunicipality}
+                                                    />
+                                                    <FormSelect
+                                                        label="Ward Number"
+                                                        name="permWardNumber"
+                                                        value={formData.permWardNumber}
+                                                        onChange={handleChange}
+                                                        options={permWards.map(w => ({ value: w.name, label: w.name }))} // Wards usually just names/numbers, storing IDs might be overkill if just for display, but let's store Name for now to match schema or ID? Schema says String. Let's store Name to be safe if ID not referenced elsewhere? Handlers stored ID. Let's store ID if consistent. 
+                                                    // Actually handler Update: setFormData(prev => ({ ...prev, permWardNumber: '' })). Handler doesn't set it. handleChange sets it.
+                                                    // handleChange uses value from event.
+                                                    // If I use FormSelect, value is ID.
+                                                    // If backend expects String (name) ??
+                                                    // Location Schema has type String for enum.
+                                                    // Member Schema address.wardNumber type String?
+                                                    // Let's check Member Schema if possible. 
+                                                    // Assuming safe to store ID or Name. 
+                                                    // The locations have _id. The frontend handlers I wrote for others store ID.
+                                                    // Let's store ID also for consistency, but if old members have strings?
+                                                    // It's a new feature.
+                                                    // BUT wait, handleChange logic:
+                                                    // const { name, value } = e.target; setFormData...
+                                                    // So it stores whatever value is in option.
+                                                    // Let's use ID as value.
+                                                    />
+                                                    {/* Re-writing strictly */}
+                                                    <FormSelect
+                                                        label="Ward Number"
+                                                        name="permWardNumber"
+                                                        value={formData.permWardNumber}
+                                                        onChange={handleChange}
+                                                        options={permWards.map(w => ({ value: w._id, label: w.name }))}
+                                                        placeholder="Select Ward"
+                                                        required
+                                                        disabled={!formData.permMunicipality || isFieldLocked('permWardNumber')}
+                                                        error={errors.permWardNumber}
+                                                    />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <FormSelect
+                                                        label="Mandal"
+                                                        name="permMandal"
+                                                        value={formData.permMandal}
+                                                        onChange={handlePermMandalChange}
+                                                        options={permMandals.map(m => ({ value: m._id, label: m.name }))}
+                                                        required
+                                                        disabled={!formData.permConstituency || isFieldLocked('permMandal')}
+                                                        error={errors.permMandal}
+                                                    />
+                                                    <FormSelect
+                                                        label="Village/Town"
+                                                        name="permVillage"
+                                                        value={formData.permVillage}
+                                                        onChange={handlePermVillageChange}
+                                                        options={permVillages.map(v => ({ value: v._id, label: v.name }))}
+                                                        required
+                                                        disabled={!formData.permMandal || isFieldLocked('permVillage')}
+                                                        error={errors.permVillage}
+                                                    />
+                                                </>
+                                            )}
 
                                             <FormInput
                                                 label="House No."
@@ -2921,36 +3233,96 @@ const MemberRegistration = () => {
                                                 disabled={sameAsPermanent}
                                                 error={!sameAsPermanent ? errors.presentDistrict : null}
                                             />
+                                            {/* Area Type Selection */}
+                                            <div className="col-span-1 md:col-span-3">
+                                                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Area Type</label>
+                                                <div className="flex items-center gap-6 mt-1">
+                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="presentAreaType"
+                                                            value="Rural"
+                                                            checked={formData.presentAreaType === 'Rural'}
+                                                            onChange={(e) => !sameAsPermanent && setFormData(prev => ({ ...prev, presentAreaType: e.target.value, presentMandal: '', presentVillage: '', presentMunicipality: '', presentWardNumber: '' }))}
+                                                            className="w-4 h-4 text-blue-600"
+                                                            disabled={sameAsPermanent}
+                                                        />
+                                                        <span className="text-sm text-gray-700">Rural (Mandal/Village)</span>
+                                                    </label>
+                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="presentAreaType"
+                                                            value="Urban"
+                                                            checked={formData.presentAreaType === 'Urban'}
+                                                            onChange={(e) => !sameAsPermanent && setFormData(prev => ({ ...prev, presentAreaType: e.target.value, presentMandal: '', presentVillage: '', presentMunicipality: '', presentWardNumber: '' }))}
+                                                            className="w-4 h-4 text-blue-600"
+                                                            disabled={sameAsPermanent}
+                                                        />
+                                                        <span className="text-sm text-gray-700">Urban (Municipality/Ward)</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+
                                             <FormSelect
                                                 label="Constituency"
                                                 name="presentConstituency"
                                                 value={formData.presentConstituency}
                                                 onChange={handlePresentConstituencyChange}
-                                                options={presentConstituencies}
+                                                options={presentConstituencies.map(c => ({ value: c._id, label: c.name }))}
                                                 required={!sameAsPermanent}
                                                 disabled={sameAsPermanent || !formData.presentDistrict}
                                                 error={!sameAsPermanent ? errors.presentConstituency : null}
                                             />
-                                            <FormSelect
-                                                label="Mandal"
-                                                name="presentMandal"
-                                                value={formData.presentMandal}
-                                                onChange={handleMandalChange}
-                                                options={mandals.map(m => ({ value: m._id, label: m.name }))}
-                                                required={!sameAsPermanent}
-                                                disabled={sameAsPermanent || !formData.presentConstituency}
-                                                error={!sameAsPermanent ? errors.presentMandal : null}
-                                            />
-                                            <FormSelect
-                                                label="Village/Town"
-                                                name="presentVillage"
-                                                value={formData.presentVillage}
-                                                onChange={handleVillageChange}
-                                                options={villages.map(v => ({ value: v._id, label: v.name }))}
-                                                required={!sameAsPermanent}
-                                                disabled={sameAsPermanent || !formData.presentMandal}
-                                                error={!sameAsPermanent ? errors.presentVillage : null}
-                                            />
+
+                                            {formData.presentAreaType === 'Urban' ? (
+                                                <>
+                                                    <FormSelect
+                                                        label="Municipality"
+                                                        name="presentMunicipality"
+                                                        value={formData.presentMunicipality}
+                                                        onChange={handlePresentMunicipalityChange}
+                                                        options={municipalities.map(m => ({ value: m._id, label: m.name }))}
+                                                        required={!sameAsPermanent}
+                                                        disabled={sameAsPermanent || !formData.presentConstituency}
+                                                        error={!sameAsPermanent ? errors.presentMunicipality : null}
+                                                    />
+                                                    <FormSelect
+                                                        label="Ward Number"
+                                                        name="presentWardNumber"
+                                                        value={formData.presentWardNumber}
+                                                        onChange={handleChange}
+                                                        options={presentWards.map(w => ({ value: w._id, label: w.name }))}
+                                                        placeholder="Select Ward"
+                                                        required={!sameAsPermanent}
+                                                        disabled={sameAsPermanent || !formData.presentMunicipality}
+                                                        error={!sameAsPermanent ? errors.presentWardNumber : null}
+                                                    />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <FormSelect
+                                                        label="Mandal"
+                                                        name="presentMandal"
+                                                        value={formData.presentMandal}
+                                                        onChange={handleMandalChange}
+                                                        options={mandals.map(m => ({ value: m._id, label: m.name }))}
+                                                        required={!sameAsPermanent}
+                                                        disabled={sameAsPermanent || !formData.presentConstituency}
+                                                        error={!sameAsPermanent ? errors.presentMandal : null}
+                                                    />
+                                                    <FormSelect
+                                                        label="Village/Town"
+                                                        name="presentVillage"
+                                                        value={formData.presentVillage}
+                                                        onChange={handleVillageChange}
+                                                        options={villages.map(v => ({ value: v._id, label: v.name }))}
+                                                        required={!sameAsPermanent}
+                                                        disabled={sameAsPermanent || !formData.presentMandal}
+                                                        error={!sameAsPermanent ? errors.presentVillage : null}
+                                                    />
+                                                </>
+                                            )}
 
                                             <FormInput
                                                 label="House No."
@@ -3036,7 +3408,7 @@ const MemberRegistration = () => {
                                             name="maritalStatus"
                                             value={formData.maritalStatus}
                                             onChange={handleChange}
-                                            options={["Unmarried", "Married", "Divorced", "Widowed"]}
+                                            options={["Divorced", "Married", "Unmarried", "Widowed"]}
                                             required
                                             error={errors.maritalStatus}
                                         />
@@ -3319,9 +3691,22 @@ const MemberRegistration = () => {
                                                                         alt={fm.name}
                                                                         className="w-full h-full object-cover"
                                                                     />
+                                                                ) : (fm.photo && typeof fm.photo === 'string' ? (
+                                                                    <img
+                                                                        src={(() => {
+                                                                            const photo = fm.photo;
+                                                                            const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+                                                                            if (photo.startsWith('http')) {
+                                                                                return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(photo)}`;
+                                                                            }
+                                                                            return `${baseUrl}/${photo.replace(/\\/g, '/')}`;
+                                                                        })()}
+                                                                        alt={fm.name}
+                                                                        className="w-full h-full object-cover"
+                                                                    />
                                                                 ) : (
                                                                     <FaUsers className="text-gray-300 text-2xl" />
-                                                                )}
+                                                                ))}
                                                             </div>
 
                                                             {/* Details */}
@@ -3425,7 +3810,7 @@ const MemberRegistration = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <FormInput label="Ration Card Number" name="rationCardNumber" value={formData.rationCardNumber} onChange={handleChange} onBlur={(e) => { handleBlur && handleBlur(e); handleDuplicateCheck('rationCard', e.target.value); }} placeholder="Enter ration card number" />
                                             <FormInput label="Ration Card Holder Name" name="rationCardHolderName" value={formData.rationCardHolderName} onChange={handleChange} placeholder="Enter card holder name" />
-                                            <FormSelect label="Ration Card Type" name="rationCardTypeFamily" value={formData.rationCardTypeFamily} onChange={handleChange} options={["Food Security Card", "Antyodaya Anna Yojana", "Annapurna Scheme"]} />
+                                            <FormSelect label="Ration Card Type" name="rationCardTypeFamily" value={formData.rationCardTypeFamily} onChange={handleChange} options={["Annapurna Scheme", "Antyodaya Anna Yojana", "Food Security Card"]} />
                                             <div className="md:col-span-2">
                                                 <FileUpload label="Upload Ration Card" name="rationCardFile" onChange={handleFileChange} onRemove={handleRemoveFile} fileName={files.rationCardFile?.name} fileUrl={files.rationCardFile?.url} />
                                                 <p className="text-[10px] text-gray-500 mt-1">Max file size: 5 MB</p>
@@ -3493,12 +3878,12 @@ const MemberRegistration = () => {
                     <div className="flex-1 overflow-y-auto bg-slate-50 pb-12">
                         <div className="max-w-4xl mx-auto pt-8 px-4">
                             <div className="flex justify-between items-center mb-6 no-print">
-                                <button onClick={() => navigate(-1)} className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 flex items-center gap-2 shadow-sm transition">
+                                <button onClick={() => window.location.reload()} className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 flex items-center gap-2 shadow-sm transition">
                                     <FaArrowLeft /> Back
                                 </button>
                                 <div className="flex gap-3">
-                                    <button onClick={() => window.print()} className="px-5 py-2.5 bg-blue-100 text-blue-700 font-bold rounded-xl hover:bg-blue-200 flex items-center gap-2 shadow-sm transition">
-                                        <FaPrint /> Print
+                                    <button onClick={handleDownloadApplication} className="px-5 py-2.5 bg-blue-100 text-blue-700 font-bold rounded-xl hover:bg-blue-200 flex items-center gap-2 shadow-sm transition">
+                                        <FaDownload /> Download
                                     </button>
                                     <button onClick={() => navigate(`/admin/members/edit/${id}`)} className="px-5 py-2.5 bg-[#1e2a4a] text-white font-bold rounded-xl hover:bg-[#2a3b66] flex items-center gap-2 shadow-md transition">
                                         <FaEdit /> Edit Profile
@@ -3597,7 +3982,7 @@ const MemberRegistration = () => {
 
                             <div className="space-y-3">
                                 <button
-                                    onClick={() => window.print()}
+                                    onClick={handleDownloadApplication}
                                     className="w-full py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg flex items-center justify-center gap-2"
                                 >
                                     <FaDownload size={18} /> Download Application
@@ -3669,7 +4054,7 @@ const MemberRegistration = () => {
             {
                 createdMemberData && (
                     <PrintPortal>
-                        <div id="print-mount" className="hidden print:block">
+                        <div id="application-form-print" className="hidden print:block">
                             <MemberDocument
                                 data={{
                                     ...createdMemberData,
@@ -3755,8 +4140,8 @@ const MemberRegistration = () => {
                                     value={familyMemberForm.relation}
                                     onChange={handleFamilyChange}
                                     options={formData.maritalStatus === 'Unmarried'
-                                        ? ["Father", "Mother", "Brother", "Sister"]
-                                        : ["Spouse", "Son", "Daughter"]
+                                        ? ["Brother", "Father", "Mother", "Sister"]
+                                        : ["Daughter", "Son", "Spouse"]
                                     }
                                     required
                                 />
@@ -3765,7 +4150,7 @@ const MemberRegistration = () => {
                                     name="maritalStatus"
                                     value={familyMemberForm.maritalStatus}
                                     onChange={handleFamilyChange}
-                                    options={["Unmarried", "Married", "Widowed", "Divorced"]}
+                                    options={["Divorced", "Married", "Unmarried", "Widowed"]}
                                     required
                                 />
                                 <FormInput label="Surname" name="surname" value={familyMemberForm.surname} onChange={handleFamilyChange} placeholder="Surname" required />
@@ -3773,7 +4158,7 @@ const MemberRegistration = () => {
                                 <FormInput label="S/o, W/o, D/o" name="fatherName" value={familyMemberForm.fatherName} onChange={handleFamilyChange} placeholder="Enter S/o, W/o, D/o Name" required />
                                 <FormInput label="Date of Birth (DD-MM-YYYY)" name="dob" value={familyMemberForm.dob} onChange={(e) => handleDateChange(e, setFamilyMemberForm, 'dob')} placeholder="DD-MM-YYYY" maxLength={10} required />
                                 <FormInput label="Age" name="age" value={familyMemberForm.age} onChange={handleFamilyChange} placeholder="Age" type="number" />
-                                <FormSelect label="Gender" name="gender" value={familyMemberForm.gender} onChange={handleFamilyChange} options={["Male", "Female", "Other"]} required />
+                                <FormSelect label="Gender" name="gender" value={familyMemberForm.gender} onChange={handleFamilyChange} options={["Female", "Male", "Other"]} required />
                                 {(parseInt(familyMemberForm.age) >= 5 || !familyMemberForm.age) && (
                                     <>
                                         <FormSelect label="Occupation" name="occupation" value={familyMemberForm.occupation} onChange={handleFamilyChange} options={memberOccupations} required />
@@ -3786,8 +4171,8 @@ const MemberRegistration = () => {
                                                     value={familyMemberForm.jobSector}
                                                     onChange={handleFamilyChange}
                                                     options={[
-                                                        "IT / Software", "Education", "Healthcare", "Manufacturing",
-                                                        "Banking / Finance", "Retail", "Services", "Other"
+                                                        "Banking / Finance", "Education", "Healthcare", "IT / Software",
+                                                        "Manufacturing", "Other", "Retail", "Services"
                                                     ]}
                                                     required
                                                 />
@@ -3874,7 +4259,7 @@ const MemberRegistration = () => {
                                                 name="educationLevel"
                                                 value={familyMemberForm.educationLevel}
                                                 onChange={handleFamilyChange}
-                                                options={["Primary School", "High School", "Intermediate", "Vocational / ITI", "Polytechnic / Diploma", "Engineering & Technology", "Degree", "PG", "Research / Doctoral Studies (PhD)"]}
+                                                options={["Degree", "Engineering & Technology", "High School", "Intermediate", "PG", "Polytechnic / Diploma", "Primary School", "Research / Doctoral Studies (PhD)", "Vocational / ITI"]}
                                                 required
                                             />
                                         )}

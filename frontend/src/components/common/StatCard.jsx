@@ -1,7 +1,10 @@
 import React from 'react';
 
-const StatCard = ({ title, value, subtext, icon: Icon, color }) => (
-    <div className="relative overflow-hidden bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300 group">
+const StatCard = ({ title, value, subtext, icon: Icon, color, onClick }) => (
+    <div
+        onClick={onClick}
+        className={`relative overflow-hidden bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-lg transition-all duration-300 group ${onClick ? 'cursor-pointer active:scale-95' : ''}`}
+    >
         <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-10 blur-2xl ${color}`}></div>
         <div className="p-6">
             <div className="flex justify-between items-start mb-4">

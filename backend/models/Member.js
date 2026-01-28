@@ -31,6 +31,9 @@ const MemberSchema = new mongoose.Schema({
         street: String,
         village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        municipality: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' }, // Fork: Municipality
+        wardNumber: String, // Fork: Municipality Ward
         district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         constituency: String, // New Field
         pinCode: String,
@@ -42,7 +45,12 @@ const MemberSchema = new mongoose.Schema({
         houseNumber: String,
         street: String,
         village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        houseNumber: String,
+        street: String,
+        village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        municipality: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' }, // Fork
+        wardNumber: String,
         district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         constituency: String, // New Field
         pinCode: String,
@@ -163,6 +171,8 @@ const MemberSchema = new mongoose.Schema({
             street: String,
             village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
             mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+            municipality: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+            wardNumber: String,
             district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
             constituency: String,
             pinCode: String,
@@ -173,6 +183,8 @@ const MemberSchema = new mongoose.Schema({
             street: String,
             village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
             mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+            municipality: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+            wardNumber: String,
             district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
             constituency: String,
             pinCode: String,
@@ -190,7 +202,7 @@ const MemberSchema = new mongoose.Schema({
     // M. Role & Permissions (Unified Access)
     role: {
         type: String,
-        enum: ['SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'MEMBER'],
+        enum: ['SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MUNICIPALITY_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'MEMBER'],
         default: 'MEMBER'
     },
     assignedLocation: {

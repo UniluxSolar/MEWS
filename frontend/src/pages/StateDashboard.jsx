@@ -11,6 +11,7 @@ import AdminHeader from '../components/AdminHeader';
 import StatCard from '../components/common/StatCard';
 import ActionCard from '../components/common/ActionCard';
 import DashboardHeader from '../components/common/DashboardHeader';
+import LiveUpdatesTicker from '../components/LiveUpdatesTicker';
 import {
     PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
     BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList
@@ -218,6 +219,7 @@ const StateDashboard = () => {
                                     icon={FaUsers}
                                     color="bg-[#1e2a4a]" // Navy
                                     textColor="text-white"
+                                    onClick={() => navigate('/admin/members')}
                                 />
                                 <StatCard
                                     title="Total Institutions"
@@ -227,6 +229,7 @@ const StateDashboard = () => {
                                     color="bg-white"
                                     textColor="text-[#1e2a4a]"
                                     border={true}
+                                    onClick={() => navigate('/admin/institutions')}
                                 />
                                 <StatCard
                                     title="Pending Approvals"
@@ -235,6 +238,7 @@ const StateDashboard = () => {
                                     icon={FaClock}
                                     color="bg-[#f59e0b]" // Orange
                                     textColor="text-white"
+                                    onClick={() => navigate('/admin/members?status=Pending')}
                                 />
                                 <StatCard
                                     title="Active Districts"
@@ -243,6 +247,7 @@ const StateDashboard = () => {
                                     icon={FaMapMarkedAlt}
                                     color="bg-amber-500"
                                     textColor="text-white"
+                                    onClick={() => document.getElementById('district-breakdown')?.scrollIntoView({ behavior: 'smooth' })}
                                 />
                             </div>
 
@@ -325,7 +330,7 @@ const StateDashboard = () => {
                             )}
 
                             {/* 3. DISTRICT PERFORMANCE GRID */}
-                            <div className="space-y-4">
+                            <div className="space-y-4" id="district-breakdown">
                                 <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
                                     <h2 className="text-xl font-bold text-[#1e2a4a] border-l-4 border-[#f59e0b] pl-3">
                                         District Breakdown

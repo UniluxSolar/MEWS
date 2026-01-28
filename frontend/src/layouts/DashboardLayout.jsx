@@ -6,6 +6,7 @@ import {
     FaBalanceScale, FaHandHoldingUsd, FaHeadset, FaQuestionCircle, FaBars,
     FaSearch, FaBell, FaUserCircle, FaChevronDown, FaSignOutAlt
 } from 'react-icons/fa';
+import CarouselModal from '../components/common/CarouselModal';
 
 const SidebarItem = ({ to, icon: Icon, label, active, collapsed }) => (
     <Link
@@ -156,14 +157,18 @@ const DashboardLayout = () => {
 
     const getImageUrl = (url) => {
         if (!url) return "/assets/images/user-profile.png";
-        if (url.startsWith('http') || url.startsWith('data:')) return url;
+        if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+
+        // Use Proxy for GCS/Remote URLs to ensure they load (CORS/Private)
+        if (url.startsWith('http')) {
+            return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(url)}`;
+        }
 
         // If relative path from backend (e.g., 'uploads/...')
         // We need to resolve it against the backend URL, not frontend.
-        // Assuming VITE_API_URL includes '/api', we strip it.
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        const baseUrl = apiUrl.replace(/\/api$/, '');
-
         // Ensure url has leading slash if needed, or handle if baseUrl has trailing
         const cleanUrl = url.startsWith('/') ? url : `/${url}`;
         return `${baseUrl}${cleanUrl}`;
@@ -171,6 +176,7 @@ const DashboardLayout = () => {
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+            <CarouselModal storageKey="hasSeenDashboardCarousel" />
             {/* Mobile Overlay Backdrop */}
             {isMobile && mobileOpen && (
                 <div

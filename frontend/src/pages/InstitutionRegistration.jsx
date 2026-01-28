@@ -180,20 +180,20 @@ const InstitutionRegistration = () => {
     };
 
     const institutionTypes = [
-        { id: 'hospital', label: 'Hospital', icon: FaHeartbeat, color: 'text-red-500' },
-        { id: 'diagnostic', label: 'Diagnostic Center', icon: FaMicroscope, color: 'text-blue-500' },
         { id: 'bloodbank', label: 'Blood Bank', icon: FaTint, color: 'text-red-600' },
-        { id: 'school', label: 'School', icon: FaSchool, color: 'text-green-500' },
         { id: 'college', label: 'College', icon: FaGraduationCap, color: 'text-indigo-500' },
-        { id: 'university', label: 'University', icon: FaUniversity, color: 'text-purple-600' },
-        { id: 'training', label: 'Training Institute', icon: FaBook, color: 'text-orange-500' },
-        { id: 'pharmacy', label: 'Pharmacy', icon: FaPills, color: 'text-emerald-500' },
+        { id: 'diagnostic', label: 'Diagnostic Center', icon: FaMicroscope, color: 'text-blue-500' },
+        { id: 'hospital', label: 'Hospital', icon: FaHeartbeat, color: 'text-red-500' },
         { id: 'other', label: 'Other', icon: FaEllipsisH, color: 'text-slate-500' },
+        { id: 'pharmacy', label: 'Pharmacy', icon: FaPills, color: 'text-emerald-500' },
+        { id: 'school', label: 'School', icon: FaSchool, color: 'text-green-500' },
+        { id: 'training', label: 'Training Institute', icon: FaBook, color: 'text-orange-500' },
+        { id: 'university', label: 'University', icon: FaUniversity, color: 'text-purple-600' },
     ];
 
     const services = [
-        "Emergency Care", "General Consultation", "Laboratory Services", "Diagnostic Imaging",
-        "Pharmacy Services", "Specialist Consultation", "Inpatient Services", "Vaccination Center"
+        "Diagnostic Imaging", "Emergency Care", "General Consultation", "Inpatient Services", "Laboratory Services",
+        "Pharmacy Services", "Specialist Consultation", "Vaccination Center"
     ];
 
     // Drag and drop handlers

@@ -34,6 +34,7 @@ const createStateAdmin = async () => {
         const username = 'telangana_state_admin';
         const password = 'Pass@123';
         const role = 'STATE_ADMIN';
+        const mobileNumber = '8977760488';
 
         // Hash password
         const salt = await bcrypt.genSalt(10);
@@ -47,6 +48,7 @@ const createStateAdmin = async () => {
             user.passwordHash = passwordHash;
             user.role = role;
             user.assignedLocation = stateLocation._id;
+            user.mobileNumber = mobileNumber;
             await user.save();
             console.log(`✅ State Admin Updated Successfully!`);
         } else {
@@ -56,7 +58,8 @@ const createStateAdmin = async () => {
                 passwordHash,
                 role,
                 assignedLocation: stateLocation._id,
-                isActive: true
+                isActive: true,
+                mobileNumber
             });
             console.log(`✅ State Admin Created Successfully!`);
         }

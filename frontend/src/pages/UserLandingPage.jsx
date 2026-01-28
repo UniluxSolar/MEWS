@@ -19,6 +19,9 @@ import Member1 from '../assets/member1.png';
 import Member2 from '../assets/member2.png';
 import Member3 from '../assets/member3.png';
 import Member4 from '../assets/member4.png';
+import { Link } from 'react-router-dom';
+import LiveUpdatesTicker from '../components/LiveUpdatesTicker';
+import PopupCarousel from '../components/common/PopupCarousel';
 
 const CommunitySupportHub = () => {
     const institutionStats = [
@@ -278,11 +281,17 @@ const CommunitySupportHub = () => {
     );
 };
 
-import LiveUpdatesTicker from '../components/LiveUpdatesTicker';
+
 
 const UserLandingPage = () => {
+    const [isPopupOpen, setIsPopupOpen] = React.useState(true);
+
     return (
         <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-secondary selection:text-white">
+            <PopupCarousel
+                isOpen={isPopupOpen}
+                onClose={() => setIsPopupOpen(false)}
+            />
             <ConnectNavbar />
             <LiveUpdatesTicker />
             <main className="space-y-0">

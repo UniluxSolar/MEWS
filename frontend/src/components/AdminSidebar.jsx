@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     FaThLarge, FaUsers, FaBuilding, FaUserPlus,
-    FaHandHoldingUsd, FaSignOutAlt, FaChartLine, FaCog, FaQuestionCircle, FaBullhorn, FaUserShield
+    FaHandHoldingUsd, FaSignOutAlt, FaChartLine, FaCog, FaQuestionCircle, FaBullhorn, FaUserShield, FaImages
 } from 'react-icons/fa';
 
 const SidebarItem = ({ icon: Icon, label, active, to }) => (
@@ -112,6 +112,10 @@ const AdminSidebar = ({ activePage }) => {
                     <SidebarItem to="/admin/settings" icon={FaCog} label={settingsLabel} active={activePage === 'settings'} />
                     <SidebarItem to="/admin/help" icon={FaQuestionCircle} label="Help & Support" active={activePage === 'help'} />
                     <SidebarItem to="/admin/announcements" icon={FaBullhorn} label="Announcements" active={activePage === 'announcements'} />
+
+                    {userRole === 'SUPER_ADMIN' && (
+                        <SidebarItem to="/admin/carousel" icon={FaImages} label="Carousel Manager" active={activePage === 'carousel'} />
+                    )}
 
                     {/* Testing Section */}
                     {/* Testing Section - Removed */}

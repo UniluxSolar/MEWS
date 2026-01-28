@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-    FaCamera, FaEdit, FaCheckCircle, FaSave, FaTimes, FaArrowLeft, FaFileAlt, FaIdCard, FaPrint
+    FaCamera, FaEdit, FaCheckCircle, FaSave, FaTimes, FaArrowLeft, FaFileAlt, FaIdCard, FaPrint, FaDownload
 } from 'react-icons/fa';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import API from '../api';
 import LivePhotoCapture from '../components/LivePhotoCapture';
 import { MemberDocument } from './MemberDocument';
@@ -181,7 +183,7 @@ const DocumentsTab = ({ onOpenApp, onOpenID }) => (
                     onClick={onOpenApp}
                     className="w-full py-2.5 bg-[#1e2a4a] text-white font-bold rounded-lg hover:bg-[#2a3b66] transition flex items-center justify-center gap-2"
                 >
-                    <FaPrint /> View Application
+                    <FaFileAlt /> View Application
                 </button>
             </div>
 
@@ -698,10 +700,17 @@ const ProfileSettings = () => {
 
     const getImageUrl = (url) => {
         if (!url) return "/assets/images/user-profile.png";
-        if (url.startsWith('http') || url.startsWith('data:')) return url;
+        if (url.startsWith('data:') || url.startsWith('blob:')) return url;
 
+        // Use Proxy for GCS/Remote URLs to ensure they load (CORS/Private)
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        const baseUrl = apiUrl.replace(/\/api$/, '');
+        const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+
+        if (url.startsWith('http')) {
+            return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(url)}`;
+        }
+
+        // Local relative paths (e.g., /uploads/...)
         const cleanUrl = url.startsWith('/') ? url : `/${url}`;
         return `${baseUrl}${cleanUrl}`;
     };
@@ -718,6 +727,52 @@ const ProfileSettings = () => {
     const handleBackToFamily = () => {
         navigate(location.pathname); // Clear query params
         setActiveTab('Family Members'); // Switch back to list tab
+    };
+
+    // Handle Download Application PDF
+    const handleDownloadApplication = async () => {
+        const element = document.getElementById('application-form-print');
+        if (!element) return;
+
+        // Temporarily show the element to capture it (it is hidden inside PrintPortal)
+        element.classList.remove('hidden');
+
+        try {
+            const pages = element.querySelectorAll('.print-page');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+
+            for (let i = 0; i < pages.length; i++) {
+                const page = pages[i];
+
+                // Use html2canvas
+                const canvas = await html2canvas(page, {
+                    scale: 2, // Higher scale for better quality
+                    useCORS: true,
+                    logging: false,
+                    windowWidth: 794, // 210mm in px at 96 DPI
+                    windowHeight: 1123, // 297mm in px
+                    backgroundColor: '#ffffff'
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 210; // A4 Width in mm
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                if (i > 0) pdf.addPage();
+
+                // Add image (0, 0 because the padding is INSIDE the captured element)
+                pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+            }
+
+            pdf.save(`MEWS_Application_${formData?.mewsId || 'Form'}.pdf`);
+
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+            alert("Failed to generate PDF. Please try again.");
+        } finally {
+            // Hide it again
+            element.classList.add('hidden');
+        }
     };
 
     if (loading) return <div className="p-8 text-center">Loading Profile...</div>;
@@ -740,8 +795,8 @@ const ProfileSettings = () => {
                         <div className="p-4 border-b flex justify-between items-center bg-gray-50">
                             <h3 className="font-bold text-lg">Application Form Preview</h3>
                             <div className="flex gap-4">
-                                <button onClick={() => window.print()} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-700">
-                                    <FaPrint /> Print Form
+                                <button onClick={handleDownloadApplication} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-700">
+                                    <FaDownload /> Download Form
                                 </button>
                                 <button onClick={() => setShowAppModal(false)} className="text-gray-500 hover:text-red-500">
                                     <FaTimes size={20} />
@@ -775,7 +830,7 @@ const ProfileSettings = () => {
 
             {/* Hidden Print Portal for direct printing support */}
             <PrintPortal>
-                <div className="hidden print:block">
+                <div id="application-form-print" className="hidden print:block">
                     <MemberDocument data={formData} />
                 </div>
             </PrintPortal>

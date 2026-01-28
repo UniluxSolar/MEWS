@@ -273,11 +273,11 @@ const MemberDocument = ({ data, lookups }) => {
             <Separator />
 
             <SectionHeader title="Declaration" />
-            <p className="text-[10px] text-gray-700 leading-relaxed text-justify mb-12">
+            <p className="text-[10px] text-gray-700 leading-relaxed text-justify mb-6">
                 I, <span className="font-bold uppercase">{data.name} {data.surname}</span>, hereby declare that all the information furnished in this application is true, complete, and correct to the best of my knowledge and belief. I understand that my membership is subject to the rules and regulations of the <strong>Mala Educational Welfare Society</strong>. I accept that any misrepresentation may lead to cancellation of my membership.
             </p>
 
-            <div className="flex justify-between items-end mt-8">
+            <div className="flex justify-between items-end mt-4">
                 <div className="w-48">
                     <div className="text-xs font-bold uppercase mb-2 pl-2 text-gray-800">{resolve(data.address?.village, 'village')}</div>
                     <div className="border-t-2 border-black pt-1 text-[10px] uppercase font-bold text-center">Place</div>

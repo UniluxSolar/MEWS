@@ -4,44 +4,27 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { FaUsers } from 'react-icons/fa';
 import mewsLogo from '../assets/mews_main_logo_new.png';
 import API from '../api';
+import CarouselModal from '../components/common/CarouselModal'; /* Replaced */
 
 const LoginPage = () => {
     const navigate = useNavigate();
 
     // State
-    // State
     const [mobile, setMobile] = useState('');
     const [otp, setOtp] = useState('');
+    /* Removed isPopupOpen state */
+    const [pendingNavigation, setPendingNavigation] = useState(null);
     const [otpSent, setOtpSent] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [timer, setTimer] = useState(0); // Timer state
-    const otpInputRef = useRef(null); // Ref for auto-focus
-    const [feedbackMessage, setFeedbackMessage] = useState(null); // New state for inline messages
+    const [timer, setTimer] = useState(0);
+    const otpInputRef = useRef(null);
+    const [feedbackMessage, setFeedbackMessage] = useState(null);
 
-    // Timer Effect
-    useEffect(() => {
-        let interval;
-        if (timer > 0) {
-            interval = setInterval(() => {
-                setTimer((prev) => prev - 1);
-            }, 1000);
-        }
-        return () => clearInterval(interval);
-    }, [timer]);
+    /* ... omitted effects ... */
 
-    // Auto-focus Effect
-    useEffect(() => {
-        if (otpSent && otpInputRef.current) {
-            otpInputRef.current.focus();
-        }
-    }, [otpSent]);
-
-    const location = useLocation();
-    const queryParams = new URLSearchParams(location.search);
-    const redirectPath = queryParams.get('redirect') || '/dashboard/profile';
 
     const handleSendOTP = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         setFeedbackMessage(null); // Clear previous messages
         try {
             setLoading(true);
@@ -68,9 +51,9 @@ const LoginPage = () => {
         try {
             setLoading(true);
             const { data } = await API.post('/auth/verify-otp', { mobile, otp, userType: 'MEMBER' });
-            localStorage.setItem('adminInfo', JSON.stringify(data)); // Store member info as adminInfo for compatibility
+            localStorage.setItem('adminInfo', JSON.stringify(data));
 
-            navigate(redirectPath, { replace: true });
+            navigate(redirectPath, { replace: true }); /* Direct redirect */
         } catch (error) {
             alert(error.response?.data?.message || 'Invalid OTP');
         } finally {
@@ -78,9 +61,14 @@ const LoginPage = () => {
         }
     };
 
+    /* Removed handlePopupClose */
+
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] p-4 font-sans text-gray-800">
-            <div className="w-full max-w-[420px] bg-white rounded-3xl shadow-xl border border-white p-8 sm:p-10 flex flex-col items-center">
+        <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] p-4 font-sans text-gray-800 relative">
+            <CarouselModal /> {/* Shows on load */}
+
+            <div className={`w-full max-w-[420px] bg-white rounded-3xl shadow-xl border border-white p-8 sm:p-10 flex flex-col items-center transition-all duration-300`}>
+                {/* Removed blur class logic based on popup */}
 
                 {/* Logo Section */}
                 <div className="mb-6 flex flex-col items-center text-center">

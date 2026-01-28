@@ -8,6 +8,7 @@ const HIERARCHY_LEVELS = {
     'STATE_ADMIN': 4,
     'DISTRICT_ADMIN': 3,
     'MANDAL_ADMIN': 2,
+    'MUNICIPALITY_ADMIN': 2,
     'VILLAGE_ADMIN': 1
 };
 

@@ -439,11 +439,20 @@ const verifyOtp = asyncHandler(async (req, res) => {
         finalRole = (user.role && user.role !== 'MEMBER') ? user.role : 'MEMBER';
     }
 
+    // Fetch Location Name for Admins/Users with assignedLocation
+    let locationName = '';
+    if (user.assignedLocation) {
+        const Location = require('../models/Location');
+        const loc = await Location.findById(user.assignedLocation);
+        if (loc) locationName = loc.name;
+    }
+
     res.json({
         _id: user.id, // Keep main ID for token/API compatibility
         ...loggedInMember, // Spread specific details (overwrites name/mobile if dependent)
         role: user.role || finalRole, // Return actual role (e.g. VILLAGE_ADMIN)
         assignedLocation: user.assignedLocation, // Send assigned location ID
+        locationName, // Added locationName
         institutionType: user.type, // Optional: if Institution, send type
         isFamilyLogin: loggedInMember.memberType === 'DEPENDENT',
         token: generateToken(user._id, loggedInMember.memberId || loggedInMember._id) // Fallback for Header-based Auth

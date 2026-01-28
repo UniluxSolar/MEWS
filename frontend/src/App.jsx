@@ -8,6 +8,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import DistrictDashboard from './pages/DistrictDashboard';
 import MandalDashboard from './pages/MandalDashboard';
 import VillageDashboard from './pages/VillageDashboard';
+import MunicipalityDashboard from './pages/MunicipalityDashboard';
 import AssignAdmin from './pages/AssignAdmin';
 import AdminManagement from './pages/AdminManagement';
 import MemberManagement from './pages/MemberManagement';
@@ -25,6 +26,7 @@ import FundingRequests from './pages/FundingRequests';
 import AdminAnnouncements from './pages/AdminAnnouncements';
 import AdminActivityLog from './pages/AdminActivityLog';
 import AdminVillageSettings from './pages/AdminVillageSettings';
+import CarouselManagement from './pages/CarouselManagement';
 import AdminHelpSupport from './pages/AdminHelpSupport';
 import DashboardLayout from './layouts/DashboardLayout';
 import MyApplications from './pages/MyApplications';
@@ -77,11 +79,12 @@ function App() {
                 <Route path="/admin/login" element={<AdminLoginPage />} />
 
                 {/* Protected Admin Routes */}
-                <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'VILLAGE_ADMIN', 'MANDAL_ADMIN', 'DISTRICT_ADMIN', 'STATE_ADMIN']} />}>
+                <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'VILLAGE_ADMIN', 'MUNICIPALITY_ADMIN', 'MANDAL_ADMIN', 'DISTRICT_ADMIN', 'STATE_ADMIN']} />}>
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
                     {/* Drill-Down Dashboard Routes */}
                     <Route path="/admin/dashboard/district/:id" element={<DistrictDashboard />} />
                     <Route path="/admin/dashboard/mandal/:id" element={<MandalDashboard />} />
+                    <Route path="/admin/dashboard/municipality/:id" element={<MunicipalityDashboard />} />
                     <Route path="/admin/dashboard/village/:id" element={<VillageDashboard />} />
 
                     <Route path="/admin/assign-admin" element={<AssignAdmin />} />
@@ -100,6 +103,7 @@ function App() {
                     <Route path="/admin/settings" element={<AdminVillageSettings />} />
                     <Route path="/admin/help" element={<AdminHelpSupport />} />
                     <Route path="/admin/notifications" element={<AdminNotifications />} />
+                    <Route path="/admin/carousel" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><CarouselManagement /></ProtectedRoute>} />
                     <Route path="/admin/members/:id" element={<MemberRegistration />} />
                     <Route path="/admin/members/edit/:id" element={<MemberRegistration />} />
                 </Route>

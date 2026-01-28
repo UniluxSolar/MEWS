@@ -19,7 +19,7 @@ const LocationSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['STATE', 'DISTRICT', 'MANDAL', 'VILLAGE'],
+        enum: ['STATE', 'DISTRICT', 'CONSTITUENCY', 'MANDAL', 'VILLAGE', 'MUNICIPALITY', 'WARD'],
         required: true
     },
     parent: {

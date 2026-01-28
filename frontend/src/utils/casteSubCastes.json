@@ -1,4 +1,91 @@
 {
+    "Arya Vysya": [
+        "Arya Vysya"
+    ],
+    "Banjara (Lambada / Sugali)": [
+        "Banjara",
+        "Lambada",
+        "Sugali"
+    ],
+    "Bestha": [
+        "Bestha",
+        "Gangaputra"
+    ],
+    "Brahmin": [
+        "Brahmin",
+        "Madhwa Brahmin",
+        "Smartha Brahmin",
+        "Vaidiki Brahmin"
+    ],
+    "Chenchu": [
+        "Chenchu"
+    ],
+    "Devanga": [
+        "Devanga"
+    ],
+    "Golla (Yadava)": [
+        "Golla",
+        "Yadava"
+    ],
+    "Gond": [
+        "Gond",
+        "Maria Gond",
+        "Raj Gond"
+    ],
+    "Goud": [
+        "Ediga",
+        "Goud"
+    ],
+    "Jain": [
+        "Digambara",
+        "Jain",
+        "Shwetambara"
+    ],
+    "Kamma": [
+        "Kamma"
+    ],
+    "Kapu": [
+        "Kapu"
+    ],
+    "Kayastha": [
+        "Kayastha"
+    ],
+    "Kolam": [
+        "Kolam"
+    ],
+    "Konda Dora": [
+        "Konda Dora"
+    ],
+    "Kondareddi": [
+        "Kondareddi"
+    ],
+    "Koya": [
+        "Koya",
+        "Koya Dora"
+    ],
+    "Kummari": [
+        "Kummari"
+    ],
+    "Kuruma": [
+        "Kuruma"
+    ],
+    "Madiga": [
+        "Anamuk",
+        "Aremala",
+        "Arvamala",
+        "Bariki",
+        "Byagari",
+        "Chachandi",
+        "Chalavadi",
+        "Dhor",
+        "Gosangi",
+        "Haddi",
+        "Madiga",
+        "Masi"
+    ],
+    "Mahar": [
+        "Mahar"
+    ],
     "Mala": [
         "Aadi Andhra",
         "Aadi Dravida",
@@ -13,151 +100,64 @@
         "Malasale (Netakani)",
         "Mita Ayyalvar"
     ],
-    "Madiga": [
-        "Madiga",
-        "Dhor",
-        "Chalavadi",
-        "Gosangi",
-        "Byagari",
-        "Bariki",
-        "Haddi",
-        "Chachandi",
-        "Masi",
-        "Anamuk",
-        "Aremala",
-        "Arvamala"
+    "Mangali": [
+        "Mangali",
+        "Nai Brahmin"
+    ],
+    "Marwadi": [
+        "Marwadi"
+    ],
+    "Medari": [
+        "Medari"
+    ],
+    "Mudiraj": [
+        "Mudiraj",
+        "Mutrasi"
+    ],
+    "Munnur Kapu": [
+        "Munnur Kapu"
+    ],
+    "Naikpod": [
+        "Naikpod"
+    ],
+    "Padmashali": [
+        "Padmashali"
+    ],
+    "Pardhan": [
+        "Pardhan"
+    ],
+    "Perika": [
+        "Perika"
+    ],
+    "Rajaka (Chakali)": [
+        "Chakali",
+        "Rajaka"
+    ],
+    "Reddy": [
+        "Reddy"
     ],
     "Relli": [
         "Relli"
     ],
-    "Mahar": [
-        "Mahar"
+    "Sikh": [
+        "Sikh"
     ],
     "Thoti": [
         "Thoti",
         "Thoti (SC)",
         "Thoti (ST)"
     ],
-    "Banjara (Lambada / Sugali)": [
-        "Banjara",
-        "Lambada",
-        "Sugali"
-    ],
-    "Gond": [
-        "Gond",
-        "Raj Gond",
-        "Maria Gond"
-    ],
-    "Koya": [
-        "Koya",
-        "Koya Dora"
-    ],
-    "Kolam": [
-        "Kolam"
-    ],
-    "Chenchu": [
-        "Chenchu"
-    ],
-    "Kondareddi": [
-        "Kondareddi"
-    ],
-    "Konda Dora": [
-        "Konda Dora"
-    ],
-    "Naikpod": [
-        "Naikpod"
-    ],
-    "Pardhan": [
-        "Pardhan"
-    ],
-    "Yerukala": [
-        "Yerukala"
-    ],
-    "Golla (Yadava)": [
-        "Golla",
-        "Yadava"
-    ],
-    "Kuruma": [
-        "Kuruma"
-    ],
-    "Goud": [
-        "Goud",
-        "Ediga"
-    ],
-    "Mudiraj": [
-        "Mudiraj",
-        "Mutrasi"
-    ],
-    "Bestha": [
-        "Bestha",
-        "Gangaputra"
-    ],
-    "Rajaka (Chakali)": [
-        "Rajaka",
-        "Chakali"
-    ],
-    "Mangali": [
-        "Mangali",
-        "Nai Brahmin"
-    ],
-    "Kummari": [
-        "Kummari"
-    ],
     "Uppara": [
         "Uppara"
     ],
-    "Medari": [
-        "Medari"
-    ],
-    "Perika": [
-        "Perika"
-    ],
-    "Padmashali": [
-        "Padmashali"
-    ],
-    "Devanga": [
-        "Devanga"
-    ],
-    "Arya Vysya": [
-        "Arya Vysya"
-    ],
-    "Munnur Kapu": [
-        "Munnur Kapu"
-    ],
-    "Kapu": [
-        "Kapu"
-    ],
-    "Reddy": [
-        "Reddy"
+    "Veera Shaiva Lingayat": [
+        "Lingayat",
+        "Veera Shaiva"
     ],
     "Velama": [
         "Velama"
     ],
-    "Kamma": [
-        "Kamma"
-    ],
-    "Brahmin": [
-        "Brahmin",
-        "Smartha Brahmin",
-        "Madhwa Brahmin",
-        "Vaidiki Brahmin"
-    ],
-    "Veera Shaiva Lingayat": [
-        "Veera Shaiva",
-        "Lingayat"
-    ],
-    "Jain": [
-        "Jain",
-        "Digambara",
-        "Shwetambara"
-    ],
-    "Kayastha": [
-        "Kayastha"
-    ],
-    "Marwadi": [
-        "Marwadi"
-    ],
-    "Sikh": [
-        "Sikh"
+    "Yerukala": [
+        "Yerukala"
     ]
 }
