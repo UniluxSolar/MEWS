@@ -57,7 +57,14 @@ const UserSchema = new mongoose.Schema({
     // OTP Fields for Admin Login
     otpHash: String,
     otpExpires: Date,
-    otpLastSent: Date
+    otpLastSent: Date,
+
+    // MPIN Fields
+    mpinHash: { type: String },
+    mpinLockedUntil: { type: Date },
+    mpinFailedAttempts: { type: Number, default: 0 },
+    isMpinEnabled: { type: Boolean, default: false },
+    deviceId: { type: String } // For binding MPIN to a specific device
 }, {
     timestamps: true
 });

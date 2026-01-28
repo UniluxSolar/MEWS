@@ -53,6 +53,8 @@ import TermsAndConditions from './pages/TermsAndConditions';
 import CampaignDetails from './pages/CampaignDetails';
 import MemberApplicationView from './pages/MemberApplicationView';
 import MemberIDCardView from './pages/MemberIDCardView';
+import MpinSetup from './pages/MpinSetup';
+import MpinLogin from './pages/MpinLogin';
 
 const ThemeInitializer = () => {
     useEffect(() => {
@@ -112,10 +114,14 @@ function App() {
                 <Route path="/benefits" element={<div className="p-10 text-center">Benefits Page Coming Soon</div>} />
                 <Route path="/donate" element={<div className="p-10 text-center">Donate Page Coming Soon</div>} />
 
+                {/* MPIN Routes */}
+                <Route path="/mpin/login" element={<MpinLogin />} />
+
                 {/* Dashboard Area - Protected (Member & Institution & Admins) */}
                 <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['MEMBER', 'INSTITUTION', 'SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'ADMIN']} />}>
                     <Route element={<DashboardLayout />}>
                         <Route index element={<DashboardHome />} />
+                        <Route path="mpin/setup" element={<MpinSetup />} />
                         <Route path="applications" element={<MyApplications />} />
                         <Route path="applications/new" element={<NewApplication />} />
                         <Route path="services" element={<MEWSServices />} />

@@ -25,6 +25,13 @@ const InstitutionSchema = new mongoose.Schema({
     otpExpires: { type: Date },
     otpLastSent: { type: Date },
 
+    // MPIN Fields
+    mpinHash: { type: String },
+    mpinLockedUntil: { type: Date },
+    mpinFailedAttempts: { type: Number, default: 0 },
+    isMpinEnabled: { type: Boolean, default: false },
+    deviceId: { type: String },
+
     // Verification
     verificationStatus: {
         type: String,

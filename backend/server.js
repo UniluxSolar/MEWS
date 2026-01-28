@@ -274,7 +274,13 @@ const startServer = async () => {
     console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
     console.log(`PORT: ${PORT}`);
     console.log(`MONGO_URI Provided: ${!!process.env.MONGO_URI}`);
-    console.log(`GCS_CREDENTIALS Provided: ${!!process.env.GCS_CREDENTIALS}`);
+    const localKey = path.join(__dirname, 'gcp-key.json');
+    const altKey = path.join(__dirname, 'gcs-key.json');
+    const hasGcsKeyFile = fs.existsSync(localKey) || fs.existsSync(altKey);
+    const activeKeyPath = process.env.GCS_KEYFILE_PATH || (fs.existsSync(localKey) ? localKey : (fs.existsSync(altKey) ? altKey : 'None'));
+
+    console.log(`GCS Configured: ${!!process.env.GCS_CREDENTIALS || hasGcsKeyFile} (Env: ${!!process.env.GCS_CREDENTIALS}, File: ${hasGcsKeyFile})`);
+    console.log(`GCS Key Path: ${activeKeyPath}`);
     console.log('-----------------------------');
 
     try {

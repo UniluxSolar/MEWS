@@ -193,11 +193,19 @@ const MemberSchema = new mongoose.Schema({
     }],
     // K1. Family Linking End (Already closed in line 165)
 
-    // L. Authentication (OTP)
+    // M. Role & Permissions (Unified Access)
+    // L. Authentication (OTP & MPIN)
     otpHash: { type: String },
     otpExpires: { type: Date },
     otpLastSent: { type: Date },
     isPhoneVerified: { type: Boolean, default: false },
+
+    // MPIN Fields
+    mpinHash: { type: String },
+    mpinLockedUntil: { type: Date },
+    mpinFailedAttempts: { type: Number, default: 0 },
+    isMpinEnabled: { type: Boolean, default: false },
+    deviceId: { type: String }, // For binding MPIN to a specific device
 
     // M. Role & Permissions (Unified Access)
     role: {
