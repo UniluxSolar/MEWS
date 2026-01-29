@@ -58,8 +58,9 @@ const MpinLogin = () => {
             localStorage.setItem('memberInfo', JSON.stringify(data)); // Legacy support maybe?
 
             // Redirect based on role
-            if (data.role === 'MEMBER') navigate('/member-dashboard');
-            else navigate('/admin-dashboard');
+            // Redirect based on role
+            if (data.role === 'MEMBER' || data.role === 'INSTITUTION') navigate('/dashboard');
+            else navigate('/admin/dashboard');
 
         } catch (err) {
             setError(err.response?.data?.message || 'Login Failed');

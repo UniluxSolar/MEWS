@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaChevronDown, FaCheck, FaTimes } from 'react-icons/fa';
 
-const MultiSelect = ({ options, selected = [], onChange, placeholder = "Select...", label }) => {
+const MultiSelect = ({ options, selected = [], onChange, placeholder = "Select...", label, disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -17,6 +17,7 @@ const MultiSelect = ({ options, selected = [], onChange, placeholder = "Select..
     }, []);
 
     const toggleOption = (option) => {
+        if (disabled) return;
         let newSelected;
         if (selected.includes(option)) {
             newSelected = selected.filter(item => item !== option);
@@ -28,15 +29,16 @@ const MultiSelect = ({ options, selected = [], onChange, placeholder = "Select..
 
     const clearSelection = (e) => {
         e.stopPropagation();
+        if (disabled) return;
         onChange([]);
     };
 
     return (
-        <div className="relative" ref={dropdownRef}>
+        <div className={`relative ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`} ref={dropdownRef}>
             {label && <label className="block text-xs font-bold text-slate-600 mb-1.5">{label}</label>}
             <div
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-slate-700 cursor-pointer flex justify-between items-center hover:border-blue-400 focus:border-blue-500 transition shadow-sm"
-                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full bg-slate-50 border border-slate-200 rounded-lg py-2.5 px-3 text-sm text-slate-700 flex justify-between items-center shadow-sm ${disabled ? 'pointer-events-none bg-slate-100' : 'cursor-pointer hover:border-blue-400 focus:border-blue-500 transition'}`}
+                onClick={() => !disabled && setIsOpen(!isOpen)}
             >
                 <div className="flex-1 truncate">
                     {selected.length === 0 ? (
@@ -58,7 +60,7 @@ const MultiSelect = ({ options, selected = [], onChange, placeholder = "Select..
                     )}
                 </div>
                 <div className="flex items-center gap-2 ml-2">
-                    {selected.length > 0 && (
+                    {selected.length > 0 && !disabled && (
                         <button
                             onClick={clearSelection}
                             className="text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-200 transaction"
@@ -70,7 +72,7 @@ const MultiSelect = ({ options, selected = [], onChange, placeholder = "Select..
                 </div>
             </div>
 
-            {isOpen && (
+            {isOpen && !disabled && (
                 <div className="absolute z-30 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
                     {options.length === 0 ? (
                         <div className="p-3 text-xs text-slate-400 text-center">No options available</div>

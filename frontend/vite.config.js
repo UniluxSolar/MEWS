@@ -1,16 +1,20 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [react()],
+    plugins: [
+        react(),
+        nodePolyfills({
+            // Whether to polyfill `node:` protocol imports.
+            protocolImports: true,
+        }),
+    ],
     resolve: {
         alias: {
-            stream: 'stream-browserify',
-            buffer: 'buffer',
-            events: 'events',
-            util: 'util',
-            process: 'process/browser',
+            // Aliases handled by nodePolyfills are removed.
+            // Keeping them might conflict or be redundant.
         },
     },
     server: {
@@ -28,5 +32,8 @@ export default defineConfig({
                 secure: false,
             }
         }
+    },
+    optimizeDeps: {
+        include: ['xlsx-js-style']
     }
 })

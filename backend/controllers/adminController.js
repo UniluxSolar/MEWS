@@ -524,40 +524,25 @@ const getVillageSettings = asyncHandler(async (req, res) => {
         let municipality = null;
         let village = null;
 
-        if (loc.type === 'STATE') {
-            state = loc;
-        } else if (loc.type === 'DISTRICT') {
-            district = loc;
-            if (loc.parent) {
-                state = await Location.findById(loc.parent);
-            }
-        } else if (loc.type === 'MUNICIPALITY') {
-            municipality = loc;
-            if (loc.parent) {
-                district = await Location.findById(loc.parent);
-                if (district && district.parent) {
-                    state = await Location.findById(district.parent);
-                }
-            }
-        } else if (loc.type === 'MANDAL') {
-            mandal = loc;
-            if (loc.parent) {
-                district = await Location.findById(loc.parent);
-                if (district && district.parent) {
-                    state = await Location.findById(district.parent);
-                }
-            }
-        } else if (loc.type === 'VILLAGE') {
-            village = loc;
-            if (loc.parent) {
-                mandal = await Location.findById(loc.parent);
-                if (mandal && mandal.parent) {
-                    district = await Location.findById(mandal.parent);
-                    if (district && district.parent) {
-                        state = await Location.findById(district.parent);
-                    }
-                }
-            }
+        // Helper to map ancestor array to variables
+        const mapLocation = (l) => {
+            if (l.type === 'STATE') state = l;
+            if (l.type === 'DISTRICT') district = l;
+            if (l.type === 'MANDAL') mandal = l;
+            if (l.type === 'MUNICIPALITY') municipality = l;
+            if (l.type === 'VILLAGE') village = l;
+        };
+
+        // Map the current location
+        mapLocation(loc);
+
+        // Map ancestors
+        if (loc.ancestors && loc.ancestors.length > 0) {
+            loc.ancestors.forEach(a => {
+                // Ancestors in DB are { locationId, name, type }
+                // We map them to the same structure expected by UI (name property is key)
+                mapLocation(a);
+            });
         }
 
         return { village, mandal, municipality, district, state };

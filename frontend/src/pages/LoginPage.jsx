@@ -140,7 +140,7 @@ const LoginPage = () => {
             localStorage.setItem('savedUser', JSON.stringify(userToSave));
 
             // Navigate to Dashboard
-            const target = (data.role === 'MEMBER' || data.role === 'INSTITUTION') ? '/member-dashboard' : '/admin-dashboard';
+            const target = (data.role === 'MEMBER' || data.role === 'INSTITUTION') ? '/dashboard' : '/admin/dashboard';
             navigate(target, { replace: true });
 
         } else {
@@ -157,7 +157,7 @@ const LoginPage = () => {
                 localStorage.setItem('savedUser', JSON.stringify(userToSave));
 
                 // Navigate to Dashboard
-                const target = (data.role === 'MEMBER' || data.role === 'INSTITUTION') ? '/member-dashboard' : '/admin-dashboard';
+                const target = (data.role === 'MEMBER' || data.role === 'INSTITUTION') ? '/dashboard' : '/admin/dashboard';
                 navigate(target, { replace: true });
 
             } else {

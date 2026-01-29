@@ -40,7 +40,7 @@ const InstitutionLoginPage = () => {
 
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
-    const redirectPath = queryParams.get('redirect') || '/dashboard/profile';
+    const redirectPath = queryParams.get('redirect') || '/dashboard';
 
     const handleSendOTP = async (e) => {
         e.preventDefault();
@@ -72,7 +72,12 @@ const InstitutionLoginPage = () => {
             const { data } = await API.post('/auth/verify-otp', { mobile, otp, userType: 'INSTITUTION' });
             localStorage.setItem('adminInfo', JSON.stringify(data)); // Store member info as adminInfo for compatibility
 
-            setPendingNavigation(redirectPath);
+            if (data.isMpinEnabled) {
+                setPendingNavigation(redirectPath === '/dashboard/profile' ? '/dashboard' : redirectPath);
+            } else {
+                setPendingNavigation('/dashboard/mpin/setup');
+            }
+
             setIsPopupOpen(true);
         } catch (error) {
             alert(error.response?.data?.message || 'Invalid OTP');

@@ -39,6 +39,10 @@ const AdminVillageSettings = () => {
                 setPageTitle('Mandal Settings');
                 setPageSubtitle('Manage configuration and preferences for your mandal.');
                 setLocationFieldLabel('Mandal Name');
+            } else if (role === 'MUNICIPALITY_ADMIN') {
+                setPageTitle('Municipality Settings');
+                setPageSubtitle('Manage configuration and preferences for your municipality.');
+                setLocationFieldLabel('Municipality Name');
             } else if (role === 'DISTRICT_ADMIN') {
                 setPageTitle('District Settings');
                 setPageSubtitle('Manage configuration and preferences for your district.');
@@ -86,8 +90,9 @@ const AdminVillageSettings = () => {
                 // Set initial location field value based on role
                 if (adminRole === 'VILLAGE_ADMIN') setLocationFieldValue(data.villageName);
                 else if (adminRole === 'MANDAL_ADMIN') setLocationFieldValue(data.mandal);
+                else if (adminRole === 'MUNICIPALITY_ADMIN') setLocationFieldValue(data.municipalityName);
                 else if (adminRole === 'DISTRICT_ADMIN') setLocationFieldValue(data.district);
-                else if (adminRole === 'STATE_ADMIN') setLocationFieldValue(data.state || 'Telangana');
+                else if (adminRole === 'STATE_ADMIN') setLocationFieldValue(data.stateName || 'Telangana');
 
             } catch (error) {
                 console.error("Failed to fetch settings", error);
@@ -144,7 +149,7 @@ const AdminVillageSettings = () => {
                             <>
                                 <Link to="/admin/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
                                 <span className="opacity-70">&gt;</span>
-                                <span>Settings</span>
+                                <span className="text-white font-medium">Settings</span>
                             </>
                         }
                     />
@@ -199,14 +204,16 @@ const AdminVillageSettings = () => {
                                                 </div>
 
                                                 {/* Conditional Grid Section */}
-                                                {(adminRole === 'VILLAGE_ADMIN' || adminRole === 'MANDAL_ADMIN') && (
+                                                {(adminRole === 'VILLAGE_ADMIN' || adminRole === 'MANDAL_ADMIN' || adminRole === 'MUNICIPALITY_ADMIN') && (
                                                     <div className="grid grid-cols-2 gap-6">
                                                         {adminRole === 'VILLAGE_ADMIN' && (
                                                             <div>
-                                                                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase">Mandal</label>
+                                                                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase">
+                                                                    {settings.municipalityName ? 'Municipality' : 'Mandal'}
+                                                                </label>
                                                                 <input
                                                                     type="text"
-                                                                    value={settings.mandal}
+                                                                    value={settings.municipalityName || settings.mandal}
                                                                     disabled
                                                                     className="w-full bg-gray-100 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed"
                                                                 />

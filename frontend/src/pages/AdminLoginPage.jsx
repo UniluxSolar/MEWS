@@ -78,7 +78,17 @@ const AdminLoginPage = () => {
 
             localStorage.setItem('adminInfo', JSON.stringify(data));
 
-            setPendingNavigation('/admin/dashboard');
+            localStorage.setItem('adminInfo', JSON.stringify(data));
+
+            if (data.isMpinEnabled) {
+                // MPIN already set, go to dashboard
+                setPendingNavigation('/admin/dashboard');
+            } else {
+                // Determine setup path. MpinSetup is at /dashboard/mpin/setup
+                // Note: /dashboard is protected. Admin has access.
+                setPendingNavigation('/dashboard/mpin/setup');
+            }
+
             setIsPopupOpen(true); // Open popup
         } catch (err) {
             setFeedbackMessage({ type: 'error', text: err.response?.data?.message || 'Invalid OTP' });

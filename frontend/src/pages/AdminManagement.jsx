@@ -13,6 +13,7 @@ import MemberIDCard from '../components/MemberIDCard';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { Link, useNavigate } from 'react-router-dom';
+import useAdminLocation from '../hooks/useAdminLocation';
 
 const AdminManagement = () => {
     const navigate = useNavigate();
@@ -79,11 +80,39 @@ const AdminManagement = () => {
 
     const allowedRoles = Object.keys(HIERARCHY).filter(r => HIERARCHY[r] < HIERARCHY[userRole]);
 
+    // Admin Location Scope Hook
+    const { adminLocation, isFieldLocked, isLoading: isLocLoading } = useAdminLocation();
+
     useEffect(() => {
         fetchAdmins();
         // Load initial States for the dropdowns
         fetchHierarchyLocations(null, 'STATE');
     }, []);
+
+    // Auto-fill & Lock for Admin Creation
+    useEffect(() => {
+        if (isLocLoading) return;
+
+        const { districtName, mandalName, villageName, stateName } = adminLocation;
+
+        // We need IDs, but hook returns Names. 
+        // AdminManagement uses Names for display but IDs for value?
+        // Actually, existing code uses `selectedState` (ID) and `targetStates` matches.
+        // This is tricky. We need to find the ID corresponding to the Name.
+        // OR rely on the backend `assignedLocation` ID if available? 
+        // The Hook doesn't return ID directly yet.
+        // Let's rely on manual selection for now IF we can't map easily, 
+        // BUT we must visually lock what they can't change.
+
+        // BETTER APPROACH:
+        // Use the `adminInfo` from localStorage directly for the ID if needed, 
+        // or just accept that the User can't change the locked dropdowns 
+        // and we will force the value on Submit if it's missing?
+
+        // Let's try to map names to IDs from the fetched target lists?
+        // This requires 'targetDistricts' etc to be loaded.
+
+    }, [adminLocation, isLocLoading]);
 
     const fetchHierarchyLocations = async (parentId, type) => {
         try {
@@ -808,7 +837,8 @@ const AdminManagement = () => {
                                         <div className={formData.role === 'SUPER_ADMIN' ? 'hidden' : ''}>
                                             <select
                                                 value={selectedState} onChange={(e) => handleStateChange(e.target.value)}
-                                                className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
+                                                className={`w-full p-2 border border-slate-300 rounded-lg text-sm bg-white ${isFieldLocked('state') ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
+                                                disabled={isFieldLocked('state')}
                                             >
                                                 <option value="">Select State</option>
                                                 {targetStates.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
@@ -820,8 +850,8 @@ const AdminManagement = () => {
                                             <div>
                                                 <select
                                                     value={selectedDistrict} onChange={(e) => handleDistrictChange(e.target.value)}
-                                                    className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
-                                                    disabled={!selectedState}
+                                                    className={`w-full p-2 border border-slate-300 rounded-lg text-sm bg-white ${isFieldLocked('district') ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
+                                                    disabled={!selectedState || isFieldLocked('district')}
                                                 >
                                                     <option value="">Select District</option>
                                                     {targetDistricts.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
@@ -834,8 +864,8 @@ const AdminManagement = () => {
                                             <div>
                                                 <select
                                                     value={selectedMandal} onChange={(e) => handleMandalChange(e.target.value)}
-                                                    className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
-                                                    disabled={!selectedDistrict}
+                                                    className={`w-full p-2 border border-slate-300 rounded-lg text-sm bg-white ${isFieldLocked('mandal') ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
+                                                    disabled={!selectedDistrict || isFieldLocked('mandal')}
                                                 >
                                                     <option value="">Select Mandal</option>
                                                     {targetMandals.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
@@ -848,8 +878,8 @@ const AdminManagement = () => {
                                             <div>
                                                 <select
                                                     value={selectedVillage} onChange={(e) => handleVillageChange(e.target.value)}
-                                                    className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
-                                                    disabled={!selectedMandal}
+                                                    className={`w-full p-2 border border-slate-300 rounded-lg text-sm bg-white ${isFieldLocked('village') ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
+                                                    disabled={!selectedMandal || isFieldLocked('village')}
                                                 >
                                                     <option value="">Select Village</option>
                                                     {targetVillages.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}

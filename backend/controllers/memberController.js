@@ -638,7 +638,10 @@ const getMembers = asyncHandler(async (req, res) => {
                 } else if (query['address.district']) {
                     const isValid = await Location.findOne({ _id: query['address.district'], parent: stateId });
                     console.log(`[GET MEMBERS] STATE_ADMIN Check: District ${query['address.district']} under State ${stateId} -> ${isValid ? 'VALID' : 'INVALID'}`);
-                    if (!isValid) query['address.district'] = null;
+                    if (!isValid) {
+                        // STRICT BLOCK: Do not allow falling back to 'null' which might show unassigned members.
+                        query = { _id: null };
+                    }
                 } else {
                     const districts = await Location.find({ parent: stateId, type: 'DISTRICT' }).select('_id');
                     query['address.district'] = { $in: districts.map(d => d._id) };

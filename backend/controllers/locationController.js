@@ -21,8 +21,12 @@ const getLocations = asyncHandler(async (req, res) => {
         // If parent is not provided for sub-levels, we might return all (or limit).
     }
 
+    if (req.query.ancestor) {
+        query['ancestors.locationId'] = req.query.ancestor;
+    }
+
     // Special case: If nothing provided, maybe return States
-    if (!type && !parent) {
+    if (!type && !parent && !req.query.ancestor) {
         query.type = 'STATE';
     }
 

@@ -57,8 +57,17 @@ const MpinSetup = () => {
                 } catch (e) { /* ignore */ }
             }
 
+            // Determine redirect path based on role
+            let targetPath = '/dashboard';
+            try {
+                const info = JSON.parse(localStorage.getItem('adminInfo') || localStorage.getItem('memberInfo'));
+                if (info && (info.role === 'ADMIN' || info.role === 'SUPER_ADMIN' || info.role.includes('ADMIN'))) {
+                    targetPath = '/admin/dashboard';
+                }
+            } catch (e) { console.error(e); }
+
             setTimeout(() => {
-                navigate('/member-dashboard'); // Or back to wherever they came from
+                navigate(targetPath, { replace: true });
             }, 1500);
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to create MPIN');

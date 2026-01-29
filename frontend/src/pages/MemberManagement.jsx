@@ -16,6 +16,7 @@ import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import DashboardHeader from '../components/common/DashboardHeader';
 import MultiSelect from '../components/common/MultiSelect';
+import useAdminLocation from '../hooks/useAdminLocation';
 // Map Imports
 import { MapContainer, TileLayer, Marker, Tooltip, useMap, CircleMarker, Popup, LayersControl } from 'react-leaflet';
 import L from 'leaflet';
@@ -166,6 +167,8 @@ const MemberManagement = () => {
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState(localStorage.getItem('memberViewMode') || 'table'); // 'table', 'cards', 'map'
 
+    const [currentPage, setCurrentPage] = useState(1);
+
 
 
     // Persist View Mode
@@ -236,18 +239,33 @@ const MemberManagement = () => {
     const [activeFilters, setActiveFilters] = useState([]);
     const [activeMenuId, setActiveMenuId] = useState(null);
 
-    // Selection Logic
-    const [selectedMemberIds, setSelectedMemberIds] = useState([]);
+    // Admin Location Scope
+    const { adminLocation, isFieldLocked, isLoading: isLocLoading } = useAdminLocation();
 
+    // Initialize Auto-Select Filters based on Admin Location
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (activeMenuId && !event.target.closest('.action-menu-container')) {
-                setActiveMenuId(null);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => { document.removeEventListener('mousedown', handleClickOutside); };
-    }, [activeMenuId]);
+        if (isLocLoading) return;
+
+        // District Lock
+        if (isFieldLocked('district') && adminLocation.districtName) {
+            setSelectedDistricts([adminLocation.districtName]);
+        }
+
+        // Mandal/Municipality Lock
+        if (isFieldLocked('mandal') || isFieldLocked('municipality')) {
+            const mandal = adminLocation.mandalName || adminLocation.municipalityName;
+            if (mandal) setSelectedMandals([mandal]);
+        }
+
+        // Village/Ward Lock
+        if (isFieldLocked('village') || isFieldLocked('ward')) {
+            const village = adminLocation.villageName || adminLocation.wardName;
+            if (village) setSelectedVillages([village]);
+        }
+    }, [adminLocation, isLocLoading]);
+
+    // Apply filters whenever dependencies change
+
 
     const toggleMenu = (id) => {
         if (activeMenuId === id) setActiveMenuId(null);
@@ -293,8 +311,10 @@ const MemberManagement = () => {
     }, [location.key]);
 
     // Pagination
-    const [currentPage, setCurrentPage] = useState(1);
+
     const [itemsPerPage, setItemsPerPage] = useState(20);
+
+
 
     const filteredMembers = useMemo(() => {
         const safeMembers = Array.isArray(members) ? members : [];
@@ -328,46 +348,45 @@ const MemberManagement = () => {
                 if (!selectedDistricts.some(d => d.toLowerCase().trim() === districtName)) return false;
             }
 
+            // Age Range Filter
             if (selectedAgeRanges.length > 0) {
-                // Check if member matches ANY of the selected age ranges
-                const age = parseInt(member.age) || 0;
-                const matchesAnyRange = selectedAgeRanges.some(range => {
-                    if (range.includes('+')) {
-                        const min = parseInt(range);
-                        return age >= min;
-                    }
+                const age = Number(member.age);
+                const inRange = selectedAgeRanges.some(range => {
                     const [min, max] = range.split('-').map(Number);
+                    if (range.includes('+')) return age >= min;
                     return age >= min && age <= max;
                 });
-                if (!matchesAnyRange) return false;
+                if (!inRange) return false;
             }
 
+            // Category (Occupation) Filter
             if (selectedCategories.length > 0) {
                 const job = (member.occupation || '').toLowerCase().trim();
-                // Check if member matches ANY selected category (case-insensitive strict check)
-                const matchesAnyCategory = selectedCategories.some(cat => {
-                    const filterVal = cat.toLowerCase().trim();
-                    if (cat === 'Private Job') {
-                        return job.includes('private');
-                    }
-                    return job === filterVal;
-                });
-                if (!matchesAnyCategory) return false;
+                // Simple keyword match or exact match depending on UI
+                if (!selectedCategories.some(c => job.includes(c.toLowerCase()))) return false;
             }
 
-            if (selectedBloodGroups.length > 0) {
-                const memberBlood = (member.bloodGroup || 'Unknown');
-                if (!selectedBloodGroups.includes(memberBlood)) return false;
-            }
-
+            // Gender Filter
             if (!selectedGenders.All) {
-                const gender = (member.gender || '').toLowerCase();
-                if (selectedGenders.Male && gender === 'male') return true;
-                if (selectedGenders.Female && gender === 'female') return true;
-                if (selectedGenders.Other && gender !== 'male' && gender !== 'female') return true;
-                return false;
+                const g = (member.gender || '').toLowerCase();
+                if (selectedGenders.Male && g !== 'male') return false;
+                if (selectedGenders.Female && g !== 'female') return false;
+                if (selectedGenders.Other && g !== 'other') return false;
+                // If specific gender selected, ensure match. Logic above handles explicit exclusion?
+                // Better logic: if NOT All, check if current gender IS selected.
+                const isSelected = (selectedGenders.Male && g === 'male') ||
+                    (selectedGenders.Female && g === 'female') ||
+                    (selectedGenders.Other && g === 'other');
+                if (!isSelected) return false;
             }
 
+            // Blood Group Filter
+            if (selectedBloodGroups.length > 0) {
+                const bg = (member.bloodGroup || '').replace(' ', ''); // normalize A + -> A+
+                if (!selectedBloodGroups.some(g => g.replace(' ', '') === bg)) return false;
+            }
+
+            // Marital Status
             if (selectedMaritalStatuses.length > 0) {
                 const marital = (member.maritalStatus || 'Unmarried');
                 if (!selectedMaritalStatuses.some(s => s.toLowerCase() === marital.toLowerCase())) return false;
@@ -456,8 +475,8 @@ const MemberManagement = () => {
                         bValue = (b.occupation || '').toLowerCase();
                         break;
                     case 'family':
-                        aValue = a.familyDetails?.memberCount || 0;
-                        bValue = b.familyDetails?.memberCount || 0;
+                        aValue = a.familyDetails?.memberCount || (a.familyMembers?.length ? a.familyMembers.length + 1 : 1);
+                        bValue = b.familyDetails?.memberCount || (b.familyMembers?.length ? b.familyMembers.length + 1 : 1);
                         break;
                     case 'createdAt':
                         aValue = new Date(a.createdAt).getTime();
@@ -670,21 +689,27 @@ const MemberManagement = () => {
     };
 
     // Derived Data for Filters
+    // Helper to normalize text (Title Case + Trim)
+    const normalizeLocation = (name) => {
+        if (!name) return null;
+        return name.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    };
+
     const districts = useMemo(() => {
         const safeMembers = Array.isArray(members) ? members : [];
-        const unique = [...new Set(safeMembers.map(m => getLocationName(m.address?.district)).filter(Boolean))];
+        const unique = [...new Set(safeMembers.map(m => normalizeLocation(getLocationName(m.address?.district))).filter(Boolean))];
         return unique.sort((a, b) => a.localeCompare(b));
     }, [members]);
 
     const mandals = useMemo(() => {
         const safeMembers = Array.isArray(members) ? members : [];
-        const unique = [...new Set(safeMembers.map(m => getLocationName(m.address?.mandal)).filter(Boolean))];
+        const unique = [...new Set(safeMembers.map(m => normalizeLocation(getLocationName(m.address?.mandal))).filter(Boolean))];
         return unique.sort((a, b) => a.localeCompare(b));
     }, [members]);
 
     const villages = useMemo(() => {
         const safeMembers = Array.isArray(members) ? members : [];
-        const unique = [...new Set(safeMembers.map(m => getLocationName(m.address?.village)).filter(Boolean))];
+        const unique = [...new Set(safeMembers.map(m => normalizeLocation(getLocationName(m.address?.village))).filter(Boolean))];
         return unique.sort((a, b) => a.localeCompare(b));
     }, [members]);
 
@@ -806,6 +831,7 @@ const MemberManagement = () => {
                                         selected={selectedDistricts}
                                         onChange={setSelectedDistricts}
                                         placeholder="Select Districts"
+                                        disabled={isFieldLocked('district')}
                                     />
                                 </div>
                                 <div>
@@ -815,6 +841,7 @@ const MemberManagement = () => {
                                         selected={selectedMandals}
                                         onChange={setSelectedMandals}
                                         placeholder="Select Mandals"
+                                        disabled={isFieldLocked('mandal') || isFieldLocked('municipality')}
                                     />
                                 </div>
                                 <div>
@@ -824,6 +851,7 @@ const MemberManagement = () => {
                                         selected={selectedVillages}
                                         onChange={setSelectedVillages}
                                         placeholder="Select Villages"
+                                        disabled={isFieldLocked('village') || isFieldLocked('ward')}
                                     />
                                 </div>
                                 <div>
@@ -940,7 +968,7 @@ const MemberManagement = () => {
                                                                 <td className="px-4 py-3 text-xs text-slate-600">{member.age}</td>
                                                                 <td className="px-4 py-3 text-xs text-slate-600">{member.gender}</td>
                                                                 <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide truncate inline-block max-w-full ${(member.occupation || '').toLowerCase().includes('farmer') ? 'bg-green-50 text-green-600' : (member.occupation || '').toLowerCase().includes('student') ? 'bg-blue-50 text-blue-600' : (member.occupation || '').toLowerCase().includes('business') ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>{member.occupation || 'Member'}</span></td>
-                                                                <td className="px-4 py-3 text-xs text-slate-600 text-center">{member.familyDetails?.memberCount || 0}</td>
+                                                                <td className="px-4 py-3 text-xs text-slate-600 text-center">{member.familyDetails?.memberCount || (member.familyMembers?.length ? member.familyMembers.length + 1 : 1)}</td>
                                                                 <td className="px-4 py-3 text-xs text-slate-500">{new Date(member.createdAt).toLocaleDateString()}</td>
                                                                 <td className="px-4 py-3 text-center relative action-menu-container">
                                                                     <button onClick={(e) => { e.stopPropagation(); toggleMenu(member._id); }} className="p-2 text-slate-400 hover:text-blue-600 transition rounded-full hover:bg-slate-100"><FaEllipsisV /></button>

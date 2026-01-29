@@ -30,6 +30,7 @@
         "slick-carousel": "^1.8.1",
         "stream-browserify": "^3.0.0",
         "util": "^0.12.5",
+        "vite-plugin-node-polyfills": "^0.25.0",
         "xlsx": "^0.18.5",
         "xlsx-js-style": "^1.2.0"
     },

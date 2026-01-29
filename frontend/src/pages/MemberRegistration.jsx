@@ -19,11 +19,12 @@ import {
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { getPincode } from '../utils/pincodeData';
-import { districtConstituencies, allConstituencies, constituencyMandals } from '../utils/constituencyData';
+
 import subCastes from '../utils/subCastes.json';
 import partnerCastes from '../utils/partnerCastes.json';
 import casteSubCastes from '../utils/casteSubCastes.json';
 import { MemberDocument } from './MemberDocument';
+import useAdminLocation from '../hooks/useAdminLocation';
 
 
 
@@ -91,10 +92,10 @@ const FormSelect = ({ label, options, required = false, colSpan = "col-span-1", 
                 className={`w-full bg-white border ${error ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all appearance-none cursor-pointer ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
             >
                 <option value="">Select {label}</option>
-                {options.map(opt => {
+                {options.map((opt, index) => {
                     const optionValue = typeof opt === 'object' ? opt.value : opt;
                     const optionLabel = typeof opt === 'object' ? opt.label : opt;
-                    return <option key={optionValue} value={optionValue}>{optionLabel}</option>
+                    return <option key={`${optionValue}-${index}`} value={optionValue}>{optionLabel}</option>
                 })}
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
@@ -400,8 +401,7 @@ const MemberRegistration = () => {
     const [files, setFiles] = useState({});
     const [loading, setLoading] = useState(false);
     const [sameAsPermanent, setSameAsPermanent] = useState(false);
-    const [userRole, setUserRole] = useState('');
-    const [adminLocation, setAdminLocation] = useState({});
+    // State for Admin Location & Role (Removed - using Hook)
     const [errors, setErrors] = useState({});
 
     // Family Member State
@@ -833,93 +833,7 @@ const MemberRegistration = () => {
     // const filterMandalsByConstituency... (Defined above)
 
     // Explicit Handlers for Constituency Change (Replacing useEffect for better control)
-    const handlePresentConstituencyChange = async (e) => {
-        const constituencyId = e.target.value;
-        // Find name for display/form data if needed, though ID is primary
-        const constituency = presentConstituencies.find(c => c._id === constituencyId);
-        const constituencyName = constituency?.name || '';
 
-        console.log(`[UI] Present Constituency Selected: ${constituencyId} (${constituencyName})`);
-
-        setFormData(prev => ({
-            ...prev,
-            presentConstituency: constituencyId,
-            // Reset dependent fields
-            presentMandal: '',
-            presentMandalName: '',
-            presentVillage: '',
-            presentVillageName: '',
-            presentMunicipality: '',
-            presentWardNumber: ''
-        }));
-
-        setMandals([]);
-        setMunicipalities([]);
-        setAllMandals([]);
-        setAllMunicipalities([]);
-        setVillages([]);
-
-        if (constituencyId) {
-            try {
-                const { data } = await API.get(`/locations?parent=${constituencyId}`);
-
-                // Split Mandals and Municipalities
-                const mList = data.filter(d => d.type === 'MANDAL');
-                const muniList = data.filter(d => d.type === 'MUNICIPALITY');
-
-                setAllMandals(mList);
-                setMandals(mList);
-
-                setAllMunicipalities(muniList);
-                setMunicipalities(muniList);
-            } catch (error) {
-                console.error("[API] Error fetching constituency children", error);
-            }
-        }
-    };
-
-    const handlePermConstituencyChange = async (e) => {
-        const constituencyId = e.target.value;
-        const constituency = permConstituencies.find(c => c._id === constituencyId);
-        const constituencyName = constituency?.name || '';
-        console.log(`[UI] Perm Constituency Selected: ${constituencyId} (${constituencyName})`);
-
-        setFormData(prev => ({
-            ...prev,
-            permConstituency: constituencyId,
-            // Reset dependent fields
-            permMandal: '',
-            permMandalName: '',
-            permVillage: '',
-            permVillageName: '',
-            permMunicipality: '',
-            permWardNumber: ''
-        }));
-
-        setPermMandals([]);
-        setPermMunicipalities([]);
-        setAllPermMandals([]);
-        setAllPermMunicipalities([]);
-        setPermVillages([]);
-
-        if (constituencyId) {
-            try {
-                const { data } = await API.get(`/locations?parent=${constituencyId}`);
-
-                // Split Mandals and Municipalities
-                const mList = data.filter(d => d.type === 'MANDAL');
-                const muniList = data.filter(d => d.type === 'MUNICIPALITY');
-
-                setAllPermMandals(mList);
-                setPermMandals(mList);
-
-                setAllPermMunicipalities(muniList);
-                setPermMunicipalities(muniList);
-            } catch (error) {
-                console.error("[API] Error fetching perm constituency children", error);
-            }
-        }
-    };
 
     // Explicit handler for Job Category to reset Sub-Category
     const handleJobCategoryChange = (e) => {
@@ -936,22 +850,29 @@ const MemberRegistration = () => {
     useEffect(() => {
         const fetchDistricts = async () => {
             try {
+                console.log("[UI] Fetching States...");
                 // Get all states
                 const { data: states } = await API.get('/locations?type=STATE');
+                console.log("[UI] States fetched:", states);
 
-                // Find Telangana specifically
-                const telangana = states.find(s => s.name === 'Telangana');
+                // Find Telangana specifically (Robust Match)
+                const telangana = states.find(s => s.name.trim().toLowerCase() === 'telangana');
 
                 if (telangana) {
+                    console.log("[UI] Found Telangana:", telangana._id);
                     const { data: dists } = await API.get(`/locations?parent=${telangana._id}`);
+                    console.log(`[UI] Fetched ${dists.length} districts for Telangana`);
                     setDistricts(dists);
                 } else if (states.length > 0) {
+                    console.warn("[UI] Telangana not found! Falling back to first state:", states[0].name);
                     // Fallback to first state if Telangana not found (though it should be)
                     const { data: dists } = await API.get(`/locations?parent=${states[0]._id}`);
                     setDistricts(dists);
+                } else {
+                    console.error("[UI] No states found in DB!");
                 }
             } catch (error) {
-                console.error("Error fetching locations", error);
+                console.error("[UI] Error fetching locations", error);
             }
         };
         fetchDistricts();
@@ -996,8 +917,44 @@ const MemberRegistration = () => {
             }
         }
     };
+    // Handle Present Address Constituency Change
+    const handlePresentConstituencyChange = async (e) => {
+        const constituencyId = e.target.value;
+        const constName = presentConstituencies.find(c => c._id === constituencyId)?.name || '';
 
-    // Handle Present Address Mandal Change
+        setFormData(prev => ({
+            ...prev,
+            presentConstituency: constituencyId,
+            presentConstituencyName: constName,
+            presentMandal: '',
+            presentMandalName: '',
+            presentVillage: '',
+            presentVillageName: '',
+            presentMunicipality: '',
+            presentWardNumber: ''
+        }));
+
+        setMandals([]);
+        setMunicipalities([]);
+        setVillages([]);
+        setPresentWards([]);
+
+        if (constituencyId) {
+            try {
+                // Fetch Mandals (Direct relationship or children)
+                const { data: mData } = await API.get(`/locations?parent=${constituencyId}`);
+                setMandals(mData.filter(d => d.type === 'MANDAL')); // Filter just in case
+
+                // Fetch Municipalities (Descendants via ancestor query)
+                const { data: muniData } = await API.get(`/locations?type=MUNICIPALITY&ancestor=${constituencyId}`);
+                setMunicipalities(muniData);
+
+            } catch (error) {
+                console.error("Error fetching constituency children", error);
+            }
+        }
+    };
+
     const handleMandalChange = async (e) => {
         const mandalId = e.target.value;
         const mandalName = mandals && mandals.length > 0 ? (mandals.find(m => m._id === mandalId)?.name || '') : '';
@@ -1053,19 +1010,15 @@ const MemberRegistration = () => {
     const handlePermVillageChange = (e) => {
         const villageId = e.target.value;
         const village = (permVillages && permVillages.length > 0) ? permVillages.find(v => v._id === villageId) : null;
+        const villageName = village?.name || '';
 
         let code = village?.pincode || '';
 
         // Fallback if DB has no pincode
         if (!code && village && formData.permDistrict && formData.permMandal) {
             const dist = (districts && districts.length > 0) ? districts.find(d => d._id === formData.permDistrict) : null;
-
-            let mand = null;
-            if (sameAsPermanent) {
-                mand = (permMandals && permMandals.length > 0) ? permMandals.find(m => m._id === formData.permMandal) : null;
-            } else {
-                mand = (mandals && mandals.length > 0) ? mandals.find(m => m._id === formData.presentMandal) : null;
-            }
+            // Always look at Permanent Mandal for Permanent Pincode
+            const mand = (permMandals && permMandals.length > 0) ? permMandals.find(m => m._id === formData.permMandal) : null;
 
             if (dist && mand) {
                 code = getPincode(dist.name, mand.name, village.name, formData.permConstituency);
@@ -1075,6 +1028,7 @@ const MemberRegistration = () => {
         setFormData(prev => ({
             ...prev,
             permVillage: villageId,
+            permVillageName: villageName, // Store Name
             permPincode: code || prev.permPincode
         }));
     };
@@ -1084,11 +1038,20 @@ const MemberRegistration = () => {
         const districtId = e.target.value;
         const districtName = (districts && districts.length > 0) ? (districts.find(d => d._id === districtId)?.name || '') : '';
 
-        // Filter Constituencies
-        const relevantConstituencies = getConstituenciesForDistrict(districtName);
-        setPermConstituencies(relevantConstituencies);
-
-        setFormData(prev => ({ ...prev, permDistrict: districtId, permConstituency: '', permMandal: '', permVillage: '', permMunicipality: '', permWardNumber: '', permAreaType: 'Rural' }));
+        setFormData(prev => ({
+            ...prev,
+            permDistrict: districtId,
+            permDistrictName: districtName, // Store Name
+            permConstituency: '',
+            permMandal: '',
+            permMandalName: '',
+            permVillage: '',
+            permVillageName: '',
+            permMunicipality: '',
+            permWardNumber: '',
+            permAreaType: 'Rural'
+        }));
+        setPermConstituencies([]);
         setPermMandals([]);
         setPermVillages([]);
         setPermMunicipalities([]);
@@ -1096,13 +1059,24 @@ const MemberRegistration = () => {
         if (districtId) {
             try {
                 const { data } = await API.get(`/locations?parent=${districtId}`);
-                // Split Mandals and Municipalities
+
+                // Filter Constituencies
+                const constList = data.filter(d => d.type === 'CONSTITUENCY');
+                setPermConstituencies(constList);
+
+                // Split Mandals and Municipalities (though usually these are children of Constituency, 
+                // but keeping logic consistent if district direct children exist or are needed later)
+                // Actually, based on my previous fix, we fetch Mandals/Munis AFTER Constituency selection for cascading.
+                // But specifically for District change, we usually just fetch Constituencies.
+                // The previous code also fetched Mandals/Munis here? 
+                // Let's look at Lines 1114-1123 in original... it filtered MANDAL/MUNICIPALITY from District children.
+                // If the hierarchy is strict (District -> Constituency -> Mandal), then Mandals won't be direct children of District.
+                // But if they are, we keep them.
                 const mList = data.filter(d => d.type === 'MANDAL');
                 const muniList = data.filter(d => d.type === 'MUNICIPALITY');
 
                 setAllPermMandals(mList);
                 setPermMandals(mList);
-
                 setAllPermMunicipalities(muniList);
                 setPermMunicipalities(muniList);
             } catch (error) {
@@ -1111,11 +1085,60 @@ const MemberRegistration = () => {
         }
     };
 
-    // Handle Permanent Address Mandal Change
+    // Handle Permanent Address Constituency Change
+    const handlePermConstituencyChange = async (e) => {
+        const constituencyId = e.target.value;
+        const constName = permConstituencies.find(c => c._id === constituencyId)?.name || '';
+
+        setFormData(prev => ({
+            ...prev,
+            permConstituency: constituencyId,
+            permConstituencyName: constName,
+            permMandal: '',
+            permMandalName: '',
+            permVillage: '',
+            permVillageName: '',
+            permMunicipality: '',
+            permWardNumber: ''
+        }));
+
+        setPermMandals([]);
+        setAllPermMandals([]); // Assuming this tracks filtered list
+        setPermMunicipalities([]);
+        setAllPermMunicipalities([]);
+        setPermVillages([]);
+        setPermWards([]);
+
+        if (constituencyId) {
+            try {
+                // Fetch Mandals
+                const { data: mData } = await API.get(`/locations?parent=${constituencyId}`);
+                const mList = mData.filter(d => d.type === 'MANDAL');
+                setPermMandals(mList);
+                setAllPermMandals(mList);
+
+                // Fetch Municipalities
+                const { data: muniData } = await API.get(`/locations?type=MUNICIPALITY&ancestor=${constituencyId}`);
+                setPermMunicipalities(muniData);
+                setAllPermMunicipalities(muniData);
+
+            } catch (error) {
+                console.error("Error fetching perm constituency children", error);
+            }
+        }
+    };
+
     const handlePermMandalChange = async (e) => {
         const mandalId = e.target.value;
+        const mandalName = (permMandals && permMandals.length > 0) ? (permMandals.find(m => m._id === mandalId)?.name || '') : '';
 
-        setFormData(prev => ({ ...prev, permMandal: mandalId, permVillage: '' }));
+        setFormData(prev => ({
+            ...prev,
+            permMandal: mandalId,
+            permMandalName: mandalName, // Store Name
+            permVillage: '',
+            permVillageName: ''
+        }));
         setPermVillages([]);
 
         if (mandalId) {
@@ -1340,9 +1363,9 @@ const MemberRegistration = () => {
 
         if (checked) {
             // Copy Permanent to Present
-            const districtName = districts.find(d => d._id === formData.permDistrict)?.name || '';
-            const relevantConstituencies = getConstituenciesForDistrict(districtName);
-            setPresentConstituencies(relevantConstituencies);
+
+            // Copy Constituencies List
+            setPresentConstituencies(permConstituencies);
 
             // Copy lists
             setMandals(permMandals);
@@ -1364,54 +1387,8 @@ const MemberRegistration = () => {
 
     // Role Based Logic
     // Role Based Logic
-    useEffect(() => {
-        const info = localStorage.getItem('adminInfo');
-        if (info) {
-            const parsed = JSON.parse(info);
-            const role = parsed.role || '';
-            setUserRole(role);
-
-            // Fetch full location details if assignedLocation exists
-            if (parsed.assignedLocation) {
-                API.get(`/locations/${parsed.assignedLocation}`)
-                    .then(({ data: loc }) => {
-                        const newLocation = { districtName: '', mandalName: '', villageName: '' };
-
-                        // Map Based on Type
-                        if (loc.type === 'DISTRICT') newLocation.districtName = loc.name;
-                        if (loc.type === 'MANDAL') newLocation.mandalName = loc.name;
-                        if (loc.type === 'VILLAGE') newLocation.villageName = loc.name;
-
-                        // Map Ancestors
-                        if (loc.ancestors && Array.isArray(loc.ancestors)) {
-                            loc.ancestors.forEach(anc => {
-                                if (anc.type === 'DISTRICT') newLocation.districtName = anc.name;
-                                if (anc.type === 'MANDAL') newLocation.mandalName = anc.name;
-                            });
-                        }
-
-                        console.log("[Auto-Fill] Resolved Admin Location:", newLocation);
-                        setAdminLocation(newLocation);
-                    })
-                    .catch(err => {
-                        console.error("[Auto-Fill] Failed to fetch location hierarchy:", err);
-                        // Fallback logic
-                        setAdminLocation({
-                            districtName: parsed.district || (role.includes('DISTRICT') ? parsed.locationName : '') || '',
-                            mandalName: parsed.mandal || (role.includes('MANDAL') ? parsed.locationName : '') || '',
-                            villageName: parsed.villageName || (role.includes('VILLAGE') ? parsed.locationName : '') || ''
-                        });
-                    });
-            } else {
-                // Fallback for Super Admin or legacy data
-                setAdminLocation({
-                    districtName: parsed.district || parsed.locationName || '',
-                    mandalName: parsed.mandal || '',
-                    villageName: parsed.villageName || ''
-                });
-            }
-        }
-    }, []);
+    // --- ADMIN AUTO-FILL & LOCKING LOGIC ---
+    const { adminLocation, isFieldLocked, userRole } = useAdminLocation();
 
     // Auto-fill Address based on Role (Only for New Registration)
     useEffect(() => {
@@ -1422,7 +1399,9 @@ const MemberRegistration = () => {
             'STATE_ADMIN': 1,
             'DISTRICT_ADMIN': 2,
             'MANDAL_ADMIN': 3,
-            'VILLAGE_ADMIN': 4
+            'MUNICIPALITY_ADMIN': 3,
+            'VILLAGE_ADMIN': 4,
+            'WARD_ADMIN': 4
         };
 
         const currentLevel = roleHierarchy[userRole] || 0;
@@ -1430,83 +1409,76 @@ const MemberRegistration = () => {
         const autoFill = async () => {
             let updates = {};
             let currentPermMandals = [];
+            let currentPermMunicipalities = [];
             let currentPermVillages = [];
+            let currentPermWards = [];
             let currentPermConstituencies = [];
 
+            // State Level
+            if (currentLevel >= 1) {
+                updates.permState = 'Telangana';
+            }
+
             // District Level
-            if (currentLevel >= 2 && adminLocation.districtName) {
-                // Find District ID
-                // Normalize names for comparison (remove spaces, lowercase)
-                const targetDistName = adminLocation.districtName.toLowerCase().replace(/\s/g, '');
-                const dist = districts.find(d => d.name.toLowerCase().replace(/\s/g, '') === targetDistName);
+            if (currentLevel >= 2 && adminLocation.districtId) {
+                updates.permDistrict = adminLocation.districtId;
+                updates.permDistrictName = adminLocation.districtName;
+            }
 
-                if (dist) {
-                    updates.permDistrict = dist._id;
-                    updates.permState = 'Telangana'; // Assuming only TS for now
-
-                    // Fetch Mandals for this District
-                    try {
-                        const { data: mData } = await API.get(`/locations?parent=${dist._id}`);
-                        setAllPermMandals(mData);
-                        setPermMandals(mData);
-                        currentPermMandals = mData;
-
-                        // Set Constituencies
-                        const relevent = getConstituenciesForDistrict(dist.name);
-                        setPermConstituencies(relevent);
-                        currentPermConstituencies = relevent;
-
-                    } catch (e) { console.error("Auto-fill fetch mandals failed", e); }
+            // Constituency Level (New Hierarchy Layer)
+            // Even if not strictly an Admin Level, if we have the ID, we should fill it to enable filtering down
+            if (adminLocation.constituencyId) {
+                updates.permConstituency = adminLocation.constituencyId;
+                // Pre-populate dropdown so it shows the value
+                if (adminLocation.constituencyName) {
+                    setPermConstituencies([{ _id: adminLocation.constituencyId, name: adminLocation.constituencyName }]);
                 }
             }
 
-            // Mandal Level
-            if (currentLevel >= 3 && adminLocation.mandalName && updates.permDistrict) {
-                // Find Mandal ID in fetched list
-                const targetMandalName = adminLocation.mandalName.toLowerCase().replace(/\s/g, '');
-                const mand = currentPermMandals.find(m => m.name.toLowerCase().replace(/\s/g, '') === targetMandalName);
+            // Mandal / Municipality Level
+            if (currentLevel >= 3) {
+                if (adminLocation.mandalId) {
+                    updates.permAreaType = 'Rural';
+                    updates.permMandal = adminLocation.mandalId;
+                    updates.permMandalName = adminLocation.mandalName;
 
-                if (mand) {
-                    updates.permMandal = mand._id;
+                    if (adminLocation.mandalName) {
+                        setPermMandals([{ _id: adminLocation.mandalId, name: adminLocation.mandalName }]);
+                        // Also set allPermMandals to avoid filter issues
+                        setAllPermMandals([{ _id: adminLocation.mandalId, name: adminLocation.mandalName }]);
+                    }
+                }
+                else if (adminLocation.municipalityId) {
+                    updates.permAreaType = 'Urban';
+                    updates.permMandal = adminLocation.municipalityId; // Form likely uses permMandal state for Municipality ID too? OR permMunicipality?
+                    // Checking JSX around line 3240: 
+                    // <select value={formData.permMandal} ...> for Mandal
+                    // <select value={formData.permMunicipality} ...> for Municipality
+                    // The 'permMandal' state variable might be shared in backend or separate? 
+                    // Let's assume separate based on logic: setPermMunicipalities
+                    updates.permMunicipality = adminLocation.municipalityId;
 
-                    // Fetch Villages for this Mandal
-                    try {
-                        const { data: vData } = await API.get(`/locations?parent=${mand._id}`);
-                        setPermVillages(vData);
-                        currentPermVillages = vData;
-
-                        // Auto-populate Constituency based on Mandal Name
-                        // Reverse lookup in constituencyMandals
-                        const mNameNormalized = mand.name.toUpperCase().replace(/[^A-Z]/g, '');
-                        let foundConstituency = '';
-
-                        for (const [constituency, mandalsList] of Object.entries(constituencyMandals)) {
-                            const normalizedList = mandalsList.map(m => m.toUpperCase().replace(/[^A-Z]/g, ''));
-                            // Check exact or partial match
-                            if (normalizedList.some(nM => nM === mNameNormalized || mNameNormalized.includes(nM) || nM.includes(mNameNormalized))) {
-                                foundConstituency = constituency;
-                                break;
-                            }
-                        }
-
-                        if (foundConstituency) {
-                            updates.permConstituency = foundConstituency;
-                            console.log(`[Auto-Fill] Inferred Constituency: ${foundConstituency} for Mandal: ${mand.name}`);
-                        }
-
-                    } catch (e) { console.error("Auto-fill fetch villages or constituency failed", e); }
+                    if (adminLocation.municipalityName) {
+                        setPermMunicipalities([{ _id: adminLocation.municipalityId, name: adminLocation.municipalityName }]);
+                        setAllPermMunicipalities([{ _id: adminLocation.municipalityId, name: adminLocation.municipalityName }]);
+                    }
                 }
             }
 
-            // Village Level
-            if (currentLevel >= 4 && adminLocation.villageName && updates.permMandal) {
-                // Find Village ID
-                const targetVillageName = adminLocation.villageName.toLowerCase().replace(/\s/g, '');
-                const vill = currentPermVillages.find(v => v.name.toLowerCase().replace(/\s/g, '') === targetVillageName);
-
-                if (vill) {
-                    updates.permVillage = vill._id;
-                    updates.permPincode = vill.pincode || '';
+            // Village / Ward Level
+            if (currentLevel >= 4) {
+                if (adminLocation.villageId) {
+                    updates.permVillage = adminLocation.villageId;
+                    updates.permVillageName = adminLocation.villageName;
+                    if (adminLocation.villageName) {
+                        setPermVillages([{ _id: adminLocation.villageId, name: adminLocation.villageName }]);
+                    }
+                }
+                else if (adminLocation.wardId) {
+                    updates.permWardNumber = adminLocation.wardId; // Assuming variable is permWardNumber
+                    if (adminLocation.wardName) {
+                        setPermWards([{ _id: adminLocation.wardId, name: adminLocation.wardName }]);
+                    }
                 }
             }
 
@@ -1516,28 +1488,10 @@ const MemberRegistration = () => {
         };
 
         autoFill();
+    }, [isEditMode, userRole, adminLocation, districts]);
 
-    }, [userRole, isEditMode, districts, adminLocation]);
-
-    // Helper to check if field should be disabled based on role
-    const isFieldLocked = (fieldName) => {
-        if (!userRole) return false;
-        const roleHierarchy = {
-            'SUPER_ADMIN': 0,
-            'STATE_ADMIN': 1, // Locks State
-            'DISTRICT_ADMIN': 2, // Locks State, District
-            'MANDAL_ADMIN': 3, // Locks State, District, Mandal
-            'VILLAGE_ADMIN': 4 // Locks State, District, Mandal, Village
-        };
-        const level = roleHierarchy[userRole] || 0;
-
-        if (fieldName === 'permState' && level >= 1) return true;
-        if (fieldName === 'permDistrict' && level >= 2) return true;
-        if ((fieldName === 'permConstituency' || fieldName === 'permMandal') && level >= 3) return true;
-        if (fieldName === 'permVillage' && level >= 4) return true;
-
-        return false;
-    };
+    // Helper locked check replaced by Hook
+    // const isFieldLocked = ... (Removed)
 
     // Auto-calculate Age
     useEffect(() => {
@@ -2111,46 +2065,72 @@ const MemberRegistration = () => {
                 // 1. Present Address Cascades
                 if (mappedData.presentDistrict) {
                     const dId = mappedData.presentDistrict;
-                    // Fetch Mandals
-                    const { data: mandalsData } = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/locations?parent=${dId}`);
-                    setAllMandals(mandalsData);
-                    setMandals(mandalsData);
+                    // Fetch Mandals & Municipalities (children of District)
+                    // Note: Depending on backend implementation, this might return all children. 
+                    // If Locations are hierarchical: District -> Constituency -> Mandal -> Village
+                    // We need Constituencies for the District.
 
-                    // Set presentConstituencies using localDistricts lookup
-                    const districtName = localDistricts.find(d => d._id === dId)?.name || '';
-                    if (districtName) {
-                        const relevent = getConstituenciesForDistrict(districtName);
-                        setPresentConstituencies(relevent);
-                    }
+                    try {
+                        const { data: distChildren } = await API.get(`/locations?parent=${dId}`);
 
-                    // Fetch Villages
-                    if (mappedData.presentMandal) {
-                        const mId = mappedData.presentMandal;
-                        const { data: villagesData } = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/locations?parent=${mId}`);
-                        setVillages(villagesData);
+                        // Filter valid constituencies (backend might return all children types if mixed)
+                        const constituencies = distChildren.filter(c => c.type === 'CONSTITUENCY');
+                        setPresentConstituencies(constituencies);
+
+                        if (data.address?.constituency) {
+                            // If we have a constituency, fetch its children (Mandals/Municipalities)
+                            const cId = data.address.constituency; // mappedData might just have ID, verify
+                            // api response `data.address.constituency` is likely the ID string based on schema
+                            // But let's use the ID we just set in mappedData.presentConstituency
+
+                            const { data: constChildren } = await API.get(`/locations?parent=${cId}`);
+                            const mList = constChildren.filter(d => d.type === 'MANDAL');
+                            const muniList = constChildren.filter(d => d.type === 'MUNICIPALITY');
+
+                            setAllMandals(mList);
+                            setMandals(mList);
+                            setMunicipalities(muniList);
+
+                            // If Mandal selected, fetch Villages
+                            if (mappedData.presentMandal) {
+                                const { data: villagesData } = await API.get(`/locations?parent=${mappedData.presentMandal}`);
+                                setVillages(villagesData);
+                            }
+                        }
+
+                    } catch (err) {
+                        console.error("Error fetching present address cascades", err);
                     }
                 }
 
                 // 2. Permanent Address Cascades
                 if (!addressesMatch && mappedData.permDistrict) {
                     const pdId = mappedData.permDistrict;
-                    // Fetch Perm Mandals
-                    const { data: permMandalsData } = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/locations?parent=${pdId}`);
-                    setAllPermMandals(permMandalsData);
-                    setPermMandals(permMandalsData);
 
-                    // Set permConstituencies
-                    const pDistrictName = localDistricts.find(d => d._id === pdId)?.name || '';
-                    if (pDistrictName) {
-                        const releventP = getConstituenciesForDistrict(pDistrictName);
-                        setPermConstituencies(releventP);
-                    }
+                    try {
+                        const { data: pDistChildren } = await API.get(`/locations?parent=${pdId}`);
+                        const pConstituencies = pDistChildren.filter(c => c.type === 'CONSTITUENCY');
+                        setPermConstituencies(pConstituencies);
 
-                    // Fetch Perm Villages
-                    if (mappedData.permMandal) {
-                        const pmId = mappedData.permMandal;
-                        const { data: permVillagesData } = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/locations?parent=${pmId}`);
-                        setPermVillages(permVillagesData);
+                        if (data.permanentAddress?.constituency) {
+                            const pcId = data.permanentAddress.constituency;
+                            const { data: pConstChildren } = await API.get(`/locations?parent=${pcId}`);
+
+                            const pmList = pConstChildren.filter(d => d.type === 'MANDAL');
+                            const pmuniList = pConstChildren.filter(d => d.type === 'MUNICIPALITY');
+
+                            setAllPermMandals(pmList);
+                            setPermMandals(pmList);
+                            setPermMunicipalities(pmuniList);
+
+                            // If Perm Mandal selected, fetch Perm Villages
+                            if (mappedData.permMandal) {
+                                const { data: pVillagesData } = await API.get(`/locations?parent=${mappedData.permMandal}`);
+                                setPermVillages(pVillagesData);
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Error fetching perm address cascades", err);
                     }
                 }
 
