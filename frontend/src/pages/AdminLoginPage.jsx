@@ -91,7 +91,7 @@ const AdminLoginPage = () => {
             setViewMode('OTP');
             setFeedbackMessage({ type: 'success', text: data.message || 'OTP sent successfully!' });
         } catch (err) {
-            const msg = err.response?.data?.message || 'Failed to send OTP';
+            const msg = err.response?.data?.message || 'Failed to send Verification Code';
             setFeedbackMessage({ type: 'error', text: msg });
         } finally {
             setLoading(false);
@@ -213,7 +213,7 @@ const AdminLoginPage = () => {
                 {/* Form Section */}
                 <div className="w-full space-y-5">
 
-                    {/* --- MPIN MODE --- */}
+                    {/* --- MPIN MODE (Saved User) --- */}
                     {viewMode === 'MPIN' && savedUser && (
                         <div className="w-full flex flex-col items-center animate-fade-in">
                             <div className="w-24 h-24 rounded-full bg-gray-200 border-4 border-white shadow-lg mb-4 overflow-hidden flex items-center justify-center">
@@ -270,6 +270,81 @@ const AdminLoginPage = () => {
                         </div>
                     )}
 
+                    {/* --- MANUAL MPIN MODE --- */}
+                    {viewMode === 'MPIN_MANUAL' && (
+                        <div className="w-full space-y-5 animate-fade-in">
+                            <div className="text-center mb-2">
+                                <h2 className="text-xl font-bold text-[#1e2a4a]">Login with MPIN</h2>
+                                <p className="text-xs text-gray-400">Enter your registered mobile & MPIN</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="block text-sm font-semibold text-gray-600 pl-1">Mobile Number</label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                            <span className="text-gray-500 font-medium">+91</span>
+                                        </div>
+                                        <input
+                                            type="tel"
+                                            value={mobileNumber}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                if (val.length <= 10) setMobileNumber(val);
+                                            }}
+                                            placeholder="Enter 10-digit number"
+                                            className="w-full bg-gray-100 border-none text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-[#1e2a4a] focus:bg-white block pl-12 p-3.5 placeholder-gray-400 font-medium transition-all outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="block text-sm font-semibold text-gray-600 pl-1">MPIN</label>
+                                    <div className="relative">
+                                        <FaLock className="absolute left-4 top-4 text-gray-400" />
+                                        <input
+                                            type="password"
+                                            inputMode="numeric"
+                                            maxLength={4}
+                                            value={mpin}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/\D/g, '');
+                                                setMpin(val);
+                                            }}
+                                            placeholder="Enter 4-digit MPIN"
+                                            className="w-full bg-gray-100 border-none text-gray-800 text-lg tracking-[0.5em] text-center rounded-lg focus:ring-2 focus:ring-[#1e2a4a] focus:bg-white block p-3.5 pl-10 font-bold transition-all outline-none"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {feedbackMessage && (
+                                <div className={`p-3 rounded-lg text-xs font-bold text-center ${feedbackMessage.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
+                                    {feedbackMessage.text}
+                                </div>
+                            )}
+
+                            <button
+                                onClick={handleMpinLogin}
+                                disabled={loading}
+                                className="w-full bg-[#1e2a4a] hover:bg-[#2c3e66] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#1e2a4a]/20 transition-all transform active:scale-[0.98] mt-2 text-sm disabled:opacity-70"
+                            >
+                                {loading ? 'Verifying...' : 'Login'}
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    setViewMode('MOBILE');
+                                    setFeedbackMessage(null);
+                                }}
+                                className="w-full text-center text-xs text-gray-500 hover:text-[#1e2a4a] mt-2 font-medium"
+                            >
+                                Login via OTP
+                            </button>
+                        </div>
+                    )}
+
+
                     {/* --- MOBILE INPUT MODE --- */}
                     {viewMode === 'MOBILE' && (
                         <>
@@ -314,7 +389,23 @@ const AdminLoginPage = () => {
                                 disabled={loading}
                                 className="w-full bg-[#1e2a4a] hover:bg-[#2c3e66] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#1e2a4a]/20 transition-all transform active:scale-[0.98] mt-2 text-sm disabled:opacity-70"
                             >
-                                {loading ? 'Sending...' : 'Send OTP'}
+                                {loading ? 'Sending...' : 'Send Verification Code'}
+                            </button>
+
+                            <div className="relative flex py-2 items-center">
+                                <div className="flex-grow border-t border-gray-200"></div>
+                                <span className="flex-shrink-0 mx-4 text-gray-300 text-xs">OR</span>
+                                <div className="flex-grow border-t border-gray-200"></div>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    setViewMode('MPIN_MANUAL');
+                                    setFeedbackMessage(null);
+                                }}
+                                className="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-3.5 rounded-xl shadow-sm transition-all transform active:scale-[0.98] text-sm"
+                            >
+                                Login with MPIN
                             </button>
                         </>
                     )}
@@ -357,14 +448,14 @@ const AdminLoginPage = () => {
                             {/* Resend Timer / Button */}
                             <div className="text-right">
                                 {timer > 0 ? (
-                                    <span className="text-xs text-gray-500 font-medium">Resend OTP in {timer}s</span>
+                                    <span className="text-xs text-gray-500 font-medium">Resend Verification Code in {timer}s</span>
                                 ) : (
                                     <button
                                         onClick={handleSendOTP}
                                         type="button"
                                         className="text-xs font-bold text-[#1e2a4a] hover:underline"
                                     >
-                                        Resend OTP
+                                        Resend Verification Code
                                     </button>
                                 )}
                             </div>
