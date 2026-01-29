@@ -13,7 +13,7 @@ const MemberIDCardTemplate = ({ member, idPrefix = "single-card" }) => {
         } else {
             // Cache buster
             const activeDate = member.updatedAt ? new Date(member.updatedAt).getTime() : Date.now();
-            const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+            const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/api\/?$/, '');
 
             if (rawPhoto.startsWith('http')) {
                 photoSrc = `${baseUrl}/api/proxy-image?url=${encodeURIComponent(rawPhoto)}&t=${activeDate}`;

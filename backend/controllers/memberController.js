@@ -436,10 +436,18 @@ const registerMember = asyncHandler(async (req, res) => {
             console.error("Admin Notification Error:", notifErr);
         }
 
+        // Return signed version for consistency
+        const signedMember = await signMemberData(member);
+
+        // Also sign dependents if any
+        const signedDependents = await Promise.all(createdDependents.map(async (dep) => {
+            return await signMemberData(dep);
+        }));
+
         res.status(201).json({
             message: 'Member registered successfully',
-            member: member,
-            dependents: createdDependents,
+            member: signedMember,
+            dependents: signedDependents,
             username: member.mewsId
         });
 

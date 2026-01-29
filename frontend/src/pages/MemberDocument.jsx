@@ -54,12 +54,12 @@ const MemberDocument = ({ data, lookups }) => {
         const timeParam = timestamp ? `&t=${timestamp}` : '';
 
         if (url.startsWith('http')) {
-            const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+            const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/api\/?$/, '');
             return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(url)}${timeParam}`;
         }
 
         // Local relative path
-        const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+        const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/api\/?$/, '');
         // Ensure url starts with /
         const normalizedPath = url.replace(/\\/g, '/').replace(/^\//, '');
         return `${baseUrl}/${normalizedPath}?t=${timestamp}`;
