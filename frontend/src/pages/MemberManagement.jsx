@@ -336,12 +336,20 @@ const MemberManagement = () => {
             // Multi-Select Filters
             if (selectedVillages.length > 0) {
                 const villageName = getLocationName(member.address?.village).trim().toLowerCase();
-                if (!selectedVillages.some(v => v.toLowerCase().trim() === villageName)) return false;
+                const wardName = (member.address?.wardNumber || member.address?.ward || '').toString().trim().toLowerCase();
+                if (!selectedVillages.some(v => {
+                    const sel = v.toLowerCase().trim();
+                    return sel === villageName || sel === wardName;
+                })) return false;
             }
 
             if (selectedMandals.length > 0) {
                 const mandalName = getLocationName(member.address?.mandal).trim().toLowerCase();
-                if (!selectedMandals.some(m => m.toLowerCase().trim() === mandalName)) return false;
+                const munName = getLocationName(member.address?.municipality).trim().toLowerCase();
+                if (!selectedMandals.some(m => {
+                    const sel = m.toLowerCase().trim();
+                    return sel === mandalName || sel === munName;
+                })) return false;
             }
 
             if (selectedDistricts.length > 0) {
@@ -728,6 +736,14 @@ const MemberManagement = () => {
         coords: getCoordinates(getLocationName(member.address?.village) || `mem-${index}`, member._id)
     }));
 
+    // Debug Filter Logic
+    useEffect(() => {
+        console.log(`[DEBUG] Members: ${members.length}, Filtered: ${filteredMembers.length}`);
+        if (members.length > 0 && filteredMembers.length === 0) {
+            console.log('[DEBUG] All members filtered out. Check Active Filters.');
+        }
+    }, [members.length, filteredMembers.length]);
+
     return (
         <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
             <style>{`
@@ -890,9 +906,11 @@ const MemberManagement = () => {
                             {activeFilters.length > 0 && (<div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-100"><span className="text-xs font-bold text-slate-400 self-center mr-1">Active filters:</span>{activeFilters.map((filter, i) => (<div key={i} className="bg-blue-50 border border-blue-100 text-blue-600 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-2">{filter}<button onClick={() => setActiveFilters(activeFilters.filter(f => f !== filter))} className="hover:text-blue-800">×</button></div>))}</div>)}
                         </div>
 
+
+
                         {/* Views Content */}
                         <div className="min-h-[400px]">
-                            {loading ? (<div className="text-center p-12 text-slate-500">Loading members...</div>) : displayedMembers.length === 0 ? (<div className="bg-white p-12 rounded-xl border border-slate-200 text-center text-slate-500">No members found matching your filters.</div>) : (
+                            {loading ? (<div className="text-center p-12 text-slate-500">Loading members...</div>) : members.length === 0 ? (<div className="bg-white p-12 rounded-xl border border-slate-200 text-center text-slate-500">No members found in the database.</div>) : displayedMembers.length === 0 ? (<div className="bg-white p-12 rounded-xl border border-slate-200 text-center text-slate-500">No members found matching your filters. <button onClick={clearFilters} className="text-blue-600 font-bold hover:underline ml-2">Clear Filters</button></div>) : (
                                 <>
                                     {/* TABLE VIEW (Condensed) */}
                                     {viewMode === 'table' && (
@@ -964,7 +982,10 @@ const MemberManagement = () => {
                                                                         <div className="text-[10px] text-slate-400 font-mono truncate">ID: {member.mewsId || member._id.substring(0, 6)}</div>
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-4 py-3 text-xs font-bold text-blue-600 truncate" title={getLocationName(member.address?.village)}>{getLocationName(member.address?.village) || 'N/A'}</td>
+                                                                <td className="px-4 py-3 text-xs font-bold text-blue-600 truncate" title={getLocationName(member.address?.village) || member.address?.wardNumber}>
+                                                                    {getLocationName(member.address?.village) || member.address?.wardNumber || 'N/A'}
+                                                                    {member.address?.municipality && <span className="text-[9px] text-slate-400 block">{getLocationName(member.address?.municipality)} (Mun)</span>}
+                                                                </td>
                                                                 <td className="px-4 py-3 text-xs text-slate-600 font-mono">{member.mobileNumber}</td>
                                                                 <td className="px-4 py-3 text-xs text-slate-600">{member.age}</td>
                                                                 <td className="px-4 py-3 text-xs text-slate-600">{member.gender}</td>
@@ -1044,8 +1065,9 @@ const MemberManagement = () => {
                                                                 <Link to={`/admin/members/${member._id}`} className="hover:text-blue-600 hover:underline">{member.name} {member.surname}</Link>
                                                             </h3>
                                                             <p className="text-[10px] text-blue-500 font-bold mb-1 truncate px-2" title={`${getLocationName(member.address?.village)} (V), ${getLocationName(member.address?.mandal) || ''} (M), ${getLocationName(member.address?.district) || ''} (D)`}>
-                                                                {getLocationName(member.address?.village)} (V)
-                                                                {member.address?.mandal && `, ${getLocationName(member.address.mandal)} (M)`}
+                                                                {getLocationName(member.address?.village) || member.address?.wardNumber || 'N/A'}
+                                                                {member.address?.mandal && ` (V), ${getLocationName(member.address.mandal)} (M)`}
+                                                                {member.address?.municipality && ` (W), ${getLocationName(member.address.municipality)} (Mun)`}
                                                                 {member.address?.district && `, ${getLocationName(member.address.district)} (D)`}
                                                             </p>
                                                             <p className="text-[10px] text-slate-400 font-mono flex items-center justify-center gap-1">
@@ -1083,7 +1105,7 @@ const MemberManagement = () => {
                                                     </LayersControl>
                                                     <MapUpdater locations={mapLocations} />
                                                     {filteredMembers.map((member, index) => {
-                                                        const coords = getCoordinates(getLocationName(member.address?.village) || `mem-${index}`, member._id);
+                                                        const coords = getCoordinates(getLocationName(member.address?.village) || member.address?.wardNumber || `mem-${index}`, member._id);
                                                         const markerColor = getOccupationColor(member.occupation);
 
                                                         return (
@@ -1091,7 +1113,7 @@ const MemberManagement = () => {
                                                                 <Popup>
                                                                     <div className="text-center p-2">
                                                                         <div className="font-bold text-slate-800">{member.name} {member.surname}</div>
-                                                                        <div className="text-xs text-blue-500 font-bold mb-1">{getLocationName(member.address?.village)}</div>
+                                                                        <div className="text-xs text-blue-500 font-bold mb-1">{getLocationName(member.address?.village) || member.address?.wardNumber}</div>
                                                                         <div className="text-xs text-slate-500">{member.mobileNumber}</div>
                                                                         <Link to={`/admin/members/${member._id}`} className="block mt-2 bg-blue-600 !text-white py-2 px-3 rounded-lg text-xs font-bold hover:bg-blue-700 text-center shadow-md no-underline">View Profile</Link>
                                                                     </div>
@@ -1099,7 +1121,7 @@ const MemberManagement = () => {
                                                                 <Tooltip direction="top" offset={[0, -28]} opacity={1} className="custom-tooltip">
                                                                     <div className="label-bubble" style={{ backgroundColor: markerColor, borderColor: markerColor }}>
                                                                         <span className="block">{member.name}</span>
-                                                                        <span className="block text-[9px] opacity-80">{getLocationName(member.address?.village)}</span>
+                                                                        <span className="block text-[9px] opacity-80">{getLocationName(member.address?.village) || member.address?.wardNumber}</span>
                                                                     </div>
                                                                 </Tooltip>
                                                             </Marker>
@@ -1118,7 +1140,7 @@ const MemberManagement = () => {
                                                             <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">Members by Village</div>
                                                             <div className="space-y-1.5 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                                                                 {Object.entries(filteredMembers.reduce((acc, curr) => {
-                                                                    const v = getLocationName(curr.address?.village) || 'Unknown';
+                                                                    const v = getLocationName(curr.address?.village) || curr.address?.wardNumber || 'Unknown';
                                                                     acc[v] = (acc[v] || 0) + 1;
                                                                     return acc;
                                                                 }, {})).sort((a, b) => b[1] - a[1]).map(([village, count]) => (

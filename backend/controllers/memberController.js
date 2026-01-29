@@ -70,11 +70,23 @@ const registerMember = asyncHandler(async (req, res) => {
     let villageId = clean(data.presentVillage);
     let mandalId = clean(data.presentMandal);
     let districtId = clean(data.presentDistrict);
+    let municipalityId = clean(data.presentMunicipality);
+    let wardNumber = clean(data.presentWardNumber) || clean(data.presentWard); // Handle keys
 
     if (req.user && req.user.assignedLocation) {
         if (req.user.role === 'VILLAGE_ADMIN') villageId = req.user.assignedLocation;
         else if (req.user.role === 'MANDAL_ADMIN') mandalId = req.user.assignedLocation;
         else if (req.user.role === 'DISTRICT_ADMIN') districtId = req.user.assignedLocation;
+        else if (req.user.role === 'MUNICIPALITY_ADMIN') municipalityId = req.user.assignedLocation;
+        else if (req.user.role === 'WARD_ADMIN') {
+            // Ward Admin typically assigned a WARD location
+            // We need to resolve the municipality from the ward location
+            const wLoc = await Location.findById(req.user.assignedLocation);
+            if (wLoc && wLoc.type === 'WARD') {
+                wardNumber = wLoc.name; // Use name as number/string
+                municipalityId = wLoc.parent;
+            }
+        }
     }
 
     if (villageId) {
@@ -96,6 +108,15 @@ const registerMember = asyncHandler(async (req, res) => {
                     districtId = mandalDoc.parent;
                 }
             }
+        }
+    }
+
+    // Resolve Municipality ID if string
+    if (municipalityId && !mongoose.Types.ObjectId.isValid(municipalityId)) {
+        const munLoc = await Location.findOne({ name: { $regex: new RegExp(`^${municipalityId.trim()}$`, 'i') }, type: 'MUNICIPALITY' });
+        if (munLoc) {
+            municipalityId = munLoc._id;
+            if (!mongoose.Types.ObjectId.isValid(districtId) && munLoc.parent) districtId = munLoc.parent;
         }
     }
 
@@ -150,11 +171,14 @@ const registerMember = asyncHandler(async (req, res) => {
             constituency: clean(data.presentConstituency),
             mandal: mandalId,
             village: villageId,
+            municipality: municipalityId,
+            wardNumber: wardNumber,
             houseNumber: clean(data.presentHouseNo),
             street: clean(data.presentStreet),
             pinCode: clean(data.presentPincode),
             residencyType: clean(data.residenceType),
-            landmark: clean(data.presentLandmark)
+            landmark: clean(data.presentLandmark),
+            state: 'Telangana' // Default to Telangana for now as per project context
         },
         permanentAddress: {
             district: clean(data.permDistrict),
@@ -273,8 +297,8 @@ const registerMember = asyncHandler(async (req, res) => {
                         voterIdFront: getFamilyFile('familyMemberVoterIdFronts', getIndex(fm.voterIdFront)),
                         voterIdBack: getFamilyFile('familyMemberVoterIdBacks', getIndex(fm.voterIdBack)),
                         // Inherit Address
-                        presentAddress: memberData.address,
-                        permanentAddress: memberData.permanentAddress
+                        presentAddress: { ...memberData.address, state: 'Telangana' },
+                        permanentAddress: { ...memberData.permanentAddress, state: 'Telangana' }
                     };
                 });
             }
@@ -588,95 +612,121 @@ const getMembers = asyncHandler(async (req, res) => {
     if (req.user && req.user.assignedLocation) {
         console.log(`[GET MEMBERS] User: ${req.user.username}, Role: ${req.user.role}, AssignedLoc: ${req.user.assignedLocation}`);
 
+
         const locationId = req.user.assignedLocation;
 
+        // -- VILLAGE ADMIN --
         if (req.user.role === 'VILLAGE_ADMIN') {
-            // STRICT: Must match the assigned Village ID
-            // Handle duplicate location entries (Resolve by Name, Scoped to Parent/Mandal)
             const assignedLoc = await Location.findById(locationId);
             if (assignedLoc) {
+                // Strict: Only members in this specific village ID
+                // But handle name-based matching cautiously if needed for legacy data
+                // For strict security, we should prefer ID match. 
+                // However, to match previous logic's robustness:
                 const escapedName = assignedLoc.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-                // Robust Query: Match Name (Partial OK) AND Same Parent (Mandal)
-                // This handles "Amanagal", "Amanagal (V)", "  Amanagal  " etc. without crossing Mandals
+                // Criteria: Name matches, Type is VILLAGE, and Parent matches (if exists)
                 const criteria = {
-                    name: { $regex: new RegExp(escapedName, 'i') }, // Unanchored for flexibility
+                    name: { $regex: new RegExp(`^${escapedName}$`, 'i') }, // Strict start/end match
                     type: 'VILLAGE'
                 };
-
-                // If the assigned location has a parent, restrict duplicates to that parent
                 if (assignedLoc.parent) {
                     criteria.parent = assignedLoc.parent;
                 }
 
                 const relatedLocations = await Location.find(criteria);
                 const locIds = relatedLocations.map(l => l._id);
-
-                // SAFEGUARD: Explicitly include the assigned ID itself
                 if (!locIds.some(id => id.toString() === locationId.toString())) {
                     locIds.push(locationId);
                 }
 
-                // Add debug log
-                console.log(`[GET MEMBERS] Resolved ${assignedLoc.name} to IDs:`, locIds);
-
-                const villageConstraint = { 'address.village': { $in: locIds } };
-                if (!query.$and) query.$and = [];
-                query.$and.push(villageConstraint);
+                query['address.village'] = { $in: locIds };
             } else {
                 query['address.village'] = locationId;
             }
         }
+
+        // -- WARD ADMIN --
+        else if (req.user.role === 'WARD_ADMIN') {
+            // Wards are strings "wardNumber", not IDs usually, but schema has wardNumber string.
+            // Wait, schema has 'wardNumber: String'. 
+            // If the admin is assigned a Location document of type 'WARD', we need to match members in that ward.
+            // Assumption: Member has address.wardNumber (String) AND/OR address.ward (Ref).
+            // Schema line 36: wardNumber: String.
+            // Schema line 52: wardNumber: String (Permanent).
+            // Schema DOES NOT have address.ward as ObjectId.
+            // BUT Look at line 114 of useAdminLocation.js: "fieldName === 'ward'".
+
+            // Let's check Location model for WARD type. 
+            // If Admin is assigned a WARD location, we need to locate members in that ward.
+            // Strategy: Match address.municipality = Ward's Parent AND address.wardNumber = Ward Name.
+
+            const assignedWard = await Location.findById(locationId);
+            if (assignedWard && assignedWard.type === 'WARD') {
+                // Match Municipality (Parent)
+                query['address.municipality'] = assignedWard.parent;
+                // Match Ward Name/Number
+                query['address.wardNumber'] = assignedWard.name;
+            } else {
+                // Fallback/Error safest to block
+                query = { _id: null };
+            }
+        }
+
+        // -- MUNICIPALITY ADMIN --
+        else if (req.user.role === 'MUNICIPALITY_ADMIN') {
+            query['address.municipality'] = locationId;
+        }
+
+        // -- MANDAL ADMIN --
         else if (req.user.role === 'MANDAL_ADMIN') {
             query['address.mandal'] = locationId;
         }
+
+        // -- DISTRICT ADMIN --
         else if (req.user.role === 'DISTRICT_ADMIN') {
             query['address.district'] = locationId;
         }
+
+        // -- STATE ADMIN --
         else if (req.user.role === 'STATE_ADMIN') {
-            // RBAC: Must be within assigned State
-            const stateId = locationId;
-            if (query['address.stateID'] && query['address.stateID'] !== stateId.toString()) {
-                console.log(`[GET MEMBERS] State Admin ${req.user.username} trying to access state ${req.query['address.stateID']} outside assigned state ${stateId}. Blocking.`);
-                query = { _id: null };
-            } else {
-                // Priority: Village > Mandal > District > State
-                if (query['address.village'] || query['address.mandal']) {
-                    // Village and Mandal already use refs
-                } else if (query['address.district']) {
-                    const isValid = await Location.findOne({ _id: query['address.district'], parent: stateId });
-                    console.log(`[GET MEMBERS] STATE_ADMIN Check: District ${query['address.district']} under State ${stateId} -> ${isValid ? 'VALID' : 'INVALID'}`);
-                    if (!isValid) {
-                        // STRICT BLOCK: Do not allow falling back to 'null' which might show unassigned members.
-                        query = { _id: null };
-                    }
-                } else {
-                    const districts = await Location.find({ parent: stateId, type: 'DISTRICT' }).select('_id');
-                    query['address.district'] = { $in: districts.map(d => d._id) };
-                }
-                delete query['address.stateID'];
+            const assignedState = await Location.findById(locationId);
+            const districts = await Location.find({ parent: locationId, type: 'DISTRICT' }).select('_id');
+            const districtIds = districts.map(d => d._id);
+
+            // Query: (District IN Ids) OR (State Name matches)
+            const orConditions = [
+                { 'address.district': { $in: districtIds } }
+            ];
+
+            if (assignedState) {
+                // Also match strict State Name if field exists
+                orConditions.push({ 'address.state': { $regex: new RegExp(`^${assignedState.name}$`, 'i') } });
             }
-        }
-        else if (req.user.role === 'SUPER_ADMIN') {
-            // If stateID is requested, resolve it ONLY if no more specific location filters are present
-            if (query['address.stateID'] && !query['address.district'] && !query['address.mandal'] && !query['address.village']) {
-                const stateId = query['address.stateID'];
-                const districts = await Location.find({ parent: stateId, type: 'DISTRICT' }).select('_id');
-                query['address.district'] = { $in: districts.map(d => d._id) };
-            }
+
+            // Apply OR condition
+            if (!query.$and) query.$and = [];
+            query.$and.push({ $or: orConditions });
+
+            // Explicitly ignore any conflicting stateID from query if it doesn't match
             delete query['address.stateID'];
         }
 
-        console.log(`[GET MEMBERS] Query applied:`, JSON.stringify(query));
+        // -- SUPER ADMIN --
+        else if (req.user.role === 'SUPER_ADMIN') {
+            // No restriction.
+            // If they requested a specific drill-down via query params, that is respected by standard filters above.
+            // If not, they see all.
+        } else {
+            // Unknown role with location? Block.
+            query = { _id: null };
+        }
     } else {
-        // If no assigned location but restricted role, return empty or error?
-        // Assuming Super Admin might not have assignedLocation.
+        // No Assigned Location
         if (req.user.role !== 'SUPER_ADMIN') {
-            console.warn(`[GET MEMBERS] User ${req.user.username} (${req.user.role}) has no assigned location. Showing nothing.`);
-            // Block access for admin roles without location
-            if (req.user.role === 'VILLAGE_ADMIN' || req.user.role === 'MANDAL_ADMIN' || req.user.role === 'DISTRICT_ADMIN' || req.user.role === 'STATE_ADMIN') {
-                query = { _id: null };
-            }
+            // STRICT BLOCK for all non-super admins without location
+            console.warn(`[GET MEMBERS] User ${req.user.username} (${req.user.role}) has no assigned location. Access Denied.`);
+            query = { _id: null };
         }
     }
 
