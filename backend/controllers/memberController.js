@@ -105,7 +105,14 @@ const registerMember = asyncHandler(async (req, res) => {
                 mandalId = vLocDoc.parent;
                 const mandalDoc = await Location.findById(vLocDoc.parent);
                 if (mandalDoc && mandalDoc.parent) {
-                    districtId = mandalDoc.parent;
+                    const parentLoc = await Location.findById(mandalDoc.parent);
+                    if (parentLoc) {
+                        if (parentLoc.type === 'DISTRICT') {
+                            districtId = parentLoc._id;
+                        } else if (parentLoc.type === 'CONSTITUENCY' && parentLoc.parent) {
+                            districtId = parentLoc.parent; // Parent of Constituency is District
+                        }
+                    }
                 }
             }
         }
@@ -116,7 +123,14 @@ const registerMember = asyncHandler(async (req, res) => {
         const munLoc = await Location.findOne({ name: { $regex: new RegExp(`^${municipalityId.trim()}$`, 'i') }, type: 'MUNICIPALITY' });
         if (munLoc) {
             municipalityId = munLoc._id;
-            if (!mongoose.Types.ObjectId.isValid(districtId) && munLoc.parent) districtId = munLoc.parent;
+            if (!mongoose.Types.ObjectId.isValid(districtId) && munLoc.parent) {
+                // Check if Municipality parent is Constituency or District
+                const munParent = await Location.findById(munLoc.parent);
+                if (munParent) {
+                    if (munParent.type === 'DISTRICT') districtId = munParent._id;
+                    else if (munParent.type === 'CONSTITUENCY' && munParent.parent) districtId = munParent.parent;
+                }
+            }
         }
     }
 
@@ -124,7 +138,13 @@ const registerMember = asyncHandler(async (req, res) => {
         const mLoc = await Location.findOne({ name: { $regex: new RegExp(`^${mandalId.trim()}$`, 'i') }, type: 'MANDAL' });
         if (mLoc) {
             mandalId = mLoc._id;
-            if (!mongoose.Types.ObjectId.isValid(districtId) && mLoc.parent) districtId = mLoc.parent;
+            if (!mongoose.Types.ObjectId.isValid(districtId) && mLoc.parent) {
+                const mParent = await Location.findById(mLoc.parent);
+                if (mParent) {
+                    if (mParent.type === 'DISTRICT') districtId = mParent._id;
+                    else if (mParent.type === 'CONSTITUENCY' && mParent.parent) districtId = mParent.parent;
+                }
+            }
         }
     }
 
@@ -733,9 +753,14 @@ const getMembers = asyncHandler(async (req, res) => {
     const total = await Member.countDocuments(query);
 
     let membersQuery = Member.find(query)
-        .populate('address.village')
-        .populate('address.mandal')
-        .populate('address.district') // Populate to show names
+        .populate('address.village', 'name')
+        .populate('address.mandal', 'name')
+        .populate('address.municipality', 'name')
+        .populate('address.district', 'name')
+        .populate('permanentAddress.village', 'name')
+        .populate('permanentAddress.mandal', 'name')
+        .populate('permanentAddress.municipality', 'name')
+        .populate('permanentAddress.district', 'name')
         .sort({ createdAt: -1 });
 
     if (limit > 0) {
@@ -767,12 +792,14 @@ const getMembers = asyncHandler(async (req, res) => {
 // @access  Private
 const getMemberById = asyncHandler(async (req, res) => {
     const member = await Member.findById(req.params.id)
-        .populate({
-            path: 'address.district',
-            populate: { path: 'parent' } // Populate State from District
-        })
-        .populate('address.mandal')
-        .populate('address.village');
+        .populate('address.village', 'name')
+        .populate('address.mandal', 'name')
+        .populate('address.municipality', 'name')
+        .populate('address.district', 'name')
+        .populate('permanentAddress.village', 'name')
+        .populate('permanentAddress.mandal', 'name')
+        .populate('permanentAddress.municipality', 'name')
+        .populate('permanentAddress.district', 'name');
     if (member) {
         const signedMember = await signMemberData(member);
         res.json(signedMember);

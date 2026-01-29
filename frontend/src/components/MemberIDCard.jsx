@@ -49,9 +49,9 @@ const MemberIDCard = ({ member }) => {
     const fullAddress = [
         address.houseNumber ? `H.No: ${address.houseNumber}` : '',
         address.street,
-        address.village ? `${address.village} (V)` : '',
-        address.mandal ? `${address.mandal} (M)` : '',
-        address.district ? `${address.district} (D)` : '',
+        (address.village?.name || address.village) ? `${address.village?.name || address.village} (V)` : '',
+        (address.mandal?.name || address.mandal) ? `${address.mandal?.name || address.mandal} (M)` : '',
+        (address.district?.name || address.district) ? `${address.district?.name || address.district} (D)` : '',
         address.state || 'Telangana',
         address.pinCode
     ].filter(Boolean).join(', ');

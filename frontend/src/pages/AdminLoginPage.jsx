@@ -89,7 +89,7 @@ const AdminLoginPage = () => {
             setOtpSent(true);
             setTimer(60);
             setViewMode('OTP');
-            setFeedbackMessage({ type: 'success', text: data.message || 'OTP sent successfully!' });
+            setFeedbackMessage({ type: 'success', text: data.message || 'Verification Code sent successfully!' });
         } catch (err) {
             const msg = err.response?.data?.message || 'Failed to send Verification Code';
             setFeedbackMessage({ type: 'error', text: msg });
@@ -418,7 +418,7 @@ const AdminLoginPage = () => {
                                     <FaArrowLeft />
                                 </button>
                                 <h2 className="text-xl font-bold text-[#1e2a4a]">Verification</h2>
-                                <p className="text-xs text-gray-400">Enter OTP sent to +91 {mobileNumber}</p>
+                                <p className="text-xs text-gray-400">Enter Verification Code sent to +91 {mobileNumber}</p>
                             </div>
 
                             {/* Feedback Message */}

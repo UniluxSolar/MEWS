@@ -157,7 +157,7 @@ const MemberDocument = ({ data, lookups }) => {
                             <tbody>
                                 <InfoRow label="Address Line" value={`${data.address?.houseNumber}, ${data.address?.street}`} />
                                 <InfoRow label="Village / Mandal" value={`${resolve(data.address?.village, 'village')}, ${resolve(data.address?.mandal, 'mandal')}`} />
-                                <InfoRow label="District / State" value={`${resolve(data.address?.district, 'district')}, Telangana`} />
+                                <InfoRow label="District / State" value={`${resolve(data.address?.district, 'district')}, ${data.address?.state || 'Telangana'}`} />
                                 <InfoRow label="Constituency / Pin" value={`${data.address?.constituency || '-'} - ${data.address?.pinCode}`} />
                                 <InfoRow label="Residence Type" value={data.address?.residencyType} />
                             </tbody>
@@ -173,7 +173,7 @@ const MemberDocument = ({ data, lookups }) => {
                             <tbody>
                                 <InfoRow label="Address Line" value={`${data.address?.permHouseNumber || data.address?.houseNumber}, ${data.address?.permStreet || data.address?.street}`} />
                                 <InfoRow label="Village / Mandal" value={`${resolve(data.address?.permVillage || data.address?.village, 'village')}, ${resolve(data.address?.permMandal || data.address?.mandal, 'mandal')}`} />
-                                <InfoRow label="District / State" value={`${resolve(data.address?.permDistrict || data.address?.district, 'district')}, Telangana`} />
+                                <InfoRow label="District / State" value={`${resolve(data.address?.permDistrict || data.address?.district, 'district')}, ${data.address?.permanentAddress?.state || data.address?.state || 'Telangana'}`} />
                                 <InfoRow label="Constituency / Pin" value={`${data.address?.permConstituency || data.address?.constituency || '-'} - ${data.address?.permPinCode || data.address?.pinCode}`} />
                             </tbody>
                         </table>

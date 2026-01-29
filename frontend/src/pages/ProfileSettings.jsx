@@ -102,12 +102,12 @@ const PersonalInfoTab = ({ formData, handleChange }) => (
 
             <div className="flex flex-wrap gap-6 mb-6">
                 <InputField label="State" name="address.state" value={formData.address?.state} onChange={handleChange} disabled={true} />
-                <InputField label="District" name="address.district" value={formData.address?.district} onChange={handleChange} disabled={true} />
-                <InputField label="Mandal" name="address.mandal" value={formData.address?.mandal} onChange={handleChange} disabled={true} />
+                <InputField label="District" name="address.district" value={formData.address?.district?.name || formData.address?.district} onChange={handleChange} disabled={true} />
+                <InputField label="Mandal" name="address.mandal" value={formData.address?.mandal?.name || formData.address?.mandal} onChange={handleChange} disabled={true} />
             </div>
 
             <div className="flex flex-wrap gap-6 mb-6">
-                <InputField label="Village" name="address.village" value={formData.address?.village} onChange={handleChange} disabled={true} />
+                <InputField label="Village" name="address.village" value={formData.address?.village?.name || formData.address?.village} onChange={handleChange} disabled={true} />
                 <InputField label="Pincode" name="address.pinCode" value={formData.address?.pinCode} onChange={handleChange} disabled={true} />
             </div>
 

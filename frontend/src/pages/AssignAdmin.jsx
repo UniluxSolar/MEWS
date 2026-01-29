@@ -5,11 +5,12 @@ import AdminSidebar from '../components/AdminSidebar';
 import { useNavigate } from 'react-router-dom';
 import MultiSelect from '../components/common/MultiSelect';
 import { FaUserShield, FaSearch, FaArrowLeft, FaMapMarkerAlt, FaCheckCircle, FaUsers, FaCheckSquare, FaCity, FaTree } from 'react-icons/fa';
+import useAdminLocation from '../hooks/useAdminLocation';
 
 const AssignAdmin = () => {
     const navigate = useNavigate();
     const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
-    const userRole = adminInfo.role;
+    const { adminLocation, userRole, isFieldLocked, isLoading: isLocLoading } = useAdminLocation();
 
     // Hierarchy Definitions
     const HIERARCHY = {
@@ -52,9 +53,6 @@ const AssignAdmin = () => {
     // Area Type Toggle (Rural vs Urban)
     const [areaType, setAreaType] = useState('Rural'); // 'Rural' or 'Urban'
 
-    // Pre-filled User Info
-    const [userLocationHierarchy, setUserLocationHierarchy] = useState(null);
-
     // Data & Filters
     const [members, setMembers] = useState([]);
     const [loadingMembers, setLoadingMembers] = useState(false);
@@ -94,14 +92,18 @@ const AssignAdmin = () => {
 
     const fetchRootLocations = async () => {
         try {
-            if (userRole === 'SUPER_ADMIN') {
+            // Fetch ALL states if Super Admin or state not locked
+            if (userRole === 'SUPER_ADMIN' || !isFieldLocked('state')) {
+                console.log("Fetching States for Super Admin/Fallback...");
                 const { data } = await API.get('/locations?type=STATE');
                 const sortedStates = [...data].sort((a, b) => a.name.localeCompare(b.name));
                 setTargetStates(sortedStates);
-            } else {
-                if (adminInfo.assignedLocation) {
-                    const { data } = await API.get(`/locations/${adminInfo.assignedLocation}`);
-                    setUserLocationHierarchy(data);
+
+                // Default auto-select Telangana for Super Admin if not already set
+                if (sortedStates.length > 0 && !targetState) {
+                    const ts = sortedStates.find(s => s.name === 'Telangana' || s.name.toUpperCase() === 'TELANGANA') || sortedStates[0];
+                    setTargetState(ts._id);
+                    fetchLocations(ts._id, 'DISTRICT');
                 }
             }
         } catch (error) {
@@ -109,32 +111,41 @@ const AssignAdmin = () => {
         }
     };
 
-    // Pre-fill Logic from User Hierarchy
-    useEffect(() => {
-        if (userLocationHierarchy) {
-            const loc = userLocationHierarchy;
+    const isTargetLocked = (level) => isFieldLocked(level);
 
-            // Populate Target Dropdowns based on Hierarchy
-            if (loc.type === 'STATE') {
-                setTargetStates([loc]); setTargetState(loc._id);
-                fetchLocations(loc._id, 'DISTRICT');
-            } else if (loc.type === 'DISTRICT') {
-                setTargetDistricts([loc]); setTargetDistrict(loc._id);
-                fetchLocations(loc._id, 'MANDAL');
-                fetchLocations(loc._id, 'MUNICIPALITY'); // Fetch both
-            } else if (loc.type === 'MANDAL') {
+    // Pre-fill Logic from Admin Location Hook
+    useEffect(() => {
+        if (adminLocation && userRole !== 'SUPER_ADMIN') {
+            console.log("[AssignAdmin] Pre-filling from adminLocation:", adminLocation);
+
+            if (adminLocation.stateName) {
+                // We usually only have Telangana, but let's be safe
+                // If we don't have the State ID yet, we might need a quick fetch or just use a known constant/ref
+                // But typically if locked, it's already in the dropdowns if we fetch root
+            }
+
+            if (adminLocation.districtId) {
+                setTargetDistrict(adminLocation.districtId);
+                fetchLocations(adminLocation.districtId, 'MANDAL');
+                fetchLocations(adminLocation.districtId, 'MUNICIPALITY');
+            }
+            if (adminLocation.mandalId) {
                 setAreaType('Rural');
-                setTargetMandals([loc]); setTargetMandal(loc._id);
-                fetchLocations(loc._id, 'VILLAGE');
-            } else if (loc.type === 'MUNICIPALITY') {
+                setTargetMandal(adminLocation.mandalId);
+                fetchLocations(adminLocation.mandalId, 'VILLAGE');
+            }
+            if (adminLocation.municipalityId) {
                 setAreaType('Urban');
-                setTargetMunicipalities([loc]); setTargetMunicipality(loc._id);
-            } else if (loc.type === 'VILLAGE') {
+                setTargetMunicipality(adminLocation.municipalityId);
+            }
+            if (adminLocation.villageId) {
                 setAreaType('Rural');
-                setTargetVillages([loc]); setTargetVillage(loc._id);
+                setTargetVillage(adminLocation.villageId);
             }
         }
-    }, [userLocationHierarchy]);
+    }, [adminLocation, userRole]);
+
+    // Generic pre-fill logic removed in favor of adminLocation hook effect
 
 
     // --- GENERIC LOCATION FETCH ---
@@ -297,6 +308,35 @@ const AssignAdmin = () => {
             if (exists) {
                 return prev.filter(m => m._id !== member._id);
             } else {
+                // SNAP TO MEMBER ADDRESS (Like Permanent Address auto-fill)
+                // Only snap if fields are NOT locked by admin's own jurisdiction
+                if (member.address) {
+                    console.log("[AssignAdmin] Snapping Target Location to Member Address...");
+                    const addr = member.address;
+
+                    if (!isFieldLocked('district') && addr.district) {
+                        const dId = addr.district._id || addr.district;
+                        setTargetDistrict(dId);
+                        fetchLocations(dId, 'MANDAL');
+                        fetchLocations(dId, 'MUNICIPALITY');
+                    }
+                    if (!isFieldLocked('mandal') && addr.mandal) {
+                        const mId = addr.mandal._id || addr.mandal;
+                        setAreaType('Rural');
+                        setTargetMandal(mId);
+                        fetchLocations(mId, 'VILLAGE');
+                    }
+                    if (!isFieldLocked('municipality') && addr.municipality) {
+                        const muId = addr.municipality._id || addr.municipality;
+                        setAreaType('Urban');
+                        setTargetMunicipality(muId);
+                    }
+                    if (!isFieldLocked('village') && addr.village) {
+                        const vId = addr.village._id || addr.village;
+                        setAreaType('Rural');
+                        setTargetVillage(vId);
+                    }
+                }
                 return [...prev, member];
             }
         });
@@ -361,20 +401,8 @@ const AssignAdmin = () => {
         }
     };
 
-    // Helper: Lock Target Fields
-    const isTargetLocked = (level) => {
-        if (!userLocationHierarchy) return false;
-        const type = userLocationHierarchy.type;
-        if (level === 'state') return true;
-        if (level === 'district' && ['DISTRICT', 'MANDAL', 'VILLAGE', 'MUNICIPALITY'].includes(type)) return true;
-        if (level === 'mandal' && ['MANDAL', 'VILLAGE'].includes(type)) return true;
-        if (level === 'village' && ['VILLAGE'].includes(type)) return true;
+    // Helper: Lock Target Fields (Unified via useAdminLocation) - Already declared at line 114
 
-        // Municipality Lock Logic
-        if (level === 'municipality' && ['MUNICIPALITY'].includes(type)) return true;
-
-        return false;
-    };
 
 
     return (

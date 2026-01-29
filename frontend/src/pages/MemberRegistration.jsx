@@ -1950,7 +1950,9 @@ const MemberRegistration = () => {
                     presentDistrict: data.address?.district?._id || data.address?.district || '',
                     presentConstituency: data.address?.constituency || '',
                     presentMandal: data.address?.mandal?._id || data.address?.mandal || '',
+                    presentMunicipality: data.address?.municipality?._id || data.address?.municipality || '', // Map Municipality
                     presentVillage: data.address?.village?._id || data.address?.village || '',
+                    presentWardNumber: data.address?.wardNumber || '', // Map Ward (String usually)
                     presentHouseNo: data.address?.houseNumber || '',
                     presentStreet: data.address?.street || '',
                     presentLandmark: data.address?.landmark || '',
@@ -1961,7 +1963,9 @@ const MemberRegistration = () => {
                     permDistrict: data.permanentAddress?.district?._id || data.permanentAddress?.district || '',
                     permConstituency: data.permanentAddress?.constituency || '',
                     permMandal: data.permanentAddress?.mandal?._id || data.permanentAddress?.mandal || '',
+                    permMunicipality: data.permanentAddress?.municipality?._id || data.permanentAddress?.municipality || '', // Map Municipality
                     permVillage: data.permanentAddress?.village?._id || data.permanentAddress?.village || '',
+                    permWardNumber: data.permanentAddress?.wardNumber || '', // Map Ward
                     permHouseNo: data.permanentAddress?.houseNumber || '',
                     permStreet: data.permanentAddress?.street || '',
                     permLandmark: data.permanentAddress?.landmark || '',

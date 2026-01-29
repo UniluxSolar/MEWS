@@ -407,7 +407,7 @@ const InstitutionLoginPage = () => {
                                     <FaArrowLeft />
                                 </button>
                                 <h2 className="text-xl font-bold text-[#1e2a4a]">Verification</h2>
-                                <p className="text-xs text-gray-400">Enter OTP sent to +91 {mobile}</p>
+                                <p className="text-xs text-gray-400">Enter Verification Code sent to +91 {mobile}</p>
                             </div>
 
                             {/* Feedback Message */}
