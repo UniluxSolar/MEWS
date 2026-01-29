@@ -1,15 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import API from '../api';
 import { useNavigate } from 'react-router-dom';
-import { FaUsers } from 'react-icons/fa';
+import { FaUsers, FaLock, FaFingerprint, FaUserCircle, FaArrowLeft } from 'react-icons/fa';
 import mewsLogo from '../assets/mews_main_logo_new.png';
 import PopupCarousel from '../components/common/PopupCarousel';
 
 const AdminLoginPage = () => {
     const navigate = useNavigate();
 
-    // OTP State
+    // Modes: 'MOBILE', 'OTP', 'MPIN', 'LOCKED'
+    const [viewMode, setViewMode] = useState('MOBILE');
+
+    // State
     const [mobileNumber, setMobileNumber] = useState('');
+    const [savedUser, setSavedUser] = useState(null);
+    const [mpin, setMpin] = useState('');
     const [isPopupOpen, setIsPopupOpen] = useState(false); // Default closed, opens on successful login
     const [pendingNavigation, setPendingNavigation] = useState(null); // Store target path
     const [otp, setOtp] = useState('');
@@ -17,8 +22,30 @@ const AdminLoginPage = () => {
     const [timer, setTimer] = useState(0);
     const [feedbackMessage, setFeedbackMessage] = useState(null);
     const otpInputRef = useRef(null); // Ref for auto-focus
+    const mpinInputRef = useRef(null);
 
     const [loading, setLoading] = useState(false);
+
+    // Load Saved User on Mount
+    useEffect(() => {
+        const storedUser = localStorage.getItem('savedUser');
+        if (storedUser) {
+            try {
+                const parsedUser = JSON.parse(storedUser);
+                // Strict Role Check: Only allow ADMIN roles
+                const adminRoles = ['SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'MUNICIPALITY_ADMIN'];
+
+                if (parsedUser.mobile && parsedUser.isMpinEnabled && adminRoles.includes(parsedUser.role)) {
+                    setSavedUser(parsedUser);
+                    setMobileNumber(parsedUser.mobile);
+                    setViewMode('MPIN');
+                }
+            } catch (e) {
+                console.error("Failed to parse saved user", e);
+                localStorage.removeItem('savedUser');
+            }
+        }
+    }, []);
 
     // Timer Effect
     useEffect(() => {
@@ -38,6 +65,15 @@ const AdminLoginPage = () => {
         }
     }, [otpSent]);
 
+    const getDeviceId = () => {
+        let deviceId = localStorage.getItem('deviceId');
+        if (!deviceId) {
+            deviceId = 'device-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+            localStorage.setItem('deviceId', deviceId);
+        }
+        return deviceId;
+    };
+
     const handleSendOTP = async (e) => {
         if (e) e.preventDefault();
         setFeedbackMessage(null);
@@ -52,6 +88,7 @@ const AdminLoginPage = () => {
             const { data } = await API.post('/auth/request-otp', { mobile: mobileNumber, userType: 'ADMIN' });
             setOtpSent(true);
             setTimer(60);
+            setViewMode('OTP');
             setFeedbackMessage({ type: 'success', text: data.message || 'OTP sent successfully!' });
         } catch (err) {
             const msg = err.response?.data?.message || 'Failed to send OTP';
@@ -69,32 +106,77 @@ const AdminLoginPage = () => {
             const { data } = await API.post('/auth/verify-otp', { mobile: mobileNumber, otp, userType: 'ADMIN' });
 
             // Check if user is actually an admin
-            const adminRoles = ['SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN'];
+            const adminRoles = ['SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'MUNICIPALITY_ADMIN'];
             if (!adminRoles.includes(data.role)) {
                 setFeedbackMessage({ type: 'error', text: 'Access Denied. You are not an Admin.' });
                 setLoading(false);
                 return;
             }
 
-            localStorage.setItem('adminInfo', JSON.stringify(data));
-
-            localStorage.setItem('adminInfo', JSON.stringify(data));
-
-            if (data.isMpinEnabled) {
-                // MPIN already set, go to dashboard
-                setPendingNavigation('/admin/dashboard');
-            } else {
-                // Determine setup path. MpinSetup is at /dashboard/mpin/setup
-                // Note: /dashboard is protected. Admin has access.
-                setPendingNavigation('/dashboard/mpin/setup');
-            }
-
-            setIsPopupOpen(true); // Open popup
+            handleLoginSuccess(data);
         } catch (err) {
             setFeedbackMessage({ type: 'error', text: err.response?.data?.message || 'Invalid OTP' });
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleMpinLogin = async () => {
+        if (!mpin || mpin.length !== 4) return;
+
+        try {
+            setLoading(true);
+            const { data } = await API.post('/auth/login-mpin', {
+                identifier: mobileNumber,
+                mpin,
+                deviceId: getDeviceId()
+            });
+
+            // Double check role
+            const adminRoles = ['SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'MUNICIPALITY_ADMIN'];
+            if (!adminRoles.includes(data.role)) {
+                setFeedbackMessage({ type: 'error', text: 'Access Denied. Not an Admin.' });
+                // Clear mpin?
+                setMpin('');
+                return;
+            }
+
+            // Login Success
+            handleLoginSuccess(data);
+        } catch (error) {
+            const msg = error.response?.data?.message || 'Login Failed';
+            setFeedbackMessage({ type: 'error', text: msg });
+            setMpin('');
+
+            if (msg.toLowerCase().includes('locked')) {
+                setViewMode('LOCKED');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLoginSuccess = (data) => {
+        localStorage.setItem('adminInfo', JSON.stringify(data));
+
+        // Save User for MPIN next time
+        if (data.isMpinEnabled) {
+            const userToSave = {
+                name: data.name,
+                mobile: data.mobileNumber,
+                role: data.role,
+                photoUrl: data.photoUrl, // Admin might not have photo, okay if null
+                isMpinEnabled: true
+            };
+            localStorage.setItem('savedUser', JSON.stringify(userToSave));
+
+            setPendingNavigation('/admin/dashboard');
+        } else {
+            // MPIN NOT ENABLED -> Force Setup
+            setPendingNavigation('/dashboard/mpin/setup');
+        }
+
+        setIsPopupOpen(true); // Open success popup -> triggers nav
     };
 
     return (
@@ -113,30 +195,89 @@ const AdminLoginPage = () => {
 
             <div className={`w-full max-w-[420px] bg-white rounded-3xl shadow-xl border border-white p-8 sm:p-10 flex flex-col items-center transition-all duration-300 ${isPopupOpen ? 'blur-sm pointer-events-none select-none' : ''}`}>
 
-                {/* Logo Section */}
-                <div className="mb-6 flex flex-col items-center text-center">
-                    <div className="w-20 h-20 bg-[#1e2a4a] rounded-2xl flex items-center justify-center shadow-md mb-4">
-                        {/* Use img if available, else icon */}
-                        {mewsLogo ? (
-                            <img src={mewsLogo} alt="MEWS" className="w-16 h-16 object-contain" />
-                        ) : (
-                            <FaUsers className="text-white text-3xl" />
-                        )}
+                {/* Header (Simplified for MPIN View) */}
+                {viewMode !== 'MPIN' && (
+                    <div className="mb-6 flex flex-col items-center text-center">
+                        <div className="w-20 h-20 bg-[#1e2a4a] rounded-2xl flex items-center justify-center shadow-md mb-4">
+                            {mewsLogo ? (
+                                <img src={mewsLogo} alt="MEWS" className="w-16 h-16 object-contain" />
+                            ) : (
+                                <FaUsers className="text-white text-3xl" />
+                            )}
+                        </div>
+                        <h1 className="text-[#1e2a4a] text-2xl font-extrabold tracking-tight">MEWS</h1>
+                        <h2 className="text-[#1e2a4a] text-sm font-semibold tracking-wide uppercase mt-1">Admin Portal</h2>
                     </div>
-                    <h1 className="text-[#1e2a4a] text-2xl font-extrabold tracking-tight">MEWS</h1>
-                    <h2 className="text-[#1e2a4a] text-sm font-semibold tracking-wide uppercase mt-1">Mala Educational Welfare Society</h2>
-                    <p className="text-gray-500 text-xs mt-1">Community Support at Your Fingertips</p>
-                </div>
+                )}
 
                 {/* Form Section */}
                 <div className="w-full space-y-5">
-                    {/* Admin Login Header */}
-                    <div className="text-center mb-2">
-                        <h2 className="text-xl font-bold text-[#1e2a4a]">Admin Login</h2>
-                    </div>
 
-                    {!otpSent ? (
+                    {/* --- MPIN MODE --- */}
+                    {viewMode === 'MPIN' && savedUser && (
+                        <div className="w-full flex flex-col items-center animate-fade-in">
+                            <div className="w-24 h-24 rounded-full bg-gray-200 border-4 border-white shadow-lg mb-4 overflow-hidden flex items-center justify-center">
+                                {savedUser.photoUrl ? (
+                                    <img src={savedUser.photoUrl} alt="User" className="w-full h-full object-cover" />
+                                ) : (
+                                    <FaUserCircle className="text-6xl text-gray-400" />
+                                )}
+                            </div>
+                            <h2 className="text-xl font-bold text-[#1e2a4a] mb-1">Welcome, {savedUser.name || 'Admin'}</h2>
+                            <p className="text-sm text-gray-500 mb-6">{savedUser.mobile}</p>
+
+                            {/* Error Msg */}
+                            {feedbackMessage && <div className="text-red-500 text-xs font-bold mb-4 bg-red-50 px-3 py-2 rounded">{feedbackMessage.text}</div>}
+
+                            <div className="relative w-full mb-6">
+                                <input
+                                    ref={mpinInputRef}
+                                    type="password"
+                                    inputMode="numeric"
+                                    maxLength={4}
+                                    value={mpin}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, '');
+                                        setMpin(val);
+                                    }}
+                                    placeholder="Enter MPIN"
+                                    className="w-full bg-gray-100/50 border border-gray-200 text-[#1e2a4a] text-3xl tracking-[0.5em] text-center rounded-2xl focus:ring-4 focus:ring-[#1e2a4a]/10 focus:border-[#1e2a4a] block p-5 font-bold transition-all placeholder:text-sm placeholder:tracking-normal placeholder:text-gray-400 outline-none"
+                                />
+                            </div>
+
+                            <button
+                                onClick={handleMpinLogin}
+                                disabled={loading}
+                                className="w-full bg-[#1e2a4a] hover:bg-[#2c3e66] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#1e2a4a]/20 transition-all transform active:scale-[0.98] mb-4 text-sm"
+                            >
+                                {loading ? 'Verifying...' : 'Unlock Dashboard'}
+                            </button>
+
+                            <div className="flex w-full justify-between items-center text-xs font-semibold text-gray-500 border-t pt-4">
+                                <button onClick={() => {
+                                    setViewMode('MOBILE');
+                                    setFeedbackMessage(null);
+                                }} className="hover:text-[#1e2a4a] transition-colors">
+                                    Switch Account
+                                </button>
+                                <button onClick={() => {
+                                    setViewMode('MOBILE'); // Revert to OTP for reset
+                                    setFeedbackMessage({ type: 'info', text: 'Please login with OTP to reset MPIN' });
+                                }} className="hover:text-[#1e2a4a] transition-colors">
+                                    Forgot MPIN?
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- MOBILE INPUT MODE --- */}
+                    {viewMode === 'MOBILE' && (
                         <>
+                            {/* Header Text */}
+                            <div className="text-center mb-2">
+                                <h2 className="text-xl font-bold text-[#1e2a4a]">Admin Login</h2>
+                            </div>
+
                             {/* Mobile Input */}
                             <div className="space-y-1.5">
                                 <label className="block text-sm font-semibold text-gray-600 pl-1">Mobile Number</label>
@@ -158,7 +299,7 @@ const AdminLoginPage = () => {
                             </div>
 
                             {/* Feedback Message (Mobile Screen) */}
-                            {feedbackMessage && !otpSent && (
+                            {feedbackMessage && (
                                 <div className={`p-3 rounded-lg text-xs font-bold text-center mb-2 ${feedbackMessage.type === 'success'
                                     ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                                     : 'bg-red-50 text-red-600 border border-red-200'
@@ -176,8 +317,19 @@ const AdminLoginPage = () => {
                                 {loading ? 'Sending...' : 'Send OTP'}
                             </button>
                         </>
-                    ) : (
-                        <>
+                    )}
+
+                    {/* --- OTP MODE --- */}
+                    {viewMode === 'OTP' && (
+                        <div className="w-full space-y-5 animate-fade-in">
+                            <div className="text-center mb-2">
+                                <button onClick={() => setViewMode('MOBILE')} className="absolute left-6 top-8 text-gray-400 hover:text-[#1e2a4a]">
+                                    <FaArrowLeft />
+                                </button>
+                                <h2 className="text-xl font-bold text-[#1e2a4a]">Verification</h2>
+                                <p className="text-xs text-gray-400">Enter OTP sent to +91 {mobileNumber}</p>
+                            </div>
+
                             {/* Feedback Message */}
                             {feedbackMessage && (
                                 <div className={`p-3 rounded-lg text-xs font-bold text-center mb-2 ${feedbackMessage.type === 'success'
@@ -227,13 +379,43 @@ const AdminLoginPage = () => {
                             </button>
 
                             <button
-                                onClick={() => setOtpSent(false)}
+                                onClick={() => {
+                                    setOtpSent(false);
+                                    setViewMode('MOBILE');
+                                }}
                                 className="w-full text-center text-xs text-gray-500 hover:text-[#1e2a4a] mt-2"
                             >
                                 Change Mobile Number
                             </button>
-                        </>
+                        </div>
                     )}
+
+                    {/* --- LOCKED MODE --- */}
+                    {viewMode === 'LOCKED' && (
+                        <div className="w-full flex flex-col items-center animate-fade-in text-center">
+                            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                                <FaLock className="text-3xl text-red-500" />
+                            </div>
+                            <h2 className="text-xl font-bold text-red-600 mb-2">Account Locked</h2>
+                            <p className="text-sm text-gray-600 mb-6">
+                                Too many incorrect attempts. Your account has been temporarily locked for security.
+                            </p>
+                            <p className="text-xs text-gray-500 mb-8 bg-gray-50 p-3 rounded-lg border">
+                                Please try again after 30 minutes or reset your MPIN using OTP.
+                            </p>
+
+                            <button
+                                onClick={() => {
+                                    setViewMode('MOBILE');
+                                    setFeedbackMessage({ type: 'info', text: 'Please login with OTP to reset details' });
+                                }}
+                                className="w-full bg-white border-2 border-[#1e2a4a] text-[#1e2a4a] font-bold py-3.5 rounded-xl transition-all hover:bg-gray-50 text-sm"
+                            >
+                                Reset via OTP
+                            </button>
+                        </div>
+                    )}
+
                 </div>
 
                 {/* Footer */}

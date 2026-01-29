@@ -30,10 +30,18 @@ const LoginPage = () => {
         if (storedUser) {
             try {
                 const parsedUser = JSON.parse(storedUser);
-                if (parsedUser.mobile && parsedUser.isMpinEnabled) {
+                // Strict Role Check: Only allow MEMBER, HEAD, or DEPENDENT for this page
+                // Valid Member Roles: 'MEMBER', 'HEAD', 'DEPENDENT'
+                // We exclude ADMIN roles and INSTITUTION to prevent confusion
+                const validRoles = ['MEMBER', 'HEAD', 'DEPENDENT'];
+
+                if (parsedUser.mobile && parsedUser.isMpinEnabled && validRoles.includes(parsedUser.role)) {
                     setSavedUser(parsedUser);
                     setMobile(parsedUser.mobile);
                     setViewMode('MPIN');
+                } else {
+                    // Mismatch found - ignore saved user for this portal
+                    // console.log("Ignoring saved user due to role mismatch:", parsedUser.role);
                 }
             } catch (e) {
                 console.error("Failed to parse saved user", e);
@@ -74,7 +82,7 @@ const LoginPage = () => {
             const { data } = await API.post('/auth/request-otp', { mobile, userType: 'MEMBER' }); // Assuming MEMBER default, logic handles lookup
             setTimer(60);
             setViewMode('OTP');
-            setFeedbackMessage({ type: 'success', text: data.message || 'OTP sent successfully!' });
+            setFeedbackMessage({ type: 'success', text: data.message || 'Verification code sent successfully!' });
         } catch (error) {
             setFeedbackMessage({ type: 'error', text: error.response?.data?.message || 'Failed to send OTP' });
         } finally {
@@ -90,7 +98,7 @@ const LoginPage = () => {
             // Login Success
             handleLoginSuccess(data);
         } catch (error) {
-            setFeedbackMessage({ type: 'error', text: error.response?.data?.message || 'Invalid OTP' });
+            setFeedbackMessage({ type: 'error', text: error.response?.data?.message || 'Invalid Verification Code' });
         } finally {
             setLoading(false);
         }
@@ -175,7 +183,7 @@ const LoginPage = () => {
 
             <div className="w-full max-w-[420px] bg-white rounded-3xl shadow-xl border border-white p-8 sm:p-10 flex flex-col items-center transition-all duration-300 relative z-10">
 
-                {/* Header / Logo (Show only in MOBILE or OTP mode usually, simplified for MPIN) */}
+                {/* Header / Logo (Show only in MOBILE or Verification Code mode usually, simplified for MPIN) */}
                 {viewMode !== 'MPIN' && (
                     <div className="mb-6 flex flex-col items-center text-center">
                         <div className="w-20 h-20 bg-[#1e2a4a] rounded-2xl flex items-center justify-center shadow-md mb-4">
@@ -239,7 +247,7 @@ const LoginPage = () => {
                             </button>
                             <button onClick={() => {
                                 setViewMode('MOBILE');
-                                setFeedbackMessage({ type: 'info', text: 'Please login with OTP to reset MPIN' });
+                                setFeedbackMessage({ type: 'info', text: 'Please login with Verification Code to reset MPIN' });
                             }} className="hover:text-[#1e2a4a] transition-colors">
                                 Forgot MPIN?
                             </button>
@@ -298,7 +306,7 @@ const LoginPage = () => {
                                 <FaArrowLeft />
                             </button>
                             <h2 className="text-xl font-bold text-[#1e2a4a]">Verification</h2>
-                            <p className="text-xs text-gray-400">Enter OTP sent to +91 {mobile}</p>
+                            <p className="text-xs text-gray-400">Enter Verification code sent to +91 {mobile}</p>
                         </div>
 
                         {feedbackMessage && (
@@ -324,7 +332,7 @@ const LoginPage = () => {
                                 <span className="text-xs text-gray-500 font-medium">Resend in {timer}s</span>
                             ) : (
                                 <button onClick={handleSendOTP} className="text-xs font-bold text-[#1e2a4a] hover:underline">
-                                    Resend OTP
+                                    Resend Verification Code
                                 </button>
                             )}
                         </div>
@@ -350,17 +358,17 @@ const LoginPage = () => {
                             Too many incorrect attempts. Your account has been temporarily locked for security.
                         </p>
                         <p className="text-xs text-gray-500 mb-8 bg-gray-50 p-3 rounded-lg border">
-                            Please try again after 30 minutes or reset your MPIN using OTP.
+                            Please try again after 30 minutes or reset your MPIN using Verification Code.
                         </p>
 
                         <button
                             onClick={() => {
                                 setViewMode('MOBILE'); // Go to OTP flow to reset
-                                setFeedbackMessage({ type: 'info', text: 'Please login with OTP to reset details' });
+                                setFeedbackMessage({ type: 'info', text: 'Please login with Verification Code to reset details' });
                             }}
                             className="w-full bg-white border-2 border-[#1e2a4a] text-[#1e2a4a] font-bold py-3.5 rounded-xl transition-all hover:bg-gray-50 text-sm"
                         >
-                            Reset via OTP
+                            Reset via Verification Code
                         </button>
                     </div>
                 )}

@@ -1,16 +1,21 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaUsers } from 'react-icons/fa';
+import { FaUsers, FaLock, FaFingerprint, FaUserCircle, FaArrowLeft } from 'react-icons/fa';
 import mewsLogo from '../assets/mews_main_logo_new.png';
 import API from '../api';
 import PopupCarousel from '../components/common/PopupCarousel';
+
 const InstitutionLoginPage = () => {
     const navigate = useNavigate();
 
-    // State
+    // Modes: 'MOBILE', 'OTP', 'MPIN', 'LOCKED'
+    const [viewMode, setViewMode] = useState('MOBILE');
+
     // State
     const [mobile, setMobile] = useState('');
+    const [savedUser, setSavedUser] = useState(null);
+    const [mpin, setMpin] = useState('');
     const [isPopupOpen, setIsPopupOpen] = useState(false); // Default closed
     const [pendingNavigation, setPendingNavigation] = useState(null);
     const [otp, setOtp] = useState('');
@@ -18,7 +23,31 @@ const InstitutionLoginPage = () => {
     const [loading, setLoading] = useState(false);
     const [timer, setTimer] = useState(0); // Timer state
     const otpInputRef = useRef(null); // Ref for auto-focus
+    const mpinInputRef = useRef(null);
     const [feedbackMessage, setFeedbackMessage] = useState(null); // New state for inline messages
+
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const redirectPath = queryParams.get('redirect') || '/dashboard';
+
+    // Load Saved User on Mount
+    useEffect(() => {
+        const storedUser = localStorage.getItem('savedUser');
+        if (storedUser) {
+            try {
+                const parsedUser = JSON.parse(storedUser);
+                // Strict Role Check: Only allow INSTITUTION role
+                if (parsedUser.mobile && parsedUser.isMpinEnabled && parsedUser.role === 'INSTITUTION') {
+                    setSavedUser(parsedUser);
+                    setMobile(parsedUser.mobile);
+                    setViewMode('MPIN');
+                }
+            } catch (e) {
+                console.error("Failed to parse saved user", e);
+                localStorage.removeItem('savedUser');
+            }
+        }
+    }, []);
 
     // Timer Effect
     useEffect(() => {
@@ -38,9 +67,14 @@ const InstitutionLoginPage = () => {
         }
     }, [otpSent]);
 
-    const location = useLocation();
-    const queryParams = new URLSearchParams(location.search);
-    const redirectPath = queryParams.get('redirect') || '/dashboard';
+    const getDeviceId = () => {
+        let deviceId = localStorage.getItem('deviceId');
+        if (!deviceId) {
+            deviceId = 'device-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+            localStorage.setItem('deviceId', deviceId);
+        }
+        return deviceId;
+    };
 
     const handleSendOTP = async (e) => {
         e.preventDefault();
@@ -52,6 +86,7 @@ const InstitutionLoginPage = () => {
             const { data } = await API.post('/auth/request-otp', { mobile, userType: 'INSTITUTION' });
             setOtpSent(true);
             setTimer(60); // Start 60s timer
+            setViewMode('OTP');
 
             // Show success message inline
             setFeedbackMessage({ type: 'success', text: data.message || 'OTP sent successfully!' });
@@ -70,20 +105,70 @@ const InstitutionLoginPage = () => {
         try {
             setLoading(true);
             const { data } = await API.post('/auth/verify-otp', { mobile, otp, userType: 'INSTITUTION' });
-            localStorage.setItem('adminInfo', JSON.stringify(data)); // Store member info as adminInfo for compatibility
 
-            if (data.isMpinEnabled) {
-                setPendingNavigation(redirectPath === '/dashboard/profile' ? '/dashboard' : redirectPath);
-            } else {
-                setPendingNavigation('/dashboard/mpin/setup');
-            }
-
-            setIsPopupOpen(true);
+            // Allow login
+            handleLoginSuccess(data);
         } catch (error) {
-            alert(error.response?.data?.message || 'Invalid OTP');
+            setFeedbackMessage({ type: 'error', text: error.response?.data?.message || 'Invalid OTP' });
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleMpinLogin = async () => {
+        if (!mpin || mpin.length !== 4) return;
+
+        try {
+            setLoading(true);
+            const { data } = await API.post('/auth/login-mpin', {
+                identifier: mobile,
+                mpin,
+                deviceId: getDeviceId()
+            });
+
+            // Role double check
+            if (data.role !== 'INSTITUTION') {
+                setFeedbackMessage({ type: 'error', text: 'Access Denied. Not an Institution.' });
+                setMpin('');
+                return;
+            }
+
+            handleLoginSuccess(data);
+        } catch (error) {
+            const msg = error.response?.data?.message || 'Login Failed';
+            setFeedbackMessage({ type: 'error', text: msg });
+            setMpin('');
+
+            if (msg.toLowerCase().includes('locked')) {
+                setViewMode('LOCKED');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLoginSuccess = (data) => {
+        localStorage.setItem('adminInfo', JSON.stringify(data)); // Store member info as adminInfo for compatibility if needed, but mainly memberInfo logic uses it differently. 
+        // Institution likely uses memberInfo or adminInfo depending on dashboard. 
+        // Based on original code: localStorage.setItem('adminInfo', JSON.stringify(data));
+
+        // Save User for MPIN
+        if (data.isMpinEnabled) {
+            const userToSave = {
+                name: data.name, // Institution name
+                mobile: data.mobileNumber,
+                role: 'INSTITUTION',
+                photoUrl: data.photoUrl,
+                isMpinEnabled: true
+            };
+            localStorage.setItem('savedUser', JSON.stringify(userToSave));
+
+            setPendingNavigation(redirectPath === '/dashboard/profile' ? '/dashboard' : redirectPath);
+        } else {
+            setPendingNavigation('/dashboard/mpin/setup');
+        }
+
+        setIsPopupOpen(true);
     };
 
     return (
@@ -101,30 +186,87 @@ const InstitutionLoginPage = () => {
             />
             <div className={`w-full max-w-[420px] bg-white rounded-3xl shadow-xl border border-white p-8 sm:p-10 flex flex-col items-center transition-all duration-300 ${isPopupOpen ? 'blur-sm pointer-events-none select-none' : ''}`}>
 
-                {/* Logo Section */}
-                <div className="mb-6 flex flex-col items-center text-center">
-                    <div className="w-20 h-20 bg-[#1e2a4a] rounded-2xl flex items-center justify-center shadow-md mb-4">
-                        {/* Use img if available, else icon */}
-                        {mewsLogo ? (
-                            <img src={mewsLogo} alt="MEWS" className="w-16 h-16 object-contain" />
-                        ) : (
-                            <FaUsers className="text-white text-3xl" />
-                        )}
+                {/* Header (Simplified for MPIN View) */}
+                {viewMode !== 'MPIN' && (
+                    <div className="mb-6 flex flex-col items-center text-center">
+                        <div className="w-20 h-20 bg-[#1e2a4a] rounded-2xl flex items-center justify-center shadow-md mb-4">
+                            {mewsLogo ? (
+                                <img src={mewsLogo} alt="MEWS" className="w-16 h-16 object-contain" />
+                            ) : (
+                                <FaUsers className="text-white text-3xl" />
+                            )}
+                        </div>
+                        <h1 className="text-[#1e2a4a] text-2xl font-extrabold tracking-tight">MEWS</h1>
+                        <h2 className="text-[#1e2a4a] text-sm font-semibold tracking-wide uppercase mt-1">Institution Portal</h2>
                     </div>
-                    <h1 className="text-[#1e2a4a] text-2xl font-extrabold tracking-tight">MEWS</h1>
-                    <h2 className="text-[#1e2a4a] text-sm font-semibold tracking-wide uppercase mt-1">Mala Educational Welfare Society</h2>
-                    <p className="text-gray-500 text-xs mt-1">Community Support at Your Fingertips</p>
-                </div>
+                )}
 
                 {/* Form Section */}
                 <div className="w-full space-y-5">
-                    {/* Institution Login Header */}
-                    <div className="text-center mb-2">
-                        <h2 className="text-xl font-bold text-[#1e2a4a]">Institution Login</h2>
-                    </div>
 
-                    {!otpSent ? (
+                    {/* --- MPIN MODE --- */}
+                    {viewMode === 'MPIN' && savedUser && (
+                        <div className="w-full flex flex-col items-center animate-fade-in">
+                            <div className="w-24 h-24 rounded-full bg-gray-200 border-4 border-white shadow-lg mb-4 overflow-hidden flex items-center justify-center">
+                                {/* Institution Icon or Logo */}
+                                <FaUserCircle className="text-6xl text-gray-400" />
+                            </div>
+                            <h2 className="text-xl font-bold text-[#1e2a4a] mb-1">Welcome, {savedUser.name}</h2>
+                            <p className="text-sm text-gray-500 mb-6">{savedUser.mobile}</p>
+
+                            {/* Error Msg */}
+                            {feedbackMessage && <div className="text-red-500 text-xs font-bold mb-4 bg-red-50 px-3 py-2 rounded">{feedbackMessage.text}</div>}
+
+                            <div className="relative w-full mb-6">
+                                <input
+                                    ref={mpinInputRef}
+                                    type="password"
+                                    inputMode="numeric"
+                                    maxLength={4}
+                                    value={mpin}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, '');
+                                        setMpin(val);
+                                    }}
+                                    placeholder="Enter MPIN"
+                                    className="w-full bg-gray-100/50 border border-gray-200 text-[#1e2a4a] text-3xl tracking-[0.5em] text-center rounded-2xl focus:ring-4 focus:ring-[#1e2a4a]/10 focus:border-[#1e2a4a] block p-5 font-bold transition-all placeholder:text-sm placeholder:tracking-normal placeholder:text-gray-400 outline-none"
+                                />
+                            </div>
+
+                            <button
+                                onClick={handleMpinLogin}
+                                disabled={loading}
+                                className="w-full bg-[#1e2a4a] hover:bg-[#2c3e66] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#1e2a4a]/20 transition-all transform active:scale-[0.98] mb-4 text-sm"
+                            >
+                                {loading ? 'Verifying...' : 'Unlock Dashboard'}
+                            </button>
+
+                            <div className="flex w-full justify-between items-center text-xs font-semibold text-gray-500 border-t pt-4">
+                                <button onClick={() => {
+                                    setViewMode('MOBILE');
+                                    setFeedbackMessage(null);
+                                }} className="hover:text-[#1e2a4a] transition-colors">
+                                    Switch Account
+                                </button>
+                                <button onClick={() => {
+                                    setViewMode('MOBILE');
+                                    setFeedbackMessage({ type: 'info', text: 'Please login with OTP to reset MPIN' });
+                                }} className="hover:text-[#1e2a4a] transition-colors">
+                                    Forgot MPIN?
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+
+                    {/* --- MOBILE MODE --- */}
+                    {viewMode === 'MOBILE' && (
                         <>
+                            {/* Institution Login Header */}
+                            <div className="text-center mb-2">
+                                <h2 className="text-xl font-bold text-[#1e2a4a]">Institution Login</h2>
+                            </div>
+
                             {/* Mobile Input */}
                             <div className="space-y-1.5">
                                 <label className="block text-sm font-semibold text-gray-600 pl-1">Mobile Number</label>
@@ -146,7 +288,7 @@ const InstitutionLoginPage = () => {
                             </div>
 
                             {/* Feedback Message (Mobile Screen) */}
-                            {feedbackMessage && !otpSent && (
+                            {feedbackMessage && (
                                 <div className={`p-3 rounded-lg text-xs font-bold text-center mb-2 ${feedbackMessage.type === 'success'
                                     ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                                     : 'bg-red-50 text-red-600 border border-red-200'
@@ -164,8 +306,20 @@ const InstitutionLoginPage = () => {
                                 {loading ? 'Sending...' : 'Send OTP'}
                             </button>
                         </>
-                    ) : (
-                        <>
+                    )}
+
+
+                    {/* --- OTP MODE --- */}
+                    {viewMode === 'OTP' && (
+                        <div className="w-full space-y-5 animate-fade-in">
+                            <div className="text-center mb-2">
+                                <button onClick={() => setViewMode('MOBILE')} className="absolute left-6 top-8 text-gray-400 hover:text-[#1e2a4a]">
+                                    <FaArrowLeft />
+                                </button>
+                                <h2 className="text-xl font-bold text-[#1e2a4a]">Verification</h2>
+                                <p className="text-xs text-gray-400">Enter OTP sent to +91 {mobile}</p>
+                            </div>
+
                             {/* Feedback Message */}
                             {feedbackMessage && (
                                 <div className={`p-3 rounded-lg text-xs font-bold text-center mb-2 ${feedbackMessage.type === 'success'
@@ -215,12 +369,41 @@ const InstitutionLoginPage = () => {
                             </button>
 
                             <button
-                                onClick={() => setOtpSent(false)}
+                                onClick={() => {
+                                    setOtpSent(false);
+                                    setViewMode('MOBILE');
+                                }}
                                 className="w-full text-center text-xs text-gray-500 hover:text-[#1e2a4a] mt-2"
                             >
                                 Change Mobile Number
                             </button>
-                        </>
+                        </div>
+                    )}
+
+                    {/* --- LOCKED MODE --- */}
+                    {viewMode === 'LOCKED' && (
+                        <div className="w-full flex flex-col items-center animate-fade-in text-center">
+                            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                                <FaLock className="text-3xl text-red-500" />
+                            </div>
+                            <h2 className="text-xl font-bold text-red-600 mb-2">Account Locked</h2>
+                            <p className="text-sm text-gray-600 mb-6">
+                                Too many incorrect attempts. Your account has been temporarily locked for security.
+                            </p>
+                            <p className="text-xs text-gray-500 mb-8 bg-gray-50 p-3 rounded-lg border">
+                                Please try again after 30 minutes or reset your MPIN using OTP.
+                            </p>
+
+                            <button
+                                onClick={() => {
+                                    setViewMode('MOBILE');
+                                    setFeedbackMessage({ type: 'info', text: 'Please login with OTP to reset details' });
+                                }}
+                                className="w-full bg-white border-2 border-[#1e2a4a] text-[#1e2a4a] font-bold py-3.5 rounded-xl transition-all hover:bg-gray-50 text-sm"
+                            >
+                                Reset via OTP
+                            </button>
+                        </div>
                     )}
                 </div>
 

@@ -58,13 +58,38 @@ const MpinSetup = () => {
             }
 
             // Determine redirect path based on role
-            let targetPath = '/dashboard';
+            let targetPath = '/dashboard'; // Default (Member)
+
             try {
-                const info = JSON.parse(localStorage.getItem('adminInfo') || localStorage.getItem('memberInfo'));
-                if (info && (info.role === 'ADMIN' || info.role === 'SUPER_ADMIN' || info.role.includes('ADMIN'))) {
-                    targetPath = '/admin/dashboard';
+                // Check for Admin or Institution info
+                // Note: Admin login and Institution login both often use 'adminInfo' in this codebase
+                // But simplified member login uses 'memberInfo' or 'savedUser'
+
+                const adminInfoRaw = localStorage.getItem('adminInfo');
+                const memberInfoRaw = localStorage.getItem('memberInfo');
+
+                let role = 'MEMBER';
+
+                if (adminInfoRaw) {
+                    const adminData = JSON.parse(adminInfoRaw);
+                    if (adminData.role) role = adminData.role;
+                } else if (memberInfoRaw) {
+                    const memberData = JSON.parse(memberInfoRaw);
+                    if (memberData.role) role = memberData.role;
                 }
-            } catch (e) { console.error(e); }
+
+                // Route based on role
+                if (['SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'MUNICIPALITY_ADMIN'].includes(role)) {
+                    targetPath = '/admin/dashboard';
+                } else if (role === 'INSTITUTION') {
+                    // Institutions might have a specific dashboard or profile
+                    // Based on InstitutionLoginPage, it defaults to /dashboard or redirect query
+                    targetPath = '/dashboard';
+                }
+
+            } catch (e) {
+                console.error("Error determining redirect path:", e);
+            }
 
             setTimeout(() => {
                 navigate(targetPath, { replace: true });
