@@ -67,6 +67,7 @@ const loginUser = asyncHandler(async (req, res) => {
                 assignedLocation: user.assignedLocation,
                 locationName,
                 institutionId: user.institutionId,
+                token: generateToken(user._id, user._id) // Add token so frontend can set Authorization header
             });
             return;
         }
@@ -612,7 +613,8 @@ const loginMpin = asyncHandler(async (req, res) => {
             _id: user._id,
             name: loggedInMember.name,
             role: loggedInMember.role,
-            message: 'Logged in with MPIN'
+            message: 'Logged in with MPIN',
+            token: generateToken(user._id, user._id) // Add token so frontend can set Authorization header
         });
 
     } else {

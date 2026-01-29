@@ -509,9 +509,15 @@ const getVillageSettings = asyncHandler(async (req, res) => {
     console.log("Assigned Location:", req.user.assignedLocation);
 
     if (!req.user.assignedLocation) {
-        console.log("ERROR: No assigned location found for user.");
-        res.status(400);
-        throw new Error('User has no assigned location');
+        console.log("WARNING: User has no assigned location. Returning empty settings.");
+        return res.json({
+            villageName: '',
+            mandal: '',
+            municipalityName: '',
+            district: '',
+            stateName: '',
+            email: req.user.email
+        });
     }
 
     const getLocationHierarchy = async (locationId) => {

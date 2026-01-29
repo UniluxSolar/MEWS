@@ -168,6 +168,7 @@ const MemberManagement = () => {
     const [viewMode, setViewMode] = useState(localStorage.getItem('memberViewMode') || 'table'); // 'table', 'cards', 'map'
 
     const [currentPage, setCurrentPage] = useState(1);
+    const [selectedMemberIds, setSelectedMemberIds] = useState([]); // Added missing state
 
 
 
