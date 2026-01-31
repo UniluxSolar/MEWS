@@ -1146,7 +1146,7 @@ const MemberManagement = () => {
                                                                         <div className="text-[10px] text-slate-400 font-mono truncate">ID: {member.mewsId || member._id.substring(0, 6)}</div>
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-4 py-3 text-xs font-bold text-blue-600 truncate" title={getLocationName(member.address?.village) || member.address?.wardNumber}>
+                                                                <td className="px-4 py-3 text-xs font-bold text-blue-600 truncate" title={`${getLocationName(member.address?.village) || member.address?.wardNumber || 'N/A'}, ${getLocationName(member.address?.constituency) || ''}, ${getLocationName(member.address?.mandal) || ''}`}>
                                                                     {getLocationName(member.address?.village) || member.address?.wardNumber || 'N/A'}
                                                                     {member.address?.municipality && <span className="text-[9px] text-slate-400 block">{getLocationName(member.address?.municipality)} (Mun)</span>}
                                                                 </td>
@@ -1229,9 +1229,10 @@ const MemberManagement = () => {
                                                             <h3 className="font-bold text-slate-800 text-sm mb-0.5 truncate px-1" title={`${member.name} ${member.surname}`}>
                                                                 <Link to={`/admin/members/${member._id}`} className="hover:text-blue-600 hover:underline">{member.name} {member.surname}</Link>
                                                             </h3>
-                                                            <p className="text-[10px] text-blue-500 font-bold mb-1 truncate px-2" title={`${getLocationName(member.address?.village)} (V), ${getLocationName(member.address?.mandal) || ''} (M), ${getLocationName(member.address?.district) || ''} (D)`}>
+                                                            <p className="text-[10px] text-blue-500 font-bold mb-1 truncate px-2" title={`${getLocationName(member.address?.village)} (V), ${getLocationName(member.address?.constituency) || ''} (C), ${getLocationName(member.address?.mandal) || ''} (M), ${getLocationName(member.address?.district) || ''} (D)`}>
                                                                 {getLocationName(member.address?.village) || member.address?.wardNumber || 'N/A'}
                                                                 {member.address?.mandal && ` (V), ${getLocationName(member.address.mandal)} (M)`}
+                                                                {member.address?.constituency && ` , ${getLocationName(member.address.constituency)} (C)`}
                                                                 {member.address?.municipality && ` (W), ${getLocationName(member.address.municipality)} (Mun)`}
                                                                 {member.address?.district && `, ${getLocationName(member.address.district)} (D)`}
                                                             </p>

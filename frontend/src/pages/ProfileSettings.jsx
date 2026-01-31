@@ -103,10 +103,11 @@ const PersonalInfoTab = ({ formData, handleChange }) => (
             <div className="flex flex-wrap gap-6 mb-6">
                 <InputField label="State" name="address.state" value={formData.address?.state} onChange={handleChange} disabled={true} />
                 <InputField label="District" name="address.district" value={formData.address?.district?.name || formData.address?.district} onChange={handleChange} disabled={true} />
-                <InputField label="Mandal" name="address.mandal" value={formData.address?.mandal?.name || formData.address?.mandal} onChange={handleChange} disabled={true} />
+                <InputField label="Constituency" name="address.constituency" value={formData.address?.constituency?.name || formData.address?.constituency} onChange={handleChange} disabled={true} />
             </div>
 
             <div className="flex flex-wrap gap-6 mb-6">
+                <InputField label="Mandal" name="address.mandal" value={formData.address?.mandal?.name || formData.address?.mandal} onChange={handleChange} disabled={true} />
                 <InputField label="Village" name="address.village" value={formData.address?.village?.name || formData.address?.village} onChange={handleChange} disabled={true} />
                 <InputField label="Pincode" name="address.pinCode" value={formData.address?.pinCode} onChange={handleChange} disabled={true} />
             </div>
@@ -114,6 +115,7 @@ const PersonalInfoTab = ({ formData, handleChange }) => (
             <div className="flex flex-wrap gap-6">
                 <InputField label="House Number" name="address.houseNumber" value={formData.address?.houseNumber} onChange={handleChange} disabled={true} />
                 <InputField label="Street" name="address.street" value={formData.address?.street} onChange={handleChange} disabled={true} />
+                <InputField label="Landmark" name="address.landmark" value={formData.address?.landmark} onChange={handleChange} disabled={true} />
             </div>
         </div>
     </div>
@@ -340,15 +342,18 @@ const ProfileSettings = () => {
             district: '',
             mandal: '',
             village: '',
+            constituency: '',
             houseNumber: '',
             street: '',
-            pinCode: ''
+            pinCode: '',
+            landmark: ''
         },
         permanentAddress: {
             state: '',
             district: '',
             mandal: '',
             village: '',
+            constituency: '',
             houseNumber: '',
             street: '',
             pinCode: '',
@@ -534,6 +539,7 @@ const ProfileSettings = () => {
                         return {
                             state: getField('state') || 'Telangana',
                             district: getField('district'),
+                            constituency: memberAddr?.constituency || headAddr?.constituency || '',
                             mandal: getField('mandal'),
                             village: getField('village'),
                             houseNumber: memberAddr?.houseNumber || headAddr?.houseNumber || '',
@@ -988,12 +994,6 @@ const ProfileSettings = () => {
                                                 {(formData.mewsId && formData.mewsId !== 'PENDING') ? formData.mewsId : 'PENDING'}
                                             </span>
                                         </div>
-                                        {formData.dob && (
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-medium text-gray-400">Born:</span>
-                                                <span className="text-gray-700">{formData.dob}</span>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -1137,6 +1137,20 @@ const ProfileSettings = () => {
                                             )}
                                         </div>
                                         <div className="group">
+                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Landmark</label>
+                                            {isReadOnly ? (
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.permanentAddress.landmark || '-'}</p>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    name="permanentAddress.landmark"
+                                                    value={formData.permanentAddress.landmark}
+                                                    onChange={handleChange}
+                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="group">
                                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Village</label>
                                             {isReadOnly ? (
                                                 <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.permanentAddress.village || '-'}</p>
@@ -1159,6 +1173,20 @@ const ProfileSettings = () => {
                                                     type="text"
                                                     name="permanentAddress.mandal"
                                                     value={formData.permanentAddress.mandal}
+                                                    onChange={handleChange}
+                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="group">
+                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Constituency</label>
+                                            {isReadOnly ? (
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.permanentAddress.constituency?.name || formData.permanentAddress.constituency || '-'}</p>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    name="permanentAddress.constituency"
+                                                    value={formData.permanentAddress.constituency?.name || formData.permanentAddress.constituency}
                                                     onChange={handleChange}
                                                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                                 />

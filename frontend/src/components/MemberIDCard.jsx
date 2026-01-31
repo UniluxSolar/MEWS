@@ -52,6 +52,7 @@ const MemberIDCard = ({ member }) => {
         address.street,
         (address.village?.name || address.village) ? `${address.village?.name || address.village} (V)` : '',
         (address.mandal?.name || address.mandal) ? `${address.mandal?.name || address.mandal} (M)` : '',
+        (address.constituency?.name || address.constituency) ? `${address.constituency?.name || address.constituency} (C)` : '',
         (address.district?.name || address.district) ? `${address.district?.name || address.district} (D)` : '',
         address.state || 'Telangana',
         address.pinCode

@@ -762,10 +762,12 @@ const getMembers = asyncHandler(async (req, res) => {
         .populate('address.mandal', 'name')
         .populate('address.municipality', 'name')
         .populate('address.district', 'name')
+        .populate('address.constituency', 'name')
         .populate('permanentAddress.village', 'name')
         .populate('permanentAddress.mandal', 'name')
         .populate('permanentAddress.municipality', 'name')
         .populate('permanentAddress.district', 'name')
+        .populate('permanentAddress.constituency', 'name')
         .sort({ createdAt: -1 });
 
     if (limit > 0) {
@@ -802,10 +804,12 @@ const getMemberById = asyncHandler(async (req, res) => {
         .populate('address.mandal', 'name')
         .populate('address.municipality', 'name')
         .populate('address.district', 'name')
+        .populate('address.constituency', 'name')
         .populate('permanentAddress.village', 'name')
         .populate('permanentAddress.mandal', 'name')
         .populate('permanentAddress.municipality', 'name')
-        .populate('permanentAddress.district', 'name');
+        .populate('permanentAddress.district', 'name')
+        .populate('permanentAddress.constituency', 'name');
     if (member) {
         const signedMember = await signMemberData(member);
         res.json(signedMember);
@@ -1337,9 +1341,11 @@ const updateMember = asyncHandler(async (req, res) => {
                 { path: 'address.district' },
                 { path: 'address.mandal' },
                 { path: 'address.village' },
+                { path: 'address.constituency' },
                 { path: 'permanentAddress.district' },
                 { path: 'permanentAddress.mandal' },
-                { path: 'permanentAddress.village' }
+                { path: 'permanentAddress.village' },
+                { path: 'permanentAddress.constituency' }
             ]);
 
             const signedMember = await signMemberData(updatedMember);

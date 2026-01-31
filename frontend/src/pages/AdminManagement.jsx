@@ -1152,6 +1152,7 @@ const AdminManagement = () => {
                                                         viewAdmin.memberId.address?.street,
                                                         viewAdmin.memberId.address?.village?.name ? `${viewAdmin.memberId.address.village.name} (V)` : '',
                                                         viewAdmin.memberId.address?.mandal?.name ? `${viewAdmin.memberId.address.mandal.name} (M)` : '',
+                                                        viewAdmin.memberId.address?.constituency?.name || viewAdmin.memberId.address?.constituency ? `${viewAdmin.memberId.address.constituency.name || viewAdmin.memberId.address.constituency} (C)` : '',
                                                         viewAdmin.memberId.address?.district?.name ? `${viewAdmin.memberId.address.district.name} (D)` : '',
                                                         viewAdmin.memberId.address?.state
                                                     ].filter(Boolean).join(', ')}
