@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import API from '../api';
+import API, { BASE_URL } from '../api';
 import { Link, useLocation } from 'react-router-dom';
 import * as XLSX from 'xlsx-js-style';
 import jsPDF from 'jspdf';
@@ -209,6 +209,7 @@ const MemberManagement = () => {
     const [selectedStatus, setSelectedStatus] = useState('');
 
     const location = useLocation();
+    const baseUrl = BASE_URL;
 
     // Initialize filters from URL - Robust Reset
     useEffect(() => {
@@ -1208,7 +1209,7 @@ const MemberManagement = () => {
                                                                 src={(() => {
                                                                     const photo = member.photoUrl || member.profileImage || '';
                                                                     if (!photo) return '';
-                                                                    const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+                                                                    const baseUrl = BASE_URL;
                                                                     const timestamp = member.updatedAt ? new Date(member.updatedAt).getTime() : '';
 
                                                                     if (photo.startsWith('http')) {

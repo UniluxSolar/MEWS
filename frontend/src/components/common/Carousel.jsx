@@ -1,4 +1,5 @@
 import React from 'react';
+import { BASE_URL } from '../../api';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
@@ -50,7 +51,7 @@ const Carousel = ({ images, autoPlay = true, height = "h-64 md:h-96" }) => {
                     <div key={index} className="relative w-full h-full outline-none">
                         <div className={`w-full ${height} relative`}>
                             <img
-                                src={img.imageUrl.startsWith('http') ? img.imageUrl : `${import.meta.env.VITE_API_URL || ''}/${img.imageUrl.replace(/\\/g, '/')}`}
+                                src={img.imageUrl.startsWith('http') ? img.imageUrl : `${BASE_URL}/${img.imageUrl.replace(/\\/g, '/')}`}
                                 alt={img.title || `Slide ${index + 1}`}
                                 className="w-full h-full object-cover"
                             />

@@ -12,7 +12,7 @@ backend/uploads
 logs
 *.log
 
-!backend/.env
+# !backend/.env  (Removed to prevent local env leaking to prod)
 !backend/gcp-key.json
 !backend/package.json
 !backend/package-lock.json

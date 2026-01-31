@@ -5,7 +5,7 @@ import {
 } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import API from '../api';
+import API, { BASE_URL } from '../api';
 import LivePhotoCapture from '../components/LivePhotoCapture';
 import { MemberDocument } from './MemberDocument';
 import MemberIDCard from '../components/MemberIDCard';
@@ -724,8 +724,7 @@ const ProfileSettings = () => {
         if (url.startsWith('data:') || url.startsWith('blob:')) return url;
 
         // Use Proxy for GCS/Remote URLs to ensure they load (CORS/Private)
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+        const baseUrl = BASE_URL;
 
         if (url.startsWith('http')) {
             return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(url)}`;

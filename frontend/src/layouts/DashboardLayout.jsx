@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import axios from '../api';
+import axios, { BASE_URL } from '../api';
 import {
     FaThLarge, FaFileAlt, FaUserCheck, FaBriefcase, FaHeart, FaNotesMedical,
     FaBalanceScale, FaHandHoldingUsd, FaHeadset, FaQuestionCircle, FaBars,
@@ -159,8 +159,7 @@ const DashboardLayout = () => {
         if (!url) return "/assets/images/user-profile.png";
         if (url.startsWith('data:') || url.startsWith('blob:')) return url;
 
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+        const baseUrl = BASE_URL;
 
         // Use Proxy for GCS/Remote URLs to ensure they load (CORS/Private)
         if (url.startsWith('http')) {
@@ -168,8 +167,6 @@ const DashboardLayout = () => {
         }
 
         // If relative path from backend (e.g., 'uploads/...')
-        // We need to resolve it against the backend URL, not frontend.
-        // Ensure url has leading slash if needed, or handle if baseUrl has trailing
         const cleanUrl = url.startsWith('/') ? url : `/${url}`;
         return `${baseUrl}${cleanUrl}`;
     };

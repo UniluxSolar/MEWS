@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FaUsers, FaLock, FaFingerprint, FaUserCircle, FaArrowLeft } from 'react-icons/fa';
 import mewsLogo from '../assets/mews_main_logo_new.png';
-import API from '../api';
+import API, { BASE_URL } from '../api';
 import CarouselModal from '../components/common/CarouselModal'; // Replaced
 
 const LoginPage = () => {
@@ -175,6 +175,18 @@ const LoginPage = () => {
         }
     };
 
+    const getImageUrl = (url) => {
+        if (!url) return null;
+        if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+
+        if (url.startsWith('http')) {
+            return `${BASE_URL}/api/proxy-image?url=${encodeURIComponent(url)}`;
+        }
+
+        const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+        return `${BASE_URL}${cleanUrl}`;
+    };
+
     // --- Render Helpers ---
 
     return (
@@ -199,7 +211,7 @@ const LoginPage = () => {
                     <div className="w-full flex flex-col items-center animate-fade-in">
                         <div className="w-24 h-24 rounded-full bg-gray-200 border-4 border-white shadow-lg mb-4 overflow-hidden flex items-center justify-center">
                             {savedUser.photoUrl ? (
-                                <img src={savedUser.photoUrl} alt="User" className="w-full h-full object-cover" />
+                                <img src={getImageUrl(savedUser.photoUrl)} alt="User" className="w-full h-full object-cover" />
                             ) : (
                                 <FaUserCircle className="text-6xl text-gray-400" />
                             )}

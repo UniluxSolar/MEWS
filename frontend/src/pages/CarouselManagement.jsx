@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import API from '../api';
+import API, { BASE_URL } from '../api';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import {
@@ -192,7 +192,7 @@ const CarouselManagement = () => {
 
     // Helpers
     const getImageUrl = (url) => {
-        return url.startsWith('http') ? url : `${import.meta.env.VITE_API_URL || ''}/${url.replace(/\\/g, '/')}`;
+        return url.startsWith('http') ? url : `${BASE_URL}/${url.replace(/\\/g, '/')}`;
     };
 
     return (
@@ -456,8 +456,8 @@ const CarouselManagement = () => {
                             <button
                                 onClick={executeBulkAction}
                                 className={`flex-1 py-2.5 rounded-xl font-bold text-white transition-colors shadow-lg ${bulkActionType === 'DELETE' ? 'bg-red-600 hover:bg-red-700 shadow-red-200' :
-                                        bulkActionType === 'PUBLISH' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' :
-                                            'bg-orange-600 hover:bg-orange-700 shadow-orange-200'
+                                    bulkActionType === 'PUBLISH' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' :
+                                        'bg-orange-600 hover:bg-orange-700 shadow-orange-200'
                                     }`}
                             >
                                 Confirm

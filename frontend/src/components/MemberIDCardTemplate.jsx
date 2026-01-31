@@ -1,6 +1,7 @@
 import React from 'react';
 import { FaPhoneAlt, FaCheck } from 'react-icons/fa';
 import mewsLogo from '../assets/mews_main_logo_new.png';
+import { BASE_URL } from '../api';
 
 const MemberIDCardTemplate = ({ member, idPrefix = "single-card" }) => {
     // Robust Photo Logic
@@ -13,7 +14,7 @@ const MemberIDCardTemplate = ({ member, idPrefix = "single-card" }) => {
         } else {
             // Cache buster
             const activeDate = member.updatedAt ? new Date(member.updatedAt).getTime() : Date.now();
-            const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/api\/?$/, '');
+            const baseUrl = BASE_URL;
 
             if (rawPhoto.startsWith('http')) {
                 photoSrc = `${baseUrl}/api/proxy-image?url=${encodeURIComponent(rawPhoto)}&t=${activeDate}`;

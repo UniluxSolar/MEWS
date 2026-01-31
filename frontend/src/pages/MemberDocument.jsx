@@ -1,5 +1,6 @@
 import React from 'react';
 import mewsLogo from '../assets/mews_main_logo_new.png';
+import { BASE_URL } from '../api';
 
 const MemberDocument = ({ data, lookups }) => {
     if (!data) return null;
@@ -55,12 +56,12 @@ const MemberDocument = ({ data, lookups }) => {
         const timeParam = timestamp ? `&t=${timestamp}` : '';
 
         if (url.startsWith('http')) {
-            const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/api\/?$/, '');
+            const baseUrl = BASE_URL;
             return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(url)}${timeParam}`;
         }
 
         // Local relative path
-        const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/api\/?$/, '');
+        const baseUrl = BASE_URL;
         // Ensure url starts with /
         const normalizedPath = url.replace(/\\/g, '/').replace(/^\//, '');
         return `${baseUrl}/${normalizedPath}?t=${timestamp}`;

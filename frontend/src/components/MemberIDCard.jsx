@@ -3,6 +3,7 @@ import html2canvas from 'html2canvas';
 import { FaDownload, FaPhoneAlt, FaCheck } from 'react-icons/fa';
 import jsPDF from 'jspdf';
 import mewsLogo from '../assets/mews_main_logo_new.png';
+import { BASE_URL } from '../api';
 import './MemberIDCardStyles.css';
 
 const MemberIDCard = ({ member }) => {
@@ -76,8 +77,7 @@ const MemberIDCard = ({ member }) => {
         if (!url) return null;
         if (url.startsWith('data:') || url.startsWith('blob:')) return url;
 
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+        const baseUrl = BASE_URL;
 
         if (url.startsWith('http')) {
             return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(url)}`;

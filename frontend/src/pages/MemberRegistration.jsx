@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import API from '../api';
+import API, { BASE_URL } from '../api';
 import axios from 'axios'; // Direct import for file upload to bypass interceptor issues
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
@@ -1905,10 +1905,10 @@ const MemberRegistration = () => {
                 // Safest: Fetch the districts list locally here.
                 let localDistricts = districts;
                 if (!localDistricts || localDistricts.length === 0) {
-                    const { data: states } = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/locations?type=STATE`);
+                    const { data: states } = await API.get('/locations?type=STATE');
                     const telangana = states.find(s => s.name === 'Telangana') || states[0];
                     if (telangana) {
-                        const { data: dists } = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/locations?parent=${telangana._id}`);
+                        const { data: dists } = await API.get(`/locations?parent=${telangana._id}`);
                         setDistricts(dists);
                         localDistricts = dists;
                     }
@@ -2017,7 +2017,7 @@ const MemberRegistration = () => {
 
                 // Populate files state with existing document URLs (for display/preview)
                 const initialFiles = {};
-                const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
+                const baseUrl = BASE_URL;
 
                 const resolveExistingFile = (url) => {
                     if (!url) return null;
@@ -2517,7 +2517,7 @@ const MemberRegistration = () => {
                                                                         <img
                                                                             src={(() => {
                                                                                 const photo = fm.photo;
-                                                                                const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+                                                                                const baseUrl = BASE_URL;
                                                                                 if (photo.startsWith('http')) {
                                                                                     return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(photo)}`;
                                                                                 }
@@ -3687,7 +3687,7 @@ const MemberRegistration = () => {
                                                                     <img
                                                                         src={(() => {
                                                                             const photo = fm.photo;
-                                                                            const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '');
+                                                                            const baseUrl = BASE_URL;
                                                                             if (photo.startsWith('http')) {
                                                                                 return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(photo)}`;
                                                                             }
