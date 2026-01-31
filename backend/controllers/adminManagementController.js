@@ -229,8 +229,19 @@ const deleteAdmin = asyncHandler(async (req, res) => {
         throw new Error('You do not have permission to delete this user.');
     }
 
+    // 2. Revert associated Member record (if any)
+    if (userToDelete.memberId) {
+        const Member = require('../models/Member');
+        await Member.findByIdAndUpdate(userToDelete.memberId, {
+            role: 'MEMBER',
+            assignedLocation: null
+        });
+        console.log(`[REVERT ADMIN] Role reset to MEMBER for Member ID: ${userToDelete.memberId}`);
+    }
+
+    // 3. Delete the User login record
     await userToDelete.deleteOne();
-    res.json({ message: 'User removed' });
+    res.json({ message: 'Administrative role removed and member reverted to regular status' });
 });
 
 // @desc    Get valid child locations for dropdown
@@ -363,10 +374,22 @@ const promoteMember = asyncHandler(async (req, res) => {
         throw new Error('Member not found');
     }
 
-    // 3. Unique Admin Role Check
+    // 3. Unique Admin Role Check (with Self-Healing)
     if (member.role && member.role !== 'MEMBER') {
-        res.status(400);
-        throw new Error(`This member is already assigned as a ${member.role.replace('_', ' ')}. Multiple admin roles are not allowed.`);
+        // Check if a corresponding User record actually exists
+        const userExists = await User.findOne({
+            $or: [
+                { memberId: member._id },
+                { username: member.mobileNumber }
+            ]
+        });
+
+        if (userExists) {
+            res.status(400);
+            throw new Error(`This member is already assigned as a ${member.role.replace('_', ' ')}. Multiple admin roles are not allowed.`);
+        } else {
+            console.log(`[SELF-HEALING] Orphaned role '${member.role}' detected for member ${member._id}. Proceeding with clean promotion.`);
+        }
     }
 
     // Check if trying to demote higher or equal role (Optional safety)

@@ -16,6 +16,14 @@ const GenerateIDCard = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
+    const handleBack = () => {
+        if (window.history.length > 2) {
+            navigate(-1);
+        } else {
+            navigate('/admin/members');
+        }
+    };
+
     // Default valid until date (5 years from now)
     const getValidUntil = () => {
         const date = new Date();
@@ -188,7 +196,7 @@ const GenerateIDCard = () => {
                 <main className="flex-1 overflow-y-auto p-8">
                     <div className="mb-6 flex justify-between items-center">
                         <div className="flex items-center gap-4">
-                            <button onClick={() => navigate(-1)} className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition shadow-sm">
+                            <button onClick={handleBack} className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition shadow-sm">
                                 <FaArrowLeft /> Back
                             </button>
                             <div>

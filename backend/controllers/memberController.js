@@ -510,11 +510,15 @@ const registerMember = asyncHandler(async (req, res) => {
 // @access  Private (Admin)
 const getMembers = asyncHandler(async (req, res) => {
     let query = {};
-    const mongoose = require('mongoose');
     const toId = (id) => {
         if (!id) return null;
-        try { return new mongoose.Types.ObjectId(id); } catch (e) { return id; }
+        try {
+            if (mongoose.Types.ObjectId.isValid(id)) return new mongoose.Types.ObjectId(id);
+            return id;
+        } catch (e) { return id; }
     };
+    console.log(`[GET MEMBERS] req.query:`, JSON.stringify(req.query, null, 2));
+    console.log(`[GET MEMBERS] req.user:`, req.user ? { id: req.user._id, role: req.user.role, assignedLoc: req.user.assignedLocation } : 'No User');
     // --- Pagination Params ---
     const page = parseInt(req.query.page) || 1;
     const rawLimit = req.query.limit === 'all' ? 0 : parseInt(req.query.limit);
@@ -541,8 +545,7 @@ const getMembers = asyncHandler(async (req, res) => {
         }
     });
 
-    // --- Location Filters (Explicit from Frontend) ---
-    // Handle both flat "address.district" and nested { address: { district: ... } }
+    // --- Location Filters (Cumulative) ---
     const q = req.query;
     const getParam = (path) => {
         if (q[path]) return q[path];
@@ -555,15 +558,37 @@ const getMembers = asyncHandler(async (req, res) => {
         return val;
     };
 
+    const district = getParam('address.district');
+    const municipality = getParam('address.municipality');
+    const wardParam = getParam('address.wardNumber') || getParam('address.ward');
+    const stateID = getParam('address.stateID');
     const village = getParam('address.village');
     const mandal = getParam('address.mandal');
-    const district = getParam('address.district');
-    const stateID = getParam('address.stateID');
 
-    if (village) query['address.village'] = toId(village);
-    if (mandal) query['address.mandal'] = toId(mandal);
+    if (stateID) {
+        if (mongoose.Types.ObjectId.isValid(stateID)) {
+            const stateLoc = await Location.findById(stateID);
+            if (stateLoc) query['address.state'] = stateLoc.name;
+        } else {
+            query['address.state'] = stateID;
+        }
+    }
     if (district) query['address.district'] = toId(district);
-    if (stateID) query['address.stateID'] = toId(stateID);
+    if (mandal) query['address.mandal'] = toId(mandal);
+    if (village) query['address.village'] = toId(village);
+    if (municipality) query['address.municipality'] = toId(municipality);
+
+    if (wardParam) {
+        if (mongoose.Types.ObjectId.isValid(wardParam)) {
+            const wardLoc = await Location.findById(wardParam);
+            if (wardLoc) {
+                const shortName = wardLoc.name.replace(/Ward\s+/i, '').trim();
+                query['address.wardNumber'] = { $in: [wardLoc.name, shortName] };
+            }
+        } else {
+            query['address.wardNumber'] = { $regex: new RegExp(`^${wardParam}$`, 'i') };
+        }
+    }
 
     // Caste Filter (Deep match)
     if (req.query.subCaste) {
@@ -668,27 +693,12 @@ const getMembers = asyncHandler(async (req, res) => {
 
         // -- WARD ADMIN --
         else if (req.user.role === 'WARD_ADMIN') {
-            // Wards are strings "wardNumber", not IDs usually, but schema has wardNumber string.
-            // Wait, schema has 'wardNumber: String'. 
-            // If the admin is assigned a Location document of type 'WARD', we need to match members in that ward.
-            // Assumption: Member has address.wardNumber (String) AND/OR address.ward (Ref).
-            // Schema line 36: wardNumber: String.
-            // Schema line 52: wardNumber: String (Permanent).
-            // Schema DOES NOT have address.ward as ObjectId.
-            // BUT Look at line 114 of useAdminLocation.js: "fieldName === 'ward'".
-
-            // Let's check Location model for WARD type. 
-            // If Admin is assigned a WARD location, we need to locate members in that ward.
-            // Strategy: Match address.municipality = Ward's Parent AND address.wardNumber = Ward Name.
-
             const assignedWard = await Location.findById(locationId);
             if (assignedWard && assignedWard.type === 'WARD') {
-                // Match Municipality (Parent)
                 query['address.municipality'] = assignedWard.parent;
-                // Match Ward Name/Number
-                query['address.wardNumber'] = assignedWard.name;
+                const shortWard = assignedWard.name.replace(/Ward\s+/i, '').trim();
+                query['address.wardNumber'] = { $in: [assignedWard.name, shortWard] };
             } else {
-                // Fallback/Error safest to block
                 query = { _id: null };
             }
         }
@@ -741,14 +751,9 @@ const getMembers = asyncHandler(async (req, res) => {
             // Unknown role with location? Block.
             query = { _id: null };
         }
-    } else {
-        // No Assigned Location
-        if (req.user.role !== 'SUPER_ADMIN') {
-            // STRICT BLOCK for all non-super admins without location
-            console.warn(`[GET MEMBERS] User ${req.user.username} (${req.user.role}) has no assigned location. Access Denied.`);
-            query = { _id: null };
-        }
     }
+
+    console.log(`[GET MEMBERS] Final Mongoose Query:`, JSON.stringify(query, null, 2));
 
     const total = await Member.countDocuments(query);
 
@@ -783,7 +788,8 @@ const getMembers = asyncHandler(async (req, res) => {
         members: signedMembers,
         total,
         page: limit > 0 ? page : 1,
-        pages: limit > 0 ? Math.ceil(total / limit) : 1
+        pages: limit > 0 ? Math.ceil(total / limit) : 1,
+        debugQuery: query // Added for troubleshooting
     });
 });
 
@@ -1376,16 +1382,24 @@ const deleteMember = asyncHandler(async (req, res) => {
         if (member) {
             // Optional: Check permissions
 
-            // Delete specific member only
+            // 1. Delete associated User record(s)
+            // A member might be linked by ID or by username (mewsId/mobile)
             const opts = session ? { session } : undefined;
-            await member.deleteOne(opts);
+            const User = require('../models/User');
+            await User.deleteMany({
+                $or: [
+                    { memberId: member._id },
+                    { username: member.mewsId },
+                    { username: member.mobileNumber }
+                ]
+            }, opts);
 
-            // CASCADE DELETION REMOVED per user request (2026-01-19)
-            // const deleteResult = await Member.deleteMany({ headOfFamily: member._id }, opts); 
-            console.log(`[DELETE] Member ${member._id} deleted.`);
+            // 2. Delete the member themselves
+            await member.deleteOne(opts);
+            console.log(`[DELETE] Member ${member._id} (${member.name}) and their user account(s) deleted.`);
 
             if (transactionStarted) await session.commitTransaction();
-            res.json({ message: 'Member removed' });
+            res.json({ message: 'Member and associated administrative accounts removed' });
         } else {
             if (transactionStarted) await session.abortTransaction();
             res.status(404);

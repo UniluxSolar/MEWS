@@ -150,8 +150,14 @@ const deleteInstitution = asyncHandler(async (req, res) => {
     const institution = await Institution.findById(req.params.id);
 
     if (institution) {
+        // 1. Cascade Delete: Remove the User account associated with this institution
+        const User = require('../models/User');
+        await User.deleteMany({ institutionId: institution._id });
+        console.log(`[DELETE] Associated User accounts for Institution ${institution._id} removed.`);
+
+        // 2. Delete the Institution record
         await institution.deleteOne();
-        res.json({ message: 'Institution removed' });
+        res.json({ message: 'Institution and associated user accounts removed' });
     } else {
         res.status(404);
         throw new Error('Institution not found');

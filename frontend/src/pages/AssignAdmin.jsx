@@ -17,8 +17,9 @@ const AssignAdmin = () => {
         'SUPER_ADMIN': 6,
         'STATE_ADMIN': 5,
         'DISTRICT_ADMIN': 4,
-        'MUNICIPALITY_ADMIN': 3, // New Role
-        'MANDAL_ADMIN': 2,
+        'MUNICIPALITY_ADMIN': 3,
+        'MANDAL_ADMIN': 3,
+        'WARD_ADMIN': 2,
         'VILLAGE_ADMIN': 1
     };
 
@@ -26,6 +27,7 @@ const AssignAdmin = () => {
         'STATE_ADMIN': 'State Admin',
         'DISTRICT_ADMIN': 'District Admin',
         'MUNICIPALITY_ADMIN': 'Municipality Admin',
+        'WARD_ADMIN': 'Ward Admin',
         'MANDAL_ADMIN': 'Mandal Admin',
         'VILLAGE_ADMIN': 'Village Admin'
     };
@@ -48,7 +50,9 @@ const AssignAdmin = () => {
     const [targetDistrict, setTargetDistrict] = useState('');
     const [targetMandal, setTargetMandal] = useState('');
     const [targetVillage, setTargetVillage] = useState('');
-    const [targetMunicipality, setTargetMunicipality] = useState(''); // New
+    const [targetMunicipality, setTargetMunicipality] = useState('');
+    const [targetWard, setTargetWard] = useState('');
+    const [targetWards, setTargetWards] = useState([]);
 
     // Area Type Toggle (Rural vs Urban)
     const [areaType, setAreaType] = useState('Rural'); // 'Rural' or 'Urban'
@@ -67,6 +71,22 @@ const AssignAdmin = () => {
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [selectedBloodGroups, setSelectedBloodGroups] = useState([]);
     const [selectedGenders, setSelectedGenders] = useState({ All: true, Male: false, Female: false, Other: false });
+
+    // Member Search Location Filters (Decoupled from Target Scope)
+    const [searchStates, setSearchStates] = useState([]);
+    const [searchDistricts, setSearchDistricts] = useState([]);
+    const [searchMandals, setSearchMandals] = useState([]);
+    const [searchVillages, setSearchVillages] = useState([]);
+    const [searchMunicipalities, setSearchMunicipalities] = useState([]);
+    const [searchWards, setSearchWards] = useState([]);
+
+    const [searchState, setSearchState] = useState('');
+    const [searchDistrict, setSearchDistrict] = useState('');
+    const [searchMandal, setSearchMandal] = useState('');
+    const [searchVillage, setSearchVillage] = useState('');
+    const [searchMunicipality, setSearchMunicipality] = useState('');
+    const [searchWard, setSearchWard] = useState('');
+    const [searchAreaType, setSearchAreaType] = useState('Rural');
 
     const [selectedMembers, setSelectedMembers] = useState([]);
     const [loadingAssign, setLoadingAssign] = useState(false);
@@ -98,12 +118,17 @@ const AssignAdmin = () => {
                 const { data } = await API.get('/locations?type=STATE');
                 const sortedStates = [...data].sort((a, b) => a.name.localeCompare(b.name));
                 setTargetStates(sortedStates);
+                setSearchStates(sortedStates); // Also for search
 
                 // Default auto-select Telangana for Super Admin if not already set
                 if (sortedStates.length > 0 && !targetState) {
                     const ts = sortedStates.find(s => s.name === 'Telangana' || s.name.toUpperCase() === 'TELANGANA') || sortedStates[0];
                     setTargetState(ts._id);
                     fetchLocations(ts._id, 'DISTRICT');
+
+                    // Also for search
+                    setSearchState(ts._id);
+                    fetchSearchLocations(ts._id, 'DISTRICT');
                 }
             }
         } catch (error) {
@@ -142,75 +167,269 @@ const AssignAdmin = () => {
                 setAreaType('Rural');
                 setTargetVillage(adminLocation.villageId);
             }
+
+            // Sync Search Filters initially
+            setSearchState(adminLocation.stateId || targetState);
+            if (adminLocation.districtId) {
+                setSearchDistrict(adminLocation.districtId);
+                fetchSearchLocations(adminLocation.districtId, 'MANDAL');
+                fetchSearchLocations(adminLocation.districtId, 'MUNICIPALITY');
+            }
+            if (adminLocation.mandalId) {
+                setSearchAreaType('Rural');
+                setSearchMandal(adminLocation.mandalId);
+                fetchSearchLocations(adminLocation.mandalId, 'VILLAGE');
+            }
+            if (adminLocation.municipalityId) {
+                setSearchAreaType('Urban');
+                setSearchMunicipality(adminLocation.municipalityId);
+            }
+            if (adminLocation.villageId) {
+                setSearchAreaType('Rural');
+                setSearchVillage(adminLocation.villageId);
+            }
         }
     }, [adminLocation, userRole]);
+
+    // Sync Search Filters when Target changes (Auto-fill from Target)
+    useEffect(() => {
+        console.log("[AssignAdmin] Syncing Search Filters from Target Selection...");
+        if (targetState) {
+            setSearchState(targetState);
+            // We should only fetch if not already populated, but for sync, we re-fetch search options
+            fetchSearchLocations(targetState, 'DISTRICT');
+        }
+    }, [targetState]);
+
+    useEffect(() => {
+        if (targetDistrict) {
+            setSearchDistrict(targetDistrict);
+            fetchSearchLocations(targetDistrict, 'MANDAL');
+            fetchSearchLocations(targetDistrict, 'MUNICIPALITY');
+        }
+    }, [targetDistrict]);
+
+    useEffect(() => {
+        if (targetMandal) {
+            setSearchAreaType('Rural');
+            setSearchMandal(targetMandal);
+            fetchSearchLocations(targetMandal, 'VILLAGE');
+        }
+    }, [targetMandal]);
+
+    useEffect(() => {
+        if (targetMunicipality) {
+            setSearchAreaType('Urban');
+            setSearchMunicipality(targetMunicipality);
+        }
+    }, [targetMunicipality]);
+
+    useEffect(() => {
+        setSearchAreaType(areaType);
+    }, [areaType]);
+
+    useEffect(() => {
+        if (targetVillage) {
+            setSearchAreaType('Rural');
+            setSearchVillage(targetVillage);
+        }
+    }, [targetVillage]);
 
     // Generic pre-fill logic removed in favor of adminLocation hook effect
 
 
     // --- GENERIC LOCATION FETCH ---
-    const fetchLocations = async (parentId, type) => {
-        if (!parentId) {
-            // Clear downstream if parent is removed area-specifically
+    const fetchLocations = async (ancestorId, type) => {
+        console.log(`[AssignAdmin] fetchLocations(ancestor: ${ancestorId}, type: ${type})`);
+        if (!ancestorId) {
             if (type === 'DISTRICT') setTargetDistricts([]);
             if (type === 'MANDAL') setTargetMandals([]);
             if (type === 'VILLAGE') setTargetVillages([]);
             if (type === 'MUNICIPALITY') setTargetMunicipalities([]);
+            if (type === 'WARD') setTargetWards([]);
             return;
         }
         try {
-            const { data } = await API.get(`/locations?parent=${parentId}`);
-            // Filter by type to be safe
-            const filteredData = data.filter(d => d.type === type);
-            const sortedData = [...filteredData].sort((a, b) => a.name.localeCompare(b.name));
+            // Use ancestor instead of parent to handle intermediate layers like CONSTITUENCY
+            const { data } = await API.get(`/locations?ancestor=${ancestorId}&type=${type}`);
+            const sortedData = [...data].sort((a, b) => a.name.localeCompare(b.name));
+            console.log(`[AssignAdmin] Fetched ${sortedData.length} ${type}s`);
 
-            if (type === 'DISTRICT') setTargetDistricts(sortedData);
-            if (type === 'MANDAL') setTargetMandals(sortedData);
-            if (type === 'VILLAGE') setTargetVillages(sortedData);
-            if (type === 'MUNICIPALITY') setTargetMunicipalities(sortedData);
+            if (type === 'DISTRICT') { setTargetDistricts(sortedData); setSearchDistricts(sortedData); }
+            if (type === 'MANDAL') { setTargetMandals(sortedData); setSearchMandals(sortedData); }
+            if (type === 'VILLAGE') { setTargetVillages(sortedData); setSearchVillages(sortedData); }
+            if (type === 'MUNICIPALITY') { setTargetMunicipalities(sortedData); setSearchMunicipalities(sortedData); }
+            if (type === 'WARD') { setTargetWards(sortedData); setSearchWards(sortedData); }
         } catch (e) {
-            console.error(e);
+            console.error(`[AssignAdmin] fetchLocations error (${type}):`, e);
+        }
+    };
+
+    // --- SEARCH LOCATION FETCH ---
+    const fetchSearchLocations = async (ancestorId, type) => {
+        console.log(`[AssignAdmin] fetchSearchLocations(ancestor: ${ancestorId}, type: ${type})`);
+        if (!ancestorId) {
+            if (type === 'DISTRICT') setSearchDistricts([]);
+            if (type === 'MANDAL') setSearchMandals([]);
+            if (type === 'VILLAGE') setSearchVillages([]);
+            if (type === 'MUNICIPALITY') setSearchMunicipalities([]);
+            if (type === 'WARD') setSearchWards([]);
+            return;
+        }
+        try {
+            // Use ancestor instead of parent to handle intermediate layers like CONSTITUENCY
+            const { data } = await API.get(`/locations?ancestor=${ancestorId}&type=${type}`);
+            const sortedData = [...data].sort((a, b) => a.name.localeCompare(b.name));
+            console.log(`[AssignAdmin] Fetched ${sortedData.length} Search ${type}s`);
+
+            if (type === 'DISTRICT') setSearchDistricts(sortedData);
+            if (type === 'MANDAL') setSearchMandals(sortedData);
+            if (type === 'VILLAGE') setSearchVillages(sortedData);
+            if (type === 'MUNICIPALITY') setSearchMunicipalities(sortedData);
+            if (type === 'WARD') setSearchWards(sortedData);
+        } catch (e) {
+            console.error(`[AssignAdmin] fetchSearchLocations error (${type}):`, e);
         }
     };
 
     // --- HANDLERS: TARGET SCOPE ---
     const handleRoleChange = (e) => {
-        const role = e.target.value;
-        setSelectedRole(role);
+        const val = e.target.value;
+        setSelectedRole(val);
 
         // Auto-switch area types based on role intent
-        if (role === 'MUNICIPALITY_ADMIN') setAreaType('Urban');
-        if (['MANDAL_ADMIN', 'VILLAGE_ADMIN'].includes(role)) setAreaType('Rural');
+        if (['MUNICIPALITY_ADMIN', 'WARD_ADMIN'].includes(val)) {
+            setAreaType('Urban');
+            setSearchAreaType('Urban');
+        }
+        if (['MANDAL_ADMIN', 'VILLAGE_ADMIN'].includes(val)) {
+            setAreaType('Rural');
+            setSearchAreaType('Rural');
+        }
+
+        // Clear lower level target selections if role changes to a higher level
+        if (val === 'STATE_ADMIN') {
+            setTargetDistrict(''); setTargetMandal(''); setTargetVillage(''); setTargetMunicipality(''); setTargetWard('');
+            setTargetDistricts([]); setTargetMandals([]); setTargetVillages([]); setTargetMunicipalities([]); setTargetWards([]);
+        } else if (val === 'DISTRICT_ADMIN') {
+            setTargetMandal(''); setTargetVillage(''); setTargetMunicipality(''); setTargetWard('');
+            setTargetMandals([]); setTargetVillages([]); setTargetMunicipalities([]); setTargetWards([]);
+        } else if (val === 'MANDAL_ADMIN') {
+            setTargetVillage(''); setTargetMunicipality(''); setTargetWard('');
+            setTargetVillages([]); setTargetMunicipalities([]); setTargetWards([]);
+        } else if (val === 'MUNICIPALITY_ADMIN') {
+            setTargetMandal(''); setTargetVillage(''); setTargetWard('');
+            setTargetMandals([]); setTargetVillages([]); setTargetWards([]);
+        } else if (val === 'VILLAGE_ADMIN') {
+            setTargetMunicipality(''); setTargetWard('');
+            setTargetMunicipalities([]); setTargetWards([]);
+        } else if (val === 'WARD_ADMIN') {
+            setTargetMandal(''); setTargetVillage('');
+            setTargetMandals([]); setTargetVillages([]);
+        }
     };
 
     const handleTargetStateChange = (e) => {
         const val = e.target.value;
         setTargetState(val);
-        setTargetDistrict(''); setTargetMandal(''); setTargetVillage(''); setTargetMunicipality('');
-        fetchLocations(val, 'DISTRICT');
+        setSearchState(val);
+        setTargetDistrict(''); setTargetMandal(''); setTargetVillage(''); setTargetMunicipality(''); setTargetWard('');
+        setSearchDistrict(''); setSearchMandal(''); setSearchVillage(''); setSearchMunicipality(''); setSearchWard('');
+        setTargetDistricts([]); setTargetMandals([]); setTargetVillages([]); setTargetMunicipalities([]); setTargetWards([]);
+        setSearchDistricts([]); setSearchMandals([]); setSearchVillages([]); setSearchMunicipalities([]); setSearchWards([]);
+        if (val) fetchLocations(val, 'DISTRICT');
     };
 
     const handleTargetDistrictChange = (e) => {
         const val = e.target.value;
         setTargetDistrict(val);
-        setTargetMandal(''); setTargetVillage(''); setTargetMunicipality('');
-        fetchLocations(val, 'MANDAL');
-        fetchLocations(val, 'MUNICIPALITY');
+        setSearchDistrict(val);
+        setTargetMandal(''); setTargetVillage(''); setTargetMunicipality(''); setTargetWard('');
+        setSearchMandal(''); setSearchVillage(''); setSearchMunicipality(''); setSearchWard('');
+        setTargetMandals([]); setTargetVillages([]); setTargetMunicipalities([]); setTargetWards([]);
+        setSearchMandals([]); setSearchVillages([]); setSearchMunicipalities([]); setSearchWards([]);
+        if (val) {
+            fetchLocations(val, 'MANDAL');
+            fetchLocations(val, 'MUNICIPALITY');
+        }
     };
 
     const handleTargetMandalChange = (e) => {
         const val = e.target.value;
         setTargetMandal(val);
+        setSearchMandal(val);
         setTargetVillage('');
-        fetchLocations(val, 'VILLAGE');
+        setSearchVillage('');
+        setTargetVillages([]);
+        setSearchVillages([]);
+        if (val) fetchLocations(val, 'VILLAGE');
     };
 
     const handleTargetVillageChange = (e) => {
-        setTargetVillage(e.target.value);
+        const val = e.target.value;
+        setTargetVillage(val);
+        setSearchVillage(val);
     };
 
     const handleTargetMunicipalityChange = (e) => {
-        setTargetMunicipality(e.target.value);
+        const val = e.target.value;
+        setTargetMunicipality(val);
+        setSearchMunicipality(val);
+        setTargetWard('');
+        setSearchWard('');
+        setTargetWards([]);
+        setSearchWards([]);
+        if (val) fetchLocations(val, 'WARD');
+    };
+
+    const handleTargetWardChange = (e) => {
+        const val = e.target.value;
+        setTargetWard(val);
+        setSearchWard(val);
+    };
+
+    // --- HANDLERS: SEARCH SCOPE ---
+    const handleSearchStateChange = (e) => {
+        const val = e.target.value;
+        setSearchState(val);
+        setSearchDistrict(''); setSearchMandal(''); setSearchVillage(''); setSearchMunicipality(''); setSearchWard('');
+        setSearchDistricts([]); setSearchMandals([]); setSearchVillages([]); setSearchMunicipalities([]); setSearchWards([]);
+        if (val) fetchSearchLocations(val, 'DISTRICT');
+    };
+
+    const handleSearchDistrictChange = (e) => {
+        const val = e.target.value;
+        setSearchDistrict(val);
+        setSearchMandal(''); setSearchVillage(''); setSearchMunicipality(''); setSearchWard('');
+        setSearchMandals([]); setSearchVillages([]); setSearchMunicipalities([]); setSearchWards([]);
+        if (val) {
+            fetchSearchLocations(val, 'MANDAL');
+            fetchSearchLocations(val, 'MUNICIPALITY');
+        }
+    };
+
+    const handleSearchMandalChange = (e) => {
+        const val = e.target.value;
+        setSearchMandal(val);
+        setSearchVillage('');
+        setSearchVillages([]);
+        if (val) fetchSearchLocations(val, 'VILLAGE');
+    };
+
+    const handleSearchVillageChange = (e) => {
+        setSearchVillage(e.target.value);
+    };
+
+    const handleSearchMunicipalityChange = (e) => {
+        const val = e.target.value;
+        setSearchMunicipality(val);
+        setSearchWard('');
+        setSearchWards([]);
+        if (val) fetchSearchLocations(val, 'WARD');
+    };
+
+    const handleSearchWardChange = (e) => {
+        setSearchWard(e.target.value);
     };
 
     const handleGenderChange = (type) => {
@@ -228,6 +447,14 @@ const AssignAdmin = () => {
         setSelectedCategories([]);
         setSelectedBloodGroups([]);
         setSelectedGenders({ All: true, Male: false, Female: false, Other: false });
+        setSearchState(targetState); // Reset to target selection
+        setSearchDistrict(targetDistrict);
+        setSearchMandal(targetMandal);
+        setSearchVillage(targetVillage);
+        setSearchMunicipality(targetMunicipality);
+        setSearchWard(targetWard);
+        setSearchWards(targetWards); // Reset search wards to target wards
+        setSearchAreaType(areaType);
         setCurrentPage(1);
     };
 
@@ -242,23 +469,18 @@ const AssignAdmin = () => {
                 search: searchTerm
             };
 
-            // Hierarchical Location Filtering from Target Scope
-            // Depends on Area Type
-            if (areaType === 'Rural') {
-                if (targetVillage) params['address.village'] = targetVillage;
-                else if (targetMandal) params['address.mandal'] = targetMandal;
-            } else if (areaType === 'Urban') {
-                if (targetMunicipality) params['address.municipality'] = targetMunicipality;
-            }
+            // Hierarchical Location Filtering from Search Scope
+            // Depends on Search Area Type
+            // Cumulative Hierarchical Location Filtering
+            if (searchState) params['address.stateID'] = searchState;
+            if (searchDistrict) params['address.district'] = searchDistrict;
 
-            // Fallback to District/State if lower levels not selected
-            // But only if we haven't selected a specific leaf yet
-            // If explicit Municipality or Village isn't selected, check higher levels
-            const hasLeafSelection = (areaType === 'Rural' && (targetVillage || targetMandal)) || (areaType === 'Urban' && targetMunicipality);
-
-            if (!hasLeafSelection) {
-                if (targetDistrict) params['address.district'] = targetDistrict;
-                else if (targetState) params['address.stateID'] = targetState;
+            if (searchAreaType === 'Rural') {
+                if (searchMandal) params['address.mandal'] = searchMandal;
+                if (searchVillage) params['address.village'] = searchVillage;
+            } else if (searchAreaType === 'Urban') {
+                if (searchMunicipality) params['address.municipality'] = searchMunicipality;
+                if (searchWard) params['address.wardNumber'] = searchWard;
             }
 
             // Extra Filters
@@ -286,7 +508,7 @@ const AssignAdmin = () => {
 
     useEffect(() => {
         fetchMembers();
-    }, [currentPage, targetState, targetDistrict, targetMandal, targetVillage, targetMunicipality, areaType, selectedAgeRanges, selectedCategories, selectedBloodGroups, selectedGenders]);
+    }, [currentPage, searchState, searchDistrict, searchMandal, searchVillage, searchMunicipality, searchWard, searchAreaType, selectedAgeRanges, selectedCategories, selectedBloodGroups, selectedGenders]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -330,6 +552,12 @@ const AssignAdmin = () => {
                         const muId = addr.municipality._id || addr.municipality;
                         setAreaType('Urban');
                         setTargetMunicipality(muId);
+                        fetchLocations(muId, 'WARD');
+                    }
+                    if (!isFieldLocked('ward') && addr.ward) { // Changed from wardNumber to ward (ID)
+                        const wId = addr.ward._id || addr.ward;
+                        setAreaType('Urban');
+                        setTargetWard(wId);
                     }
                     if (!isFieldLocked('village') && addr.village) {
                         const vId = addr.village._id || addr.village;
@@ -351,6 +579,7 @@ const AssignAdmin = () => {
         if (selectedRole === 'DISTRICT_ADMIN') finalAssignId = targetDistrict;
 
         if (selectedRole === 'MUNICIPALITY_ADMIN') finalAssignId = targetMunicipality;
+        if (selectedRole === 'WARD_ADMIN') finalAssignId = targetWard;
 
         if (selectedRole === 'MANDAL_ADMIN') finalAssignId = targetMandal;
         if (selectedRole === 'VILLAGE_ADMIN') finalAssignId = targetVillage;
@@ -400,10 +629,6 @@ const AssignAdmin = () => {
             setLoadingAssign(false);
         }
     };
-
-    // Helper: Lock Target Fields (Unified via useAdminLocation) - Already declared at line 114
-
-
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
@@ -459,7 +684,7 @@ const AssignAdmin = () => {
                                             </select>
                                         </div>
 
-                                        {['DISTRICT_ADMIN', 'MUNICIPALITY_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN'].includes(selectedRole) && (
+                                        {['DISTRICT_ADMIN', 'MUNICIPALITY_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'WARD_ADMIN'].includes(selectedRole) && (
                                             <div>
                                                 <label className="block text-xs text-slate-600 mb-1 font-semibold">District</label>
                                                 <select
@@ -475,7 +700,7 @@ const AssignAdmin = () => {
                                     </div>
 
                                     {/* Sub-Location Selection (Mandal/Village OR Municipality) */}
-                                    {(targetDistrict && ['MANDAL_ADMIN', 'VILLAGE_ADMIN', 'MUNICIPALITY_ADMIN'].includes(selectedRole)) && (
+                                    {(targetDistrict && ['MANDAL_ADMIN', 'VILLAGE_ADMIN', 'MUNICIPALITY_ADMIN', 'WARD_ADMIN'].includes(selectedRole)) && (
                                         <div className="mt-4 bg-slate-50 p-4 rounded-lg">
                                             {/* Area Type Toggle (Only if Role allows choice or for Member Search context) - Actually Role dictates it largely */}
                                             <div className="flex items-center gap-6 mb-4">
@@ -487,7 +712,7 @@ const AssignAdmin = () => {
                                                         value="Rural"
                                                         checked={areaType === 'Rural'}
                                                         onChange={() => setAreaType('Rural')}
-                                                        disabled={selectedRole === 'MUNICIPALITY_ADMIN'} // Locked for Muni Admin
+                                                        disabled={['MUNICIPALITY_ADMIN', 'WARD_ADMIN'].includes(selectedRole)} // Locked for Muni/Ward Admin
                                                         className="text-emerald-500 focus:ring-emerald-500"
                                                     />
                                                     <span className={`text-sm font-bold ${areaType === 'Rural' ? 'text-emerald-700' : 'text-slate-500'} flex items-center gap-1`}><FaTree size={12} /> Rural (Mandal/Village)</span>
@@ -548,7 +773,18 @@ const AssignAdmin = () => {
                                                                 {targetMunicipalities.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
                                                             </select>
                                                         </div>
-                                                        {/* Future: Ward Selection here if we have Ward Admins? For now, Municipality Admin manages the whole Muni */}
+                                                        {selectedRole === 'WARD_ADMIN' && (
+                                                            <div>
+                                                                <label className="block text-xs text-slate-600 mb-1 font-semibold">Ward Number</label>
+                                                                <select
+                                                                    value={targetWard} onChange={handleTargetWardChange} disabled={!targetMunicipality || isTargetLocked('ward')}
+                                                                    className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                                                                >
+                                                                    <option value="">Select Ward</option>
+                                                                    {targetWards.map(w => <option key={w._id} value={w._id}>{w.name}</option>)}
+                                                                </select>
+                                                            </div>
+                                                        )}
                                                     </>
                                                 )}
 
@@ -575,6 +811,103 @@ const AssignAdmin = () => {
                                 </p>
 
                                 <div className="space-y-6">
+                                    {/* Hierarchical Address Filters for Search */}
+                                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                            <div>
+                                                <label className="block text-[10px] text-slate-500 mb-1 font-bold uppercase">State</label>
+                                                <select
+                                                    value={searchState} onChange={handleSearchStateChange}
+                                                    className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500"
+                                                >
+                                                    <option value="">All States</option>
+                                                    {searchStates.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-slate-500 mb-1 font-bold uppercase">District</label>
+                                                <select
+                                                    value={searchDistrict} onChange={handleSearchDistrictChange} disabled={!searchState}
+                                                    className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100"
+                                                >
+                                                    <option value="">All Districts</option>
+                                                    {searchDistricts.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4 border-t border-slate-200 pt-4">
+                                            <div>
+                                                <label className="block text-[10px] text-slate-500 mb-1 font-bold uppercase">Search Area Type</label>
+                                                <select
+                                                    value={searchAreaType}
+                                                    onChange={(e) => setSearchAreaType(e.target.value)}
+                                                    className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500"
+                                                >
+                                                    <option value="Rural">Rural (Mandal/Village)</option>
+                                                    <option value="Urban">Urban (Municipality)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {searchAreaType === 'Rural' ? (
+                                                <>
+                                                    <div>
+                                                        <label className="block text-[10px] text-slate-500 mb-1 font-bold uppercase">Mandal</label>
+                                                        <select
+                                                            value={searchMandal} onChange={handleSearchMandalChange}
+                                                            disabled={!searchDistrict}
+                                                            className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:text-slate-400"
+                                                        >
+                                                            <option value="">{searchDistrict ? 'All Mandals' : 'Select District First'}</option>
+                                                            {searchMandals.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] text-slate-500 mb-1 font-bold uppercase">Village</label>
+                                                        <select
+                                                            value={searchVillage} onChange={handleSearchVillageChange}
+                                                            disabled={!searchMandal}
+                                                            className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:text-slate-400"
+                                                        >
+                                                            <option value="">{searchMandal ? 'All Villages' : 'Select Mandal First'}</option>
+                                                            {searchVillages.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
+                                                        </select>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div>
+                                                        <label className="block text-[10px] text-slate-500 mb-1 font-bold uppercase">Municipality</label>
+                                                        <select
+                                                            value={searchMunicipality} onChange={handleSearchMunicipalityChange}
+                                                            disabled={!searchDistrict}
+                                                            className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
+                                                        >
+                                                            <option value="">{searchDistrict ? 'All Municipalities' : 'Select District First'}</option>
+                                                            {searchMunicipalities.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <label className="block text-[10px] text-slate-400 mb-1 font-bold uppercase tracking-wider">Ward Number</label>
+                                                        <select
+                                                            value={searchWard}
+                                                            onChange={handleSearchWardChange}
+                                                            disabled={!searchMunicipality}
+                                                            className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                                                        >
+                                                            <option value="">Select Ward</option>
+                                                            {searchWards.map(w => (
+                                                                <option key={w._id} value={w._id}>{w.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     <div className="relative">
                                         <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input

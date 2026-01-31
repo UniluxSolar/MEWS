@@ -253,6 +253,14 @@ const memberOccupations = [
 const MemberRegistration = () => {
     const navigate = useNavigate();
     const { id } = useParams();
+
+    const handleBack = () => {
+        if (window.history.length > 2) {
+            navigate(-1);
+        } else {
+            navigate('/admin/members');
+        }
+    };
     const location = useLocation();
     const isEditMode = location.pathname.includes('/edit/');
     const isViewMode = Boolean(id) && !isEditMode;
@@ -3834,7 +3842,7 @@ const MemberRegistration = () => {
                                         <button type="button" onClick={handleReset} className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition shadow-sm flex items-center gap-2">
                                             <FaEraser /> Clear Form
                                         </button>
-                                        <button type="button" onClick={() => navigate(-1)} className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition shadow-sm">
+                                        <button type="button" onClick={handleBack} className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition shadow-sm">
                                             Cancel
                                         </button>
                                         <div className="flex-1"></div>
@@ -3862,7 +3870,7 @@ const MemberRegistration = () => {
                     <div className="flex-1 overflow-y-auto bg-slate-50 pb-12">
                         <div className="max-w-4xl mx-auto pt-8 px-4">
                             <div className="flex justify-between items-center mb-6 no-print">
-                                <button onClick={() => window.location.reload()} className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 flex items-center gap-2 shadow-sm transition">
+                                <button onClick={handleBack} className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 flex items-center gap-2 shadow-sm transition">
                                     <FaArrowLeft /> Back
                                 </button>
                                 <div className="flex gap-3">
@@ -3903,6 +3911,7 @@ const MemberRegistration = () => {
                                             village: formData.presentVillage,
                                             mandal: formData.presentMandal,
                                             district: formData.presentDistrict,
+                                            constituency: formData.presentConstituency,
                                             pinCode: formData.presentPincode,
                                             residencyType: formData.residencyType
                                         },
@@ -3912,6 +3921,7 @@ const MemberRegistration = () => {
                                             village: formData.permVillage,
                                             mandal: formData.permMandal,
                                             district: formData.permDistrict,
+                                            constituency: formData.permConstituency,
                                             pinCode: formData.permPincode,
                                             landmark: formData.permLandmark
                                         },
@@ -3936,6 +3946,7 @@ const MemberRegistration = () => {
                                         districts: districts,
                                         mandals: allMandals,
                                         villages: villages,
+                                        constituencies: presentConstituencies,
                                         permMandals: allPermMandals,
                                         permVillages: permVillages
                                     }}
@@ -4096,8 +4107,10 @@ const MemberRegistration = () => {
                                     districts: districts,
                                     mandals: allMandals,
                                     villages: villages,
+                                    constituencies: presentConstituencies, // Use present list as fallback/merged or pass perm
                                     permMandals: allPermMandals,
-                                    permVillages: permVillages
+                                    permVillages: permVillages,
+                                    permConstituencies: permConstituencies
                                 }}
                             />
                         </div>

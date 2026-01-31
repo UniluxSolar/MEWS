@@ -170,7 +170,7 @@ const LoginPage = () => {
 
             } else {
                 // MPIN NOT ENABLED -> Force Setup
-                navigate('/mpin/setup', { replace: true });
+                navigate('/dashboard/mpin/setup', { replace: true });
             }
         }
     };

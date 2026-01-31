@@ -13,6 +13,7 @@ const MemberDocument = ({ data, lookups }) => {
             if (type === 'district') list = lookups.districts || [];
             if (type === 'mandal') list = lookups.mandals || [];
             if (type === 'village') list = lookups.villages || [];
+            if (type === 'constituency') list = lookups.constituencies || lookups.permConstituencies || [];
             const found = list.find(item => item._id === id);
             if (found) return found.name;
         }
@@ -103,14 +104,14 @@ const MemberDocument = ({ data, lookups }) => {
             </div>
 
             {/* Member ID Header line */}
-            <div className="flex justify-between items-end border-b-2 border-black pb-1 mb-6">
-                <div className="flex items-end gap-2">
-                    <div className="text-[10px] text-gray-500 uppercase font-bold mb-1">Member ID:</div>
+            <div className="flex justify-between items-baseline border-b-2 border-black pb-2 mb-6">
+                <div className="flex items-baseline gap-2">
+                    <div className="text-[10px] text-gray-500 uppercase font-bold">MEMBER ID:</div>
                     <div className="text-xl font-black text-black leading-none">{data.mewsId || 'PENDING'}</div>
                 </div>
-                <div className="flex items-end gap-2">
-                    <div className="text-[10px] text-gray-500 uppercase font-bold mb-0.5">Date of Application:</div>
-                    <div className="text-sm font-bold text-black leading-none mb-0.5">{new Date().toLocaleDateString('en-GB')}</div>
+                <div className="flex items-baseline gap-2">
+                    <div className="text-[10px] text-gray-500 uppercase font-bold">DATE OF APPLICATION:</div>
+                    <div className="text-sm font-bold text-black leading-none">{new Date().toLocaleDateString('en-GB')}</div>
                 </div>
             </div>
 
@@ -124,6 +125,7 @@ const MemberDocument = ({ data, lookups }) => {
                             src={getPhotoUrl(data.photoUrl)}
                             alt="Member"
                             className="w-full h-full object-cover"
+                            crossOrigin="anonymous"
                             onError={(e) => { e.target.style.display = 'none'; }}
                         />
                     ) : (
@@ -158,7 +160,7 @@ const MemberDocument = ({ data, lookups }) => {
                                 <InfoRow label="Address Line" value={`${data.address?.houseNumber}, ${data.address?.street}`} />
                                 <InfoRow label="Village / Mandal" value={`${resolve(data.address?.village, 'village')}, ${resolve(data.address?.mandal, 'mandal')}`} />
                                 <InfoRow label="District / State" value={`${resolve(data.address?.district, 'district')}, ${data.address?.state || 'Telangana'}`} />
-                                <InfoRow label="Constituency / Pin" value={`${data.address?.constituency || '-'} - ${data.address?.pinCode}`} />
+                                <InfoRow label="Constituency / Pin" value={`${resolve(data.address?.constituency, 'constituency')} - ${data.address?.pinCode}`} />
                                 <InfoRow label="Residence Type" value={data.address?.residencyType} />
                             </tbody>
                         </table>
@@ -172,9 +174,9 @@ const MemberDocument = ({ data, lookups }) => {
                         <table className="w-full">
                             <tbody>
                                 <InfoRow label="Address Line" value={`${data.address?.permHouseNumber || data.address?.houseNumber}, ${data.address?.permStreet || data.address?.street}`} />
-                                <InfoRow label="Village / Mandal" value={`${resolve(data.address?.permVillage || data.address?.village, 'village')}, ${resolve(data.address?.permMandal || data.address?.mandal, 'mandal')}`} />
-                                <InfoRow label="District / State" value={`${resolve(data.address?.permDistrict || data.address?.district, 'district')}, ${data.address?.permanentAddress?.state || data.address?.state || 'Telangana'}`} />
-                                <InfoRow label="Constituency / Pin" value={`${data.address?.permConstituency || data.address?.constituency || '-'} - ${data.address?.permPinCode || data.address?.pinCode}`} />
+                                <InfoRow label="Village / Mandal" value={`${resolve(data.permanentAddress?.village, 'village')}, ${resolve(data.permanentAddress?.mandal, 'mandal')}`} />
+                                <InfoRow label="District / State" value={`${resolve(data.permanentAddress?.district, 'district')}, ${data.permanentAddress?.state || 'Telangana'}`} />
+                                <InfoRow label="Constituency / Pin" value={`${resolve(data.permanentAddress?.constituency, 'constituency')} - ${data.permanentAddress?.pinCode}`} />
                             </tbody>
                         </table>
                     </div>

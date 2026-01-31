@@ -64,6 +64,15 @@ const FormSelect = ({ label, options, required = false, colSpan = "col-span-1", 
 const EditMember = () => {
     const navigate = useNavigate();
     const { id } = useParams();
+    const location = useLocation();
+
+    const handleBack = () => {
+        if (window.history.length > 2) {
+            navigate(-1);
+        } else {
+            navigate('/admin/members');
+        }
+    };
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -298,9 +307,9 @@ const EditMember = () => {
                             <h1 className="text-2xl font-bold text-gray-900">Edit Member Profile</h1>
                             <p className="text-sm text-gray-500 mt-1">Update all information for member ID: {id}</p>
                         </div>
-                        <Link to="/admin/members" className="bg-[#1e2a4a] hover:bg-[#2a3b66] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition">
+                        <button onClick={handleBack} className="bg-[#1e2a4a] hover:bg-[#2a3b66] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition">
                             <FaArrowLeft size={12} /> Back to Members
-                        </Link>
+                        </button>
                     </div>
 
                     <form className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 space-y-2">
@@ -455,7 +464,7 @@ const EditMember = () => {
 
                         {/* Actions */}
                         <div className="flex items-center gap-4 pt-10 border-t border-gray-100 mt-8">
-                            <button type="button" onClick={() => navigate(-1)} className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition shadow-sm">
+                            <button type="button" onClick={handleBack} className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition shadow-sm">
                                 Cancel
                             </button>
                             <div className="flex-1"></div>

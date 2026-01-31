@@ -27,32 +27,28 @@ const MemberSchema = new mongoose.Schema({
 
     // B. Address Details
     address: {
-        houseNumber: String,
-        street: String,
-        village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
-        municipality: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' }, // Fork: Municipality
-        wardNumber: String, // Fork: Municipality Ward
-        district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
-        constituency: String, // New Field
+        municipality: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        wardNumber: String,
+        constituency: String,
+        houseNumber: String,
+        street: String,
         pinCode: String,
-        state: String, // Added state field
-        residencyType: String // e.g., Owned, Rented
+        state: String,
+        residencyType: String
     },
 
     permanentAddress: {
-        houseNumber: String,
-        street: String,
-        village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
-        houseNumber: String,
-        street: String,
-        village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
-        mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
-        municipality: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' }, // Fork
-        wardNumber: String,
         district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
-        constituency: String, // New Field
+        mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        municipality: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        wardNumber: String,
+        constituency: String,
+        houseNumber: String,
+        street: String,
         pinCode: String,
         landmark: String
     },

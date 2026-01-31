@@ -68,6 +68,14 @@ const InstitutionRegistration = () => {
         googleMapsLink: ''
     });
 
+    const handleBack = () => {
+        if (window.history.length > 2) {
+            navigate(-1);
+        } else {
+            navigate('/admin/institutions');
+        }
+    };
+
 
 
     // Location State
@@ -492,7 +500,7 @@ const InstitutionRegistration = () => {
                                     <FaFileAlt size={14} /> Save as Draft
                                 </button>
                                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                                    <button onClick={() => navigate(-1)} className="flex-1 sm:flex-none px-6 py-3 border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-50 text-sm transition shadow-sm">
+                                    <button onClick={handleBack} className="flex-1 sm:flex-none px-6 py-3 border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-50 text-sm transition shadow-sm">
                                         Cancel
                                     </button>
                                     <button onClick={handleSubmit} className="flex-1 sm:flex-none px-8 py-3 bg-[#1e2a4a] text-white font-bold rounded-xl hover:bg-[#2a3b66] text-sm transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 transform active:scale-95">

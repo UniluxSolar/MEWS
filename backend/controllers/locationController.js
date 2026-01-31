@@ -9,7 +9,7 @@ const getLocations = asyncHandler(async (req, res) => {
     let query = {};
 
     if (type) {
-        query.type = type;
+        query.type = Array.isArray(type) ? { $in: type } : type;
     }
 
     if (parent) {
@@ -30,7 +30,7 @@ const getLocations = asyncHandler(async (req, res) => {
         query.type = 'STATE';
     }
 
-    const locations = await Location.find(query).select('name _id type pincode').sort('name');
+    const locations = await Location.find(query).select('name _id type pincode parent').sort('name');
     res.json(locations);
 });
 

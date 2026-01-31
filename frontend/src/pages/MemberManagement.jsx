@@ -73,6 +73,13 @@ const MemberManagement = () => {
         return String(data);
     };
 
+    const normalizeLocation = (name) => {
+        if (!name) return '';
+        return String(name).trim().split(' ').map(word =>
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
+    };
+
     // Predefined Coordinates for Nalgonda villages
     const VILLAGE_COORDINATES = {
         'Nalgonda': [17.0500, 79.2667],
@@ -167,6 +174,13 @@ const MemberManagement = () => {
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState(localStorage.getItem('memberViewMode') || 'table'); // 'table', 'cards', 'map'
 
+    // Full Location Data for Filters
+    const [allDistricts, setAllDistricts] = useState([]);
+    const [allMunicipalities, setAllMunicipalities] = useState([]);
+    const [allMandals, setAllMandals] = useState([]);
+    const [allVillages, setAllVillages] = useState([]);
+    const [allWards, setAllWards] = useState([]);
+
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedMemberIds, setSelectedMemberIds] = useState([]); // Added missing state
 
@@ -179,9 +193,11 @@ const MemberManagement = () => {
 
     // Filter States - Multi-Select (Arrays)
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedVillages, setSelectedVillages] = useState([]);
-    const [selectedMandals, setSelectedMandals] = useState([]);
     const [selectedDistricts, setSelectedDistricts] = useState([]);
+    const [selectedMunicipalities, setSelectedMunicipalities] = useState([]);
+    const [selectedMandals, setSelectedMandals] = useState([]);
+    const [selectedVillages, setSelectedVillages] = useState([]);
+    const [selectedWards, setSelectedWards] = useState([]);
     const [selectedAgeRanges, setSelectedAgeRanges] = useState([]);
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [selectedGenders, setSelectedGenders] = useState({ All: true, Male: false, Female: false, Other: false });
@@ -265,6 +281,49 @@ const MemberManagement = () => {
         }
     }, [adminLocation, isLocLoading]);
 
+    // Hierarchical Selection Cleanup
+    useEffect(() => {
+        if (selectedDistricts.length > 0) {
+            const districtIds = allDistricts
+                .filter(d => selectedDistricts.includes(normalizeLocation(d.name)))
+                .map(d => d._id);
+
+            const validMandalNames = allMandals
+                .filter(m => (m.ancestors || []).some(anc => districtIds.includes(anc.locationId)))
+                .map(m => normalizeLocation(m.name));
+            setSelectedMandals(prev => prev.filter(m => validMandalNames.includes(m)));
+
+            const validMunNames = allMunicipalities
+                .filter(m => (m.ancestors || []).some(anc => districtIds.includes(anc.locationId)))
+                .map(m => normalizeLocation(m.name));
+            setSelectedMunicipalities(prev => prev.filter(m => validMunNames.includes(m)));
+        }
+    }, [selectedDistricts, allDistricts, allMandals, allMunicipalities]);
+
+    useEffect(() => {
+        if (selectedMandals.length > 0) {
+            const mandalIds = allMandals
+                .filter(m => selectedMandals.includes(normalizeLocation(m.name)))
+                .map(m => m._id);
+            const validVillageNames = allVillages
+                .filter(v => (v.ancestors || []).some(anc => mandalIds.includes(anc.locationId)))
+                .map(v => normalizeLocation(v.name));
+            setSelectedVillages(prev => prev.filter(v => validVillageNames.includes(v)));
+        }
+    }, [selectedMandals, allMandals, allVillages]);
+
+    useEffect(() => {
+        if (selectedMunicipalities.length > 0) {
+            const munIds = allMunicipalities
+                .filter(m => selectedMunicipalities.includes(normalizeLocation(m.name)))
+                .map(m => m._id);
+            const validWardNames = allWards
+                .filter(w => (w.ancestors || []).some(anc => munIds.includes(anc.locationId)))
+                .map(w => normalizeLocation(w.name));
+            setSelectedWards(prev => prev.filter(w => validWardNames.includes(w)));
+        }
+    }, [selectedMunicipalities, allMunicipalities, allWards]);
+
     // Apply filters whenever dependencies change
 
 
@@ -307,8 +366,29 @@ const MemberManagement = () => {
         }
     };
 
+    const fetchAllLocationData = async () => {
+        try {
+            const [distRes, mandRes, munRes, villRes, wardRes] = await Promise.all([
+                API.get('/locations?type=DISTRICT'),
+                API.get('/locations?type=MANDAL'),
+                API.get('/locations?type=MUNICIPALITY'),
+                API.get('/locations?type=VILLAGE'),
+                API.get('/locations?type=WARD')
+            ]);
+
+            setAllDistricts(distRes.data);
+            setAllMandals(mandRes.data);
+            setAllMunicipalities(munRes.data);
+            setAllVillages(villRes.data);
+            setAllWards(wardRes.data);
+        } catch (error) {
+            console.error("Failed to fetch full location data", error);
+        }
+    };
+
     useEffect(() => {
         fetchMembers();
+        fetchAllLocationData();
     }, [location.key]);
 
     // Pagination
@@ -334,28 +414,36 @@ const MemberManagement = () => {
             }
 
             // Multi-Select Filters
-            if (selectedVillages.length > 0) {
-                const villageName = getLocationName(member.address?.village).trim().toLowerCase();
-                const wardName = (member.address?.wardNumber || member.address?.ward || '').toString().trim().toLowerCase();
-                if (!selectedVillages.some(v => {
-                    const sel = v.toLowerCase().trim();
-                    return sel === villageName || sel === wardName;
-                })) return false;
-            }
-
-            if (selectedMandals.length > 0) {
-                const mandalName = getLocationName(member.address?.mandal).trim().toLowerCase();
-                const munName = getLocationName(member.address?.municipality).trim().toLowerCase();
-                if (!selectedMandals.some(m => {
-                    const sel = m.toLowerCase().trim();
-                    return sel === mandalName || sel === munName;
-                })) return false;
-            }
-
+            // District Filter (OR logic within array)
             if (selectedDistricts.length > 0) {
-                const districtName = getLocationName(member.address?.district).trim().toLowerCase();
-                if (!selectedDistricts.some(d => d.toLowerCase().trim() === districtName)) return false;
+                const memberDistrict = normalizeLocation(getLocationName(member.address?.district));
+                if (!selectedDistricts.includes(memberDistrict)) return false;
             }
+
+            // Municipality Filter
+            if (selectedMunicipalities.length > 0) {
+                const memberMun = normalizeLocation(getLocationName(member.address?.municipality));
+                if (!selectedMunicipalities.includes(memberMun)) return false;
+            }
+
+            // Mandal Filter
+            if (selectedMandals.length > 0) {
+                const memberMandal = normalizeLocation(getLocationName(member.address?.mandal));
+                if (!selectedMandals.includes(memberMandal)) return false;
+            }
+
+            // Village Filter
+            if (selectedVillages.length > 0) {
+                const memberVillage = normalizeLocation(getLocationName(member.address?.village));
+                if (!selectedVillages.includes(memberVillage)) return false;
+            }
+
+            // Ward Filter
+            if (selectedWards.length > 0) {
+                const memberWard = normalizeLocation(member.address?.wardNumber || member.address?.ward || '');
+                if (!selectedWards.includes(memberWard)) return false;
+            }
+
 
             // Age Range Filter
             if (selectedAgeRanges.length > 0) {
@@ -698,29 +786,80 @@ const MemberManagement = () => {
     };
 
     // Derived Data for Filters
-    // Helper to normalize text (Title Case + Trim)
-    const normalizeLocation = (name) => {
-        if (!name) return null;
-        return name.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-    };
 
     const districts = useMemo(() => {
-        const safeMembers = Array.isArray(members) ? members : [];
-        const unique = [...new Set(safeMembers.map(m => normalizeLocation(getLocationName(m.address?.district))).filter(Boolean))];
-        return unique.sort((a, b) => a.localeCompare(b));
-    }, [members]);
+        return [...new Set(allDistricts.map(l => normalizeLocation(l.name)))].filter(Boolean).sort();
+    }, [allDistricts]);
+
+    const municipalities = useMemo(() => {
+        let filtered = allMunicipalities;
+        if (selectedDistricts.length > 0) {
+            const districtIds = allDistricts
+                .filter(d => selectedDistricts.includes(normalizeLocation(d.name)))
+                .map(d => d._id);
+            filtered = allMunicipalities.filter(m =>
+                districtIds.includes(m.parent) ||
+                (m.ancestors || []).some(anc => districtIds.includes(anc.locationId))
+            );
+        }
+        return [...new Set(filtered.map(l => normalizeLocation(l.name)))].filter(Boolean).sort();
+    }, [allMunicipalities, selectedDistricts, allDistricts]);
 
     const mandals = useMemo(() => {
-        const safeMembers = Array.isArray(members) ? members : [];
-        const unique = [...new Set(safeMembers.map(m => normalizeLocation(getLocationName(m.address?.mandal))).filter(Boolean))];
-        return unique.sort((a, b) => a.localeCompare(b));
-    }, [members]);
+        let filtered = allMandals;
+        if (selectedDistricts.length > 0) {
+            const districtIds = allDistricts
+                .filter(d => selectedDistricts.includes(normalizeLocation(d.name)))
+                .map(d => d._id);
+            filtered = allMandals.filter(m =>
+                districtIds.includes(m.parent) ||
+                (m.ancestors || []).some(anc => districtIds.includes(anc.locationId))
+            );
+        }
+        return [...new Set(filtered.map(l => normalizeLocation(l.name)))].filter(Boolean).sort();
+    }, [allMandals, selectedDistricts, allDistricts]);
 
     const villages = useMemo(() => {
-        const safeMembers = Array.isArray(members) ? members : [];
-        const unique = [...new Set(safeMembers.map(m => normalizeLocation(getLocationName(m.address?.village))).filter(Boolean))];
-        return unique.sort((a, b) => a.localeCompare(b));
-    }, [members]);
+        let filtered = allVillages;
+        if (selectedMandals.length > 0) {
+            const mandalIds = allMandals
+                .filter(m => selectedMandals.includes(normalizeLocation(m.name)))
+                .map(m => m._id);
+            filtered = allVillages.filter(v =>
+                mandalIds.includes(v.parent) ||
+                (v.ancestors || []).some(anc => mandalIds.includes(anc.locationId))
+            );
+        } else if (selectedDistricts.length > 0) {
+            const districtIds = allDistricts
+                .filter(d => selectedDistricts.includes(normalizeLocation(d.name)))
+                .map(d => d._id);
+            filtered = allVillages.filter(v =>
+                (v.ancestors || []).some(anc => districtIds.includes(anc.locationId))
+            );
+        }
+        return [...new Set(filtered.map(l => normalizeLocation(l.name)))].filter(Boolean).sort();
+    }, [allVillages, selectedMandals, allMandals, selectedDistricts, allDistricts]);
+
+    const wards = useMemo(() => {
+        let filtered = allWards;
+        if (selectedMunicipalities.length > 0) {
+            const munIds = allMunicipalities
+                .filter(m => selectedMunicipalities.includes(normalizeLocation(m.name)))
+                .map(m => m._id);
+            filtered = allWards.filter(w =>
+                munIds.includes(w.parent) ||
+                (w.ancestors || []).some(anc => munIds.includes(anc.locationId))
+            );
+        } else if (selectedDistricts.length > 0) {
+            const districtIds = allDistricts
+                .filter(d => selectedDistricts.includes(normalizeLocation(d.name)))
+                .map(d => d._id);
+            filtered = allWards.filter(w =>
+                (w.ancestors || []).some(anc => districtIds.includes(anc.locationId))
+            );
+        }
+        return [...new Set(filtered.map(l => normalizeLocation(l.name)))].filter(Boolean).sort();
+    }, [allWards, selectedMunicipalities, allMunicipalities, selectedDistricts, allDistricts]);
 
     const getOccupationColor = (occupation) => {
         const job = (occupation || '').toLowerCase();
@@ -840,7 +979,7 @@ const MemberManagement = () => {
                             <div className="mb-6">
                                 <div className="relative"><FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" /><input type="text" placeholder="Search by name, phone, village..." className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
                                 <div>
                                     <MultiSelect
                                         label="Districts"
@@ -853,12 +992,22 @@ const MemberManagement = () => {
                                 </div>
                                 <div>
                                     <MultiSelect
+                                        label="Municipalities"
+                                        options={municipalities}
+                                        selected={selectedMunicipalities}
+                                        onChange={setSelectedMunicipalities}
+                                        placeholder="Select Municipalities"
+                                        disabled={isFieldLocked('municipality')}
+                                    />
+                                </div>
+                                <div>
+                                    <MultiSelect
                                         label="Mandals"
                                         options={mandals}
                                         selected={selectedMandals}
                                         onChange={setSelectedMandals}
                                         placeholder="Select Mandals"
-                                        disabled={isFieldLocked('mandal') || isFieldLocked('municipality')}
+                                        disabled={isFieldLocked('mandal')}
                                     />
                                 </div>
                                 <div>
@@ -868,7 +1017,17 @@ const MemberManagement = () => {
                                         selected={selectedVillages}
                                         onChange={setSelectedVillages}
                                         placeholder="Select Villages"
-                                        disabled={isFieldLocked('village') || isFieldLocked('ward')}
+                                        disabled={isFieldLocked('village')}
+                                    />
+                                </div>
+                                <div>
+                                    <MultiSelect
+                                        label="Ward Numbers"
+                                        options={wards}
+                                        selected={selectedWards}
+                                        onChange={setSelectedWards}
+                                        placeholder="Select Wards"
+                                        disabled={isFieldLocked('ward')}
                                     />
                                 </div>
                                 <div>
@@ -883,7 +1042,11 @@ const MemberManagement = () => {
                                 <div>
                                     <MultiSelect
                                         label="Occupation"
-                                        options={['Farmer', 'Student', 'Business', 'Private Job']}
+                                        options={[
+                                            "Business", "Daily Wage Laborer", "Farmer", "Government Employee", "House Wife", "Other",
+                                            "Political Elected", "Private Employee", "Retired Govt. Employee", "Retired Private Employee",
+                                            "Self-Employed / Business", "Student", "Unemployed"
+                                        ].sort()}
                                         selected={selectedCategories}
                                         onChange={setSelectedCategories}
                                         placeholder="Select Occupations"
@@ -1057,6 +1220,7 @@ const MemberManagement = () => {
                                                                 })()}
                                                                 alt={member.name}
                                                                 className="w-full h-full object-cover relative z-10 bg-slate-100"
+                                                                crossOrigin="anonymous"
                                                                 onError={(e) => { e.target.style.display = 'none'; }}
                                                             />
                                                         </div>

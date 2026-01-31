@@ -344,6 +344,16 @@ const ProfileSettings = () => {
             street: '',
             pinCode: ''
         },
+        permanentAddress: {
+            state: '',
+            district: '',
+            mandal: '',
+            village: '',
+            houseNumber: '',
+            street: '',
+            pinCode: '',
+            landmark: ''
+        },
         fullAddress: '', // Helper logic for display if needed, or split fields
         familyMembers: [], // Array for family members
         mewsId: '',
@@ -425,7 +435,8 @@ const ProfileSettings = () => {
                         isHead: true,
                         memberType: 'HEAD',
                         // Address mapping for display if needed
-                        presentAddress: data.address
+                        presentAddress: data.address,
+                        permanentAddress: data.permanentAddress
                     };
 
                     const dependents = (response.data.familyMembers || []).map(fm => ({
@@ -472,7 +483,11 @@ const ProfileSettings = () => {
                         setViewingMemberId(viewMemberId);
                         const foundInFamily = finalFamilyList.find(m => m._id === viewMemberId || m.mewsId === viewMemberId);
                         if (foundInFamily) {
-                            memberToDisplay = { ...foundInFamily, address: foundInFamily.presentAddress || data.address }; // Use family member data
+                            memberToDisplay = {
+                                ...foundInFamily,
+                                address: foundInFamily.presentAddress || data.address,
+                                permanentAddress: foundInFamily.permanentAddress || data.permanentAddress
+                            }; // Use family member data
                             setActiveTab('Personal Info'); // Force tab
                         }
                     } else if (adminInfo.memberId && adminInfo.memberId !== adminInfo._id) {
@@ -483,6 +498,7 @@ const ProfileSettings = () => {
                                 ...data,
                                 ...foundMember,
                                 address: foundMember.presentAddress || data.address,
+                                permanentAddress: foundMember.permanentAddress || data.permanentAddress,
                             };
                         }
                     }
@@ -522,11 +538,14 @@ const ProfileSettings = () => {
                             village: getField('village'),
                             houseNumber: memberAddr?.houseNumber || headAddr?.houseNumber || '',
                             street: memberAddr?.street || headAddr?.street || '',
-                            pinCode: memberAddr?.pinCode || headAddr?.pinCode || ''
+                            pinCode: memberAddr?.pinCode || headAddr?.pinCode || '',
+                            landmark: memberAddr?.landmark || headAddr?.landmark || ''
                         };
                     }
 
+                    const headPermAddress = data.permanentAddress || {};
                     const finalAddress = resolveAddress(memberToDisplay.address || memberToDisplay.presentAddress, headAddress);
+                    const finalPermAddress = resolveAddress(memberToDisplay.permanentAddress, headPermAddress);
 
                     setFormData({
                         ...memberToDisplay,
@@ -537,6 +556,7 @@ const ProfileSettings = () => {
                         email: memberToDisplay.email || '',
                         gender: memberToDisplay.gender || '',
                         address: finalAddress,
+                        permanentAddress: finalPermAddress,
                         dob: memberToDisplay.dob ? memberToDisplay.dob.split('T')[0] : '',
                         familyMembers: response.data.familyMembers || []
                     });
@@ -620,6 +640,7 @@ const ProfileSettings = () => {
 
             // Nested Objects as JSON strings
             submitData.append('address', JSON.stringify(formData.address));
+            submitData.append('permanentAddress', JSON.stringify(formData.permanentAddress));
 
             // Family Members as JSON string
             // Note: We are just updating text data for now. If photo upload for family members is needed, 
@@ -1091,12 +1112,12 @@ const ProfileSettings = () => {
                                         <div className="group">
                                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">House Number</label>
                                             {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address.houseNumber || '-'}</p>
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.permanentAddress.houseNumber || '-'}</p>
                                             ) : (
                                                 <input
                                                     type="text"
-                                                    name="address.houseNumber"
-                                                    value={formData.address.houseNumber}
+                                                    name="permanentAddress.houseNumber"
+                                                    value={formData.permanentAddress.houseNumber}
                                                     onChange={handleChange}
                                                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                                 />
@@ -1105,12 +1126,12 @@ const ProfileSettings = () => {
                                         <div className="group">
                                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Street / Colony</label>
                                             {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address.street || '-'}</p>
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.permanentAddress.street || '-'}</p>
                                             ) : (
                                                 <input
                                                     type="text"
-                                                    name="address.street"
-                                                    value={formData.address.street}
+                                                    name="permanentAddress.street"
+                                                    value={formData.permanentAddress.street}
                                                     onChange={handleChange}
                                                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                                 />
@@ -1119,12 +1140,12 @@ const ProfileSettings = () => {
                                         <div className="group">
                                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Village</label>
                                             {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address.village || '-'}</p>
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.permanentAddress.village || '-'}</p>
                                             ) : (
                                                 <input
                                                     type="text"
-                                                    name="address.village"
-                                                    value={formData.address.village}
+                                                    name="permanentAddress.village"
+                                                    value={formData.permanentAddress.village}
                                                     onChange={handleChange}
                                                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                                 />
@@ -1133,12 +1154,12 @@ const ProfileSettings = () => {
                                         <div className="group">
                                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Mandal</label>
                                             {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address.mandal || '-'}</p>
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.permanentAddress.mandal || '-'}</p>
                                             ) : (
                                                 <input
                                                     type="text"
-                                                    name="address.mandal"
-                                                    value={formData.address.mandal}
+                                                    name="permanentAddress.mandal"
+                                                    value={formData.permanentAddress.mandal}
                                                     onChange={handleChange}
                                                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                                 />
