@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaLock, FaCheckCircle, FaArrowLeft } from 'react-icons/fa';
 import API from '../api';
+import MpinInput from '../components/common/MpinInput';
 
 const MpinSetup = () => {
     const navigate = useNavigate();
@@ -21,19 +22,12 @@ const MpinSetup = () => {
         return deviceId;
     };
 
-    const handleDigitInput = (val, type) => {
-        // Simple numeric input handler
-        const numericVal = val.replace(/\D/g, '').slice(0, 4);
-        if (type === 'mpin') setMpin(numericVal);
-        else setConfirmMpin(numericVal);
-    };
-
     const handleSetup = async (e) => {
         e.preventDefault();
         setError('');
 
         if (mpin.length !== 4) {
-            setError('MPIN must be 4 digits');
+            setError('MPIN must be exactly 4 digits');
             return;
         }
         if (mpin !== confirmMpin) {
@@ -124,32 +118,22 @@ const MpinSetup = () => {
 
                         <div className="space-y-1.5">
                             <label className="block text-sm font-semibold text-gray-600 pl-1">Enter 4-digit MPIN</label>
-                            <div className="relative">
-                                <FaLock className="absolute left-4 top-4 text-gray-400" />
-                                <input
-                                    type="password"
-                                    inputMode="numeric"
-                                    value={mpin}
-                                    onChange={(e) => handleDigitInput(e.target.value, 'mpin')}
-                                    placeholder="XXXX"
-                                    className="w-full bg-gray-100 border-none text-gray-800 text-lg tracking-widest text-center rounded-lg focus:ring-2 focus:ring-[#1e2a4a] focus:bg-white block p-3.5 pl-10 font-bold transition-all"
-                                />
-                            </div>
+                            <MpinInput
+                                value={mpin}
+                                onChange={setMpin}
+                                length={4}
+                                autoFocus={true}
+                            />
                         </div>
 
                         <div className="space-y-1.5">
                             <label className="block text-sm font-semibold text-gray-600 pl-1">Confirm MPIN</label>
-                            <div className="relative">
-                                <FaLock className="absolute left-4 top-4 text-gray-400" />
-                                <input
-                                    type="password"
-                                    inputMode="numeric"
-                                    value={confirmMpin}
-                                    onChange={(e) => handleDigitInput(e.target.value, 'confirm')}
-                                    placeholder="XXXX"
-                                    className="w-full bg-gray-100 border-none text-gray-800 text-lg tracking-widest text-center rounded-lg focus:ring-2 focus:ring-[#1e2a4a] focus:bg-white block p-3.5 pl-10 font-bold transition-all"
-                                />
-                            </div>
+                            <MpinInput
+                                value={confirmMpin}
+                                onChange={setConfirmMpin}
+                                length={4}
+                                autoFocus={false}
+                            />
                         </div>
 
                         <button

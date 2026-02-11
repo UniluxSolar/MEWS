@@ -131,18 +131,7 @@ const createAdmin = asyncHandler(async (req, res) => {
     });
 
     if (user) {
-        // Send Welcome SMS
-        if (mobileNumber) {
-            try {
-                const { sendSms } = require('../utils/smsService');
-                const formattedMobile = mobileNumber.startsWith('+') ? mobileNumber : `+91${mobileNumber}`;
-                const messageBody = `Welcome to MEWS Admin Team.\n\nYou have been registered as ${role.replace('_', ' ')}.\nUsername: ${username}\nMobile: ${mobileNumber}\n\nPlease login to complete your setup.`;
 
-                await sendSms(formattedMobile, messageBody);
-            } catch (smsErr) {
-                console.error("Failed to send admin creation SMS:", smsErr);
-            }
-        }
 
         res.status(201).json({
             _id: user.id,
@@ -436,15 +425,24 @@ const promoteMember = asyncHandler(async (req, res) => {
     try {
         let locationName = '';
         if (assignedLocation) {
+            const Location = require('../models/Location');
             const loc = await Location.findById(assignedLocation).select('name');
             if (loc) locationName = loc.name;
         }
 
-        const { sendAdminPromotionNotification } = require('../utils/notificationService');
-        await sendAdminPromotionNotification(member, user, locationName);
+        const { sendSms } = require('../utils/smsService');
+        const roleName = user.role.replace(/_/g, ' '); // e.g. VILLAGE_ADMIN -> VILLAGE ADMIN
+        const locString = locationName ? locationName : 'All Locations';
+
+        const message = `Dear ${member.name}, you are appointed as ${roleName} for ${locString}. Login using your registered mobile. Welcome to the MEWS Admin Team!`;
+
+        // Ensure mobile has +91
+        let mobile = user.username; // Username is mobile for promoted admins
+        if (!mobile.startsWith('+')) mobile = `+91${mobile}`;
+
+        await sendSms(mobile, message);
     } catch (notifErr) {
-        console.error("Failed to send admin promotion notification:", notifErr);
-        // Do not fail the request, just log error
+        console.error("Failed to send admin promotion SMS:", notifErr);
     }
 
     res.json({

@@ -61,6 +61,8 @@ const UserSchema = new mongoose.Schema({
 
     // MPIN Fields
     mpinHash: { type: String },
+    mpinDigest: { type: String, select: false }, // SHA256 of MPIN for lookup
+    mpinCreated: { type: Boolean, default: false },
     mpinLockedUntil: { type: Date },
     mpinFailedAttempts: { type: Number, default: 0 },
     isMpinEnabled: { type: Boolean, default: false },

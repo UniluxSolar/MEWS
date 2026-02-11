@@ -25,13 +25,7 @@ const protect = async (req, res, next) => {
             if (!user) {
                 const Member = require('../models/Member');
                 user = await Member.findById(decoded.id);
-                if (user) {
-                    // Role is now defined in Member schema, do not overwrite it.
-                    // user.role = 'MEMBER'; 
-                    // Mongoose document to object hack if needed, but usually redundant if we just assign property
-                    // If strict schema, we might need to use .toObject() or just rely on virtuals if defined.
-                    // For now, attaching to the mongoose document instance usually works in memory.
-                }
+                // Role handling for Member...
             }
 
             // 3. If not found in Member, check Institution (Institution Login)

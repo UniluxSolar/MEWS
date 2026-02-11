@@ -1,19 +1,39 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import slide1 from '../../assets/popup_new_1.jpg';
-import slide2 from '../../assets/popup_new_2.jpg';
+import API, { BASE_URL } from '../../api';
 
 const PopupCarousel = ({ isOpen, onClose, storageKey }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isVisible, setIsVisible] = useState(false);
-    const images = [slide1, slide2];
+    const [images, setImages] = useState([]);
     const autoScrollTimer = useRef(null);
 
+    // Fetch active banners on mount
     useEffect(() => {
-        if (isOpen) {
+        const fetchBanners = async () => {
+            try {
+                const { data } = await API.get('/carousel/public');
+                console.log("Fetched Banners:", data);
+                if (data && data.length > 0) {
+                    setImages(data);
+                } else {
+                    setImages([]); // No active banners
+                }
+            } catch (error) {
+                console.error("Failed to fetch public banners:", error);
+            }
+        };
+
+        fetchBanners();
+    }, []);
+
+    useEffect(() => {
+        if (isOpen && images.length > 0) {
             // Check storage if key is provided
             if (storageKey) {
                 const hasSeen = sessionStorage.getItem(storageKey);
+                // Also check if we have new banners compared to when user last closed? 
+                // For now, simple session-based masking is fine.
                 if (hasSeen) {
                     onClose();
                     return;
@@ -23,16 +43,16 @@ const PopupCarousel = ({ isOpen, onClose, storageKey }) => {
         } else {
             setIsVisible(false);
         }
-    }, [isOpen, storageKey, onClose]);
+    }, [isOpen, storageKey, onClose, images.length]);
 
     useEffect(() => {
-        if (isVisible) {
+        if (isVisible && images.length > 1) {
             startTimer();
         } else {
             stopTimer();
         }
         return () => stopTimer();
-    }, [isVisible, currentIndex]);
+    }, [isVisible, currentIndex, images.length]);
 
     const startTimer = () => {
         stopTimer();
@@ -64,7 +84,13 @@ const PopupCarousel = ({ isOpen, onClose, storageKey }) => {
         setTimeout(onClose, 300);
     };
 
+    const getImageUrl = (url) => {
+        if (!url) return '';
+        return url.startsWith('http') ? url : `${BASE_URL}/${url.replace(/\\/g, '/')}`;
+    };
+
     if (!isOpen && !isVisible) return null;
+    if (images.length === 0) return null;
 
     return (
         <div
@@ -78,7 +104,7 @@ const PopupCarousel = ({ isOpen, onClose, storageKey }) => {
                 {/* Close Button */}
                 <button
                     onClick={handleClose}
-                    className="absolute -top-10 right-0 md:-right-10 w-8 h-8 md:w-10 md:h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-md border border-white/20 z-50 group"
+                    className="absolute -top-12 right-0 md:-right-12 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-md border border-white/20 z-50 group"
                     aria-label="Close Popup"
                 >
                     <FaTimes className="group-hover:rotate-90 transition-transform duration-300" />
@@ -90,43 +116,49 @@ const PopupCarousel = ({ isOpen, onClose, storageKey }) => {
                     {/* Images */}
                     {images.map((img, index) => (
                         <div
-                            key={index}
+                            key={img._id || index}
                             className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${index === currentIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
                         >
                             <img
-                                src={img}
-                                alt={`Slide ${index + 1}`}
-                                className="w-full h-full object-contain md:object-cover" // Contain on mobile to prevent cropping important text, cover on desktop
+                                src={getImageUrl(img.imageUrl)}
+                                alt={img.title || `Slide ${index + 1}`}
+                                className="w-full h-full object-contain md:object-cover"
                             />
+                            {/* Optional: Caption overlay can go here if needed */}
                         </div>
                     ))}
 
-                    {/* Navigation Arrows */}
-                    <button
-                        onClick={prevSlide}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/30 hover:bg-black/50 text-white/70 hover:text-white rounded-full flex items-center justify-center backdrop-blur-md transition-all z-20 border border-white/10 opacity-0 group-hover:opacity-100 md:opacity-100"
-                    >
-                        <FaChevronLeft />
-                    </button>
-                    <button
-                        onClick={nextSlide}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/30 hover:bg-black/50 text-white/70 hover:text-white rounded-full flex items-center justify-center backdrop-blur-md transition-all z-20 border border-white/10 opacity-0 group-hover:opacity-100 md:opacity-100"
-                    >
-                        <FaChevronRight />
-                    </button>
-
-                    {/* Dots Indicator */}
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
-                        {images.map((_, index) => (
+                    {/* Navigation Arrows - Only show if more than 1 image */}
+                    {images.length > 1 && (
+                        <>
                             <button
-                                key={index}
-                                onClick={() => setCurrentIndex(index)}
-                                className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentIndex ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/60'}`}
-                                aria-label={`Go to slide ${index + 1}`}
-                            />
-                        ))}
-                    </div>
+                                onClick={prevSlide}
+                                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/30 hover:bg-black/50 text-white/70 hover:text-white rounded-full flex items-center justify-center backdrop-blur-md transition-all z-20 border border-white/10 opacity-0 group-hover:opacity-100 md:opacity-100"
+                            >
+                                <FaChevronLeft />
+                            </button>
+                            <button
+                                onClick={nextSlide}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/30 hover:bg-black/50 text-white/70 hover:text-white rounded-full flex items-center justify-center backdrop-blur-md transition-all z-20 border border-white/10 opacity-0 group-hover:opacity-100 md:opacity-100"
+                            >
+                                <FaChevronRight />
+                            </button>
+                        </>
+                    )}
 
+                    {/* Dots Indicator - Only show if more than 1 image */}
+                    {images.length > 1 && (
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
+                            {images.map((_, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => setCurrentIndex(index)}
+                                    className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentIndex ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/60'}`}
+                                    aria-label={`Go to slide ${index + 1}`}
+                                />
+                            ))}
+                        </div>
+                    )}
 
                 </div>
             </div>

@@ -25,7 +25,14 @@ const createLog = async (req, action, details) => {
 const getPublicCarouselImages = async (req, res) => {
     console.log('[Controller] getPublicCarouselImages called');
     try {
-        const images = await CarouselImage.find({ isActive: true }).sort({ order: 1, createdAt: -1 });
+        const now = new Date();
+        const images = await CarouselImage.find({
+            isActive: true, // Must be active
+            $or: [
+                { expiryDate: null },        // No expiry date set
+                { expiryDate: { $gt: now } } // OR expiry date is in the future
+            ]
+        }).sort({ order: 1, createdAt: -1 });
         res.json(images);
     } catch (error) {
         console.error('Error fetching public carousel images:', error);
@@ -55,7 +62,7 @@ const uploadCarouselImage = async (req, res) => {
             return res.status(400).json({ message: 'No image file uploaded' });
         }
 
-        const { title, description, order, isActive } = req.body;
+        const { title, description, order, isActive, expiryDate } = req.body;
 
         // Construct image URL (assuming local storage for now based on other controllers, or simple relative path)
         // If uploadMiddleware saves to 'uploads/', then URL is 'uploads/filename'
@@ -67,6 +74,7 @@ const uploadCarouselImage = async (req, res) => {
             imageUrl,
             order: order ? parseInt(order) : 0,
             isActive: isActive === 'true' || isActive === true,
+            expiryDate: expiryDate ? new Date(expiryDate) : null,
             uploadedBy: req.user._id
         });
 
@@ -90,12 +98,13 @@ const updateCarouselImage = async (req, res) => {
             return res.status(404).json({ message: 'Image not found' });
         }
 
-        const { title, description, order, isActive } = req.body;
+        const { title, description, order, isActive, expiryDate } = req.body;
 
         if (title !== undefined) image.title = title;
         if (description !== undefined) image.description = description;
         if (order !== undefined) image.order = parseInt(order);
         if (isActive !== undefined) image.isActive = isActive;
+        if (expiryDate !== undefined) image.expiryDate = expiryDate ? new Date(expiryDate) : null;
 
         const updatedImage = await image.save();
 

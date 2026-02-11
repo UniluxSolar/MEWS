@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FaLock, FaUserCircle, FaFingerprint } from 'react-icons/fa';
 import API from '../api';
+import MpinInput from '../components/common/MpinInput';
 
 const MpinLogin = () => {
     const navigate = useNavigate();
@@ -43,12 +44,11 @@ const MpinLogin = () => {
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
-        if (mpin.length !== 4) return;
+        if (mpin.length !== 4 && mpin.length !== 6) return;
 
         try {
             setLoading(true);
             const { data } = await API.post('/auth/login-mpin', {
-                identifier: user.mobile, // Assuming we know the mobile
                 mpin,
                 deviceId: getDeviceId()
             });
@@ -185,17 +185,11 @@ const MpinLogin = () => {
                     </div>
                 ) : (
                     <div className="w-full space-y-6">
-                        <div className="relative">
-                            <input
-                                type="password"
-                                inputMode="numeric"
+                        <div className="w-full">
+                            <MpinInput
                                 value={mpin}
-                                onChange={(e) => {
-                                    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-                                    setMpin(val);
-                                }}
-                                placeholder="Enter MPIN"
-                                className="w-full bg-gray-100 border-none text-gray-800 text-2xl tracking-[0.5em] text-center rounded-xl focus:ring-2 focus:ring-[#1e2a4a] focus:bg-white block p-4 font-bold transition-all placeholder:text-sm placeholder:tracking-normal"
+                                onChange={setMpin}
+                                length={4}
                             />
                         </div>
 

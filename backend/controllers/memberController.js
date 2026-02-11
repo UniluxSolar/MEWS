@@ -437,9 +437,20 @@ const registerMember = asyncHandler(async (req, res) => {
         if (transactionStarted) await session.commitTransaction();
 
         // Notify Head
-        sendRegistrationNotification(member).catch(err => console.error("Notify Warning:", err));
+        try {
+            const { sendSms } = require('../utils/smsService');
+            const message = `Dear ${member.name} ${member.surname}, your MEWS registration is successful. Member ID: ${member.mewsId}. Welcome to the MEWS community! – MEWS`;
+            // Ensure mobile number has +91
+            let mobile = member.mobileNumber;
+            if (!mobile.startsWith('+')) mobile = `+91${mobile}`;
 
-        // Notify Dependents (if they have a different mobile number)
+            await sendSms(mobile, message);
+        } catch (err) {
+            console.error("Notify Warning:", err);
+        }
+
+        // Notify Dependents (if they have a different mobile number) - REMOVED per user request
+        /*
         if (createdDependents.length > 0) {
             // Use a Set to avoid duplicate notifications if multiple dependents share a number (optional, but good practice? 
             // Request said "if the person is different from the head". 
@@ -453,6 +464,7 @@ const registerMember = asyncHandler(async (req, res) => {
                 }
             }
         }
+        */
 
         // In-App Notification to Admins
         try {

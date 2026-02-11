@@ -21,6 +21,10 @@ const CarouselImageSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    expiryDate: {
+        type: Date,
+        default: null // Optional: If set, banner auto-hides after this date
+    },
     uploadedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User', // Assuming there's a User model for admins, or Member if admins are members

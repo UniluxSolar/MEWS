@@ -19,6 +19,6 @@ router.post('/create-mpin', protect, createMpin);
 router.post('/login-mpin', loginMpin);
 router.get('/check-mpin', protect, checkMpinStatus);
 router.post('/forgot-mpin', forgotMpin);
-router.post('/reset-mpin', resetMpin);
+router.post('/reset-mpin', protect, resetMpin);
 
 module.exports = router;

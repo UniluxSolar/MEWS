@@ -27,8 +27,10 @@ const InstitutionSchema = new mongoose.Schema({
 
     // MPIN Fields
     mpinHash: { type: String },
+    mpinDigest: { type: String, select: false }, // SHA256 of MPIN for lookup
     mpinLockedUntil: { type: Date },
     mpinFailedAttempts: { type: Number, default: 0 },
+    mpinCreated: { type: Boolean, default: false },
     isMpinEnabled: { type: Boolean, default: false },
     deviceId: { type: String },
 

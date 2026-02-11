@@ -27,6 +27,7 @@ const CarouselManagement = () => {
     const [newTitle, setNewTitle] = useState('');
     const [newDesc, setNewDesc] = useState('');
     const [newOrder, setNewOrder] = useState(0);
+    const [newExpiryDate, setNewExpiryDate] = useState('');
 
     const [editingId, setEditingId] = useState(null);
     const [editData, setEditData] = useState({});
@@ -148,6 +149,7 @@ const CarouselManagement = () => {
             formData.append('title', newTitle);
             formData.append('description', newDesc);
             formData.append('order', newOrder);
+            if (newExpiryDate) formData.append('expiryDate', newExpiryDate);
             formData.append('isActive', false); // Default to Draft
 
             await API.post('/carousel', formData, {
@@ -160,6 +162,7 @@ const CarouselManagement = () => {
             setNewTitle('');
             setNewDesc('');
             setNewOrder(0);
+            setNewExpiryDate('');
             fetchImages();
             alert("Image uploaded as Draft!");
         } catch (error) {
@@ -175,7 +178,8 @@ const CarouselManagement = () => {
         setEditData({
             title: image.title,
             description: image.description,
-            order: image.order
+            order: image.order,
+            expiryDate: image.expiryDate ? new Date(image.expiryDate).toISOString().split('T')[0] : ''
         });
     };
 
@@ -259,6 +263,16 @@ const CarouselManagement = () => {
                                             value={newOrder}
                                             onChange={e => setNewOrder(e.target.value)}
                                         />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase">Expiry Date (Optional)</label>
+                                        <input
+                                            type="date"
+                                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-100 outline-none"
+                                            value={newExpiryDate}
+                                            onChange={e => setNewExpiryDate(e.target.value)}
+                                        />
+                                        <p className="text-[10px] text-slate-400 mt-1">Banner will auto-hide after this date.</p>
                                     </div>
                                     <div className="md:col-span-2">
                                         <label className="text-xs font-bold text-slate-500 uppercase">Description</label>
@@ -369,18 +383,33 @@ const CarouselManagement = () => {
                                                                 className="w-full text-xs font-bold border rounded px-2 py-1"
                                                                 value={editData.title}
                                                                 onChange={e => setEditData({ ...editData, title: e.target.value })}
+                                                                placeholder="Title"
                                                             />
                                                             <input
                                                                 className="w-full text-xs border rounded px-2 py-1"
                                                                 value={editData.description}
                                                                 onChange={e => setEditData({ ...editData, description: e.target.value })}
+                                                                placeholder="Description"
+                                                            />
+                                                            <input
+                                                                type="date"
+                                                                className="w-full text-xs border rounded px-2 py-1"
+                                                                value={editData.expiryDate}
+                                                                onChange={e => setEditData({ ...editData, expiryDate: e.target.value })}
                                                             />
                                                         </div>
                                                     ) : (
                                                         <div>
                                                             <div className="font-bold text-slate-800">{img.title || "Untitled"}</div>
                                                             <div className="text-xs text-slate-500 truncate max-w-[200px]">{img.description}</div>
-                                                            <div className="text-[10px] text-slate-400 mt-1">{new Date(img.createdAt).toLocaleDateString()}</div>
+                                                            <div className="flex gap-2 mt-1">
+                                                                <span className="text-[10px] text-slate-400">Created: {new Date(img.createdAt).toLocaleDateString()}</span>
+                                                                {img.expiryDate && (
+                                                                    <span className={`text-[10px] font-bold ${new Date(img.expiryDate) < new Date() ? 'text-red-500' : 'text-amber-500'}`}>
+                                                                        Expires: {new Date(img.expiryDate).toLocaleDateString()}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </td>

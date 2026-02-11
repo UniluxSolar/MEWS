@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const path = require('path');
@@ -52,9 +53,18 @@ app.use((req, res, next) => {
     next();
 });
 
+// Auth Rate Limiting
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: 'Too many login attempts from this IP, please try again after 15 minutes',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 // Define Routes
 app.use('/api/carousel', require('./routes/carouselRoutes')); // Moved to top for debugging
-app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
 app.use('/api/locations', require('./routes/locationRoutes'));
 app.use('/api/members', require('./routes/memberRoutes'));
 app.use('/api/institutions', require('./routes/institutionRoutes'));
