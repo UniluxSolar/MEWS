@@ -1,426 +1,256 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { FaArrowLeft, FaMobileAlt } from 'react-icons/fa';
-import mewsLogo from '../assets/mews_main_logo_new.png';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FaLock, FaUser, FaArrowLeft, FaCheckCircle, FaExclamationCircle, FaShieldAlt, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
 import API from '../api';
-import PopupCarousel from '../components/common/PopupCarousel';
-import MpinInput from '../components/common/MpinInput';
+import LoginLayout from '../components/auth/LoginLayout';
+import CarouselModal from '../components/common/CarouselModal';
+
+const InputField = ({ label, icon: Icon, suffixIcon: SuffixIcon, onSuffixClick, ...props }) => (
+    <div className="space-y-2">
+        <label className="text-[10px] font-black text-[#1e2a4a] uppercase tracking-widest ml-1">{label}</label>
+        <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#1e2a4a] transition-colors">
+                <Icon size={16} />
+            </div>
+            <input
+                {...props}
+                className="w-full bg-gray-50 border-2 border-transparent focus:border-[#1e2a4a]/10 focus:bg-white text-gray-800 text-base rounded-2xl block pl-12 pr-12 p-4 font-bold transition-all outline-none focus:ring-4 focus:ring-[#1e2a4a]/5"
+            />
+            {SuffixIcon && (
+                <button
+                    type="button"
+                    onClick={onSuffixClick}
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-[#1e2a4a] transition-colors"
+                >
+                    <SuffixIcon size={18} />
+                </button>
+            )}
+        </div>
+    </div>
+);
+
+const Feedback = ({ feedback }) => feedback && (
+    <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`p-4 rounded-2xl flex items-start gap-3 ${feedback.type === 'error' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}
+    >
+        {feedback.type === 'error' ? <FaExclamationCircle className="mt-0.5 shrink-0" /> : <FaCheckCircle className="mt-0.5 shrink-0" />}
+        <p className="text-xs font-bold leading-relaxed">{feedback.text}</p>
+    </motion.div>
+);
 
 const InstitutionLoginPage = () => {
     const navigate = useNavigate();
-    const location = useLocation();
-    const queryParams = new URLSearchParams(location.search);
-    const redirectPath = queryParams.get('redirect') || '/dashboard';
 
-    // View Modes: 
-    // 'DEFAULT' (MPIN Only)
-    // 'CREATE_MPIN_MOBILE' -> 'CREATE_MPIN_OTP' -> 'CREATE_MPIN_SET'
-    // 'FORGOT_MPIN_MOBILE' -> 'FORGOT_MPIN_OTP' -> 'FORGOT_MPIN_SET'
-    const [viewMode, setViewMode] = useState('DEFAULT');
+    // View Modes: 'LOGIN', 'FORGOT', 'RESET'
+    const [viewMode, setViewMode] = useState('LOGIN');
 
     // Data
-    const [mobile, setMobile] = useState('');
-    const [otp, setOtp] = useState('');
-    const [mpin, setMpin] = useState('');
-    const [confirmMpin, setConfirmMpin] = useState(''); // For collision flow
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [resetCode, setResetCode] = useState('');
+    const [newPassword, setNewPassword] = useState('');
 
-    // UI
+    // UI State
     const [loading, setLoading] = useState(false);
-    const [feedback, setFeedback] = useState(null); // { type: 'error' | 'success', text: string }
-    const [timer, setTimer] = useState(0);
-    const [isPopupOpen, setIsPopupOpen] = useState(false); // Success Popup
-    const [pendingNavigation, setPendingNavigation] = useState(null);
-
-    // Refs
-    const otpInputRef = useRef(null);
-
-    // Timer Logic
-    useEffect(() => {
-        let interval;
-        if (timer > 0) {
-            interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
-        }
-        return () => clearInterval(interval);
-    }, [timer]);
-
-    // Cleanup feedback on mode change
-    useEffect(() => {
-        setFeedback(null);
-        setMpin('');
-        setConfirmMpin('');
-        // Don't clear OTP or mobile to preserve state during reset flow
-    }, [viewMode]);
-
-    // --- Helpers ---
-    const getDeviceId = () => {
-        let deviceId = localStorage.getItem('deviceId');
-        if (!deviceId) {
-            deviceId = 'device-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
-            localStorage.setItem('deviceId', deviceId);
-        }
-        return deviceId;
-    };
+    const [feedback, setFeedback] = useState(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleLoginSuccess = (data) => {
-        if (data.role !== 'INSTITUTION') {
-            setFeedback({ type: 'error', text: 'Access Denied: Not an Institution Account' });
-            return;
-        }
+        localStorage.setItem('adminInfo', JSON.stringify(data));
+        localStorage.setItem('memberInfo', JSON.stringify(data));
 
-        localStorage.setItem('adminInfo', JSON.stringify(data)); // For compatibility if used elsewhere
-
-        // Save for "Remember Me"
         const userToSave = {
+            _id: data._id,
             name: data.name,
-            mobile: data.mobile,
+            email: data.email,
             role: data.role,
-            photoUrl: data.photoUrl,
-            isMpinEnabled: true
+            memberType: data.memberType
         };
         localStorage.setItem('savedUser', JSON.stringify(userToSave));
 
-        setPendingNavigation(redirectPath === '/dashboard/profile' ? '/dashboard' : redirectPath);
-        setIsPopupOpen(true); // Trigger Success Popup -> Navigation
+        const target = (data.role === 'MEMBER' || data.role === 'INSTITUTION') ? '/dashboard' : '/admin/dashboard';
+        navigate(target, { replace: true });
     };
 
-    // --- API Interactions ---
-
-    // 1. MPIN Login
-    // 1. MPIN Login
-    const handleMpinLogin = async (explicitMpin = null) => {
-        const mpinToUse = explicitMpin || mpin;
-        if (!mpinToUse || (mpinToUse.length !== 4 && mpinToUse.length !== 6)) return;
-
+    const handleLogin = async (e) => {
+        if (e) e.preventDefault();
         setLoading(true);
+        setFeedback(null);
         try {
-            const payload = {
-                mpin: mpinToUse,
-                deviceId: getDeviceId(),
-                userType: 'INSTITUTION'
-            };
-
-            const { data } = await API.post('/auth/login-mpin', payload);
+            const { data } = await API.post('/auth/login', { username, password });
             handleLoginSuccess(data);
         } catch (error) {
-            setFeedback({ type: 'error', text: error.response?.data?.message || 'Login Failed' });
-            setMpin('');
+            setFeedback({ type: 'error', text: error.response?.data?.message || 'Authentication Failed' });
         } finally {
             setLoading(false);
         }
     };
 
-    // 2. Send OTP
-    const handleSendOtp = async (nextMode) => {
-        if (!mobile || mobile.length !== 10) {
-            setFeedback({ type: 'error', text: 'Please enter a valid 10-digit mobile number' });
-            return;
-        }
-
+    const handleForgotPassword = async (e) => {
+        if (e) e.preventDefault();
         setLoading(true);
         try {
-            await API.post('/auth/request-otp', { mobile, userType: 'INSTITUTION' });
-            // Alert removed per user request
-            setTimer(60);
-            setViewMode(nextMode);
-            setFeedback({ type: 'success', text: 'Verification code sent successfully!' });
+            const { data } = await API.post('/auth/forgot-password', { loginInput: username });
+            setFeedback({ type: 'success', text: data.message });
+            setViewMode('RESET');
         } catch (error) {
-            setFeedback({ type: 'error', text: error.response?.data?.message || 'Failed to send OTP' });
+            setFeedback({ type: 'error', text: error.response?.data?.message || 'Reset failed' });
         } finally {
             setLoading(false);
         }
     };
 
-    // 3. Verify OTP
-    const handleVerifyOtp = async (nextMode) => {
-        if (!otp || otp.length !== 4) {
-            setFeedback({ type: 'error', text: 'Please enter 4-digit OTP' });
-            return;
-        }
-
-        // For BOTH Create and Resetflows, we NEED verify-otp to get the JWT session/cookie.
-        // This establishes the secure context for the next step.
-
-        // For Create MPIN, we NEED verify-otp to get the JWT session/cookie.
-        localStorage.removeItem('adminInfo');
+    const handleResetPassword = async (e) => {
+        if (e) e.preventDefault();
         setLoading(true);
         try {
-            await API.post('/auth/verify-otp', { mobile, otp, userType: 'INSTITUTION' });
-            setViewMode(nextMode);
-            setFeedback(null);
-        } catch (error) {
-            setFeedback({ type: 'error', text: error.response?.data?.message || 'Invalid OTP' });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // 4. Create New MPIN
-    const handleCreateMpinSubmit = async () => {
-        if (mpin.length !== 4) {
-            setFeedback({ type: 'error', text: 'MPIN must be exactly 4 digits' });
-            return;
-        }
-
-        setLoading(true);
-        try {
-            await API.post('/auth/create-mpin', {
-                mpin,
-                deviceId: getDeviceId()
-            });
-
-            setFeedback({ type: 'success', text: 'Institution MPIN Created! Logging in...' });
-
+            const { data } = await API.post('/auth/reset-password', { loginInput: username, resetCode, newPassword });
+            setFeedback({ type: 'success', text: data.message });
             setTimeout(() => {
-                handleMpinLogin();
-            }, 1000);
-
-        } catch (error) {
-            setLoading(false);
-            setFeedback({ type: 'error', text: error.response?.data?.message || 'Failed to create MPIN' });
-        }
-    };
-
-    // 5. Reset MPIN
-    const handleResetMpinSubmit = async () => {
-        if (!otp || otp.length !== 4) {
-            setFeedback({ type: 'error', text: 'Please enter the 4-digit verification code' });
-            return;
-        }
-        if (mpin !== confirmMpin) {
-            setFeedback({ type: 'error', text: 'MPINs do not match' });
-            return;
-        }
-        setLoading(true);
-        try {
-            await API.post('/auth/reset-mpin', {
-                newMpin: mpin,
-                deviceId: getDeviceId(),
-                userType: 'INSTITUTION'
-            });
-
-            setFeedback({ type: 'success', text: 'MPIN reset successfully. Please login.' });
-            setTimeout(() => {
-                setViewMode('DEFAULT');
-                setMpin('');
+                setViewMode('LOGIN');
+                setFeedback(null);
+                setResetCode('');
+                setNewPassword('');
             }, 2000);
-
         } catch (error) {
+            setFeedback({ type: 'error', text: error.response?.data?.message || 'Update failed' });
+        } finally {
             setLoading(false);
-            setFeedback({ type: 'error', text: error.response?.data?.message || 'Failed to reset MPIN' });
         }
     };
-
-
-    // --- Render Components ---
-
-    const LogoHeader = () => (
-        <div className="mb-8 flex flex-col items-center text-center">
-            <div className="w-20 h-20 bg-[#1e2a4a] rounded-2xl flex items-center justify-center shadow-md mb-4">
-                <img src={mewsLogo} alt="MEWS" className="w-16 h-16 object-contain" />
-            </div>
-            <h1 className="text-[#1e2a4a] text-2xl font-extrabold tracking-tight">MEWS</h1>
-            <p className="text-[#1e2a4a] text-xs font-bold uppercase tracking-wider mt-1">Institution Login</p>
-        </div>
-    );
-
-    const FeedbackDisplay = () => (
-        feedback && (
-            <div className={`mb-4 p-3 rounded-lg text-xs font-bold text-center ${feedback.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                {feedback.text}
-            </div>
-        )
-    );
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] p-4 font-sans text-gray-800 relative">
+        <LoginLayout
+            title="Institution Access"
+            subtitle="Portal for registered service partners"
+            footerLink={viewMode === 'LOGIN' ? 'First Time Login / Forgot Password?' : 'Back to Login'}
+            onFooterClick={() => {
+                setViewMode(viewMode === 'LOGIN' ? 'FORGOT' : 'LOGIN');
+                setFeedback(null);
+                setShowPassword(false);
+            }}
+        >
+            <CarouselModal />
 
-            {/* Success Popup Navigation Handler */}
-            <PopupCarousel
-                isOpen={isPopupOpen}
-                onClose={() => {
-                    setIsPopupOpen(false);
-                    if (pendingNavigation) navigate(pendingNavigation, { replace: true });
-                }}
-            />
+            <AnimatePresence mode="wait">
+                {viewMode === 'LOGIN' && (
+                    <motion.form
+                        key="login"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        onSubmit={handleLogin}
+                        className="space-y-6"
+                    >
+                        <InputField
+                            label="Username"
+                            icon={FaUser}
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="Email or Mobile Number"
+                        />
+                        <InputField
+                            label="Password"
+                            icon={FaLock}
+                            type={showPassword ? "text" : "password"}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="••••••••"
+                            suffixIcon={showPassword ? FaEyeSlash : FaEye}
+                            onSuffixClick={() => setShowPassword(!showPassword)}
+                        />
 
-            <div className={`w-full max-w-[400px] bg-white rounded-3xl shadow-xl border border-white p-8 transition-all duration-300 relative z-10 ${isPopupOpen ? 'blur-sm pointer-events-none' : ''}`}>
-
-                {/* 1. DEFAULT VIEW (MPIN ONLY) */}
-                {viewMode === 'DEFAULT' && (
-                    <div className="animate-fade-in flex flex-col items-center">
-                        <LogoHeader />
-                        {FeedbackDisplay()}
-
-                        <div className="w-full mb-6">
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 text-center">Enter Institution MPIN</label>
-                            <MpinInput
-                                value={mpin}
-                                onChange={setMpin}
-                                length={4}
-                            />
-                        </div>
+                        <Feedback feedback={feedback} />
 
                         <button
-                            onClick={() => handleMpinLogin()}
-                            disabled={loading || mpin.length !== 4}
-                            className="w-full bg-[#1e2a4a] hover:bg-[#2c3e66] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#1e2a4a]/20 transition-all transform active:scale-[0.98] mb-6 disabled:opacity-70 disabled:transform-none"
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-[#1e2a4a] text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-900/20 hover:shadow-blue-900/30 active:scale-[0.98] transition-all disabled:opacity-50"
                         >
-                            {loading ? 'Verifying...' : 'Login'}
+                            {loading ? 'Logging in...' : 'Sign In'}
                         </button>
-
-                        <div className="flex w-full justify-between items-center text-xs font-semibold text-gray-500 border-t pt-5">
-                            <button onClick={() => setViewMode('CREATE_MPIN_MOBILE')} className="hover:text-[#1e2a4a] transition-colors">
-                                Create New MPIN
-                            </button>
-                            <button onClick={() => setViewMode('FORGOT_MPIN_MOBILE')} className="hover:text-[#1e2a4a] transition-colors">
-                                Forgot MPIN?
-                            </button>
-                        </div>
-                    </div>
+                    </motion.form>
                 )}
 
-                {/* 3. CREATE / FORGOT FLOWS - STEP 1: MOBILE */}
-                {(viewMode === 'CREATE_MPIN_MOBILE' || viewMode === 'FORGOT_MPIN_MOBILE') && (
-                    <div className="animate-fade-in">
-                        <button onClick={() => setViewMode('DEFAULT')} className="absolute left-6 top-8 text-gray-400 hover:text-[#1e2a4a]">
-                            <FaArrowLeft />
-                        </button>
-                        <div className="text-center mb-6 mt-2">
-                            <h2 className="text-xl font-bold text-[#1e2a4a]">
-                                {viewMode === 'CREATE_MPIN_MOBILE' ? 'Create Institution MPIN' : 'Reset Institution MPIN'}
-                            </h2>
-                            <p className="text-xs text-gray-400 mt-1">Enter registered mobile number</p>
-                        </div>
-                        {FeedbackDisplay()}
+                {viewMode === 'FORGOT' && (
+                    <motion.form
+                        key="forgot"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        onSubmit={handleForgotPassword}
+                        className="space-y-6"
+                    >
+                        <InputField
+                            label="Registered Email / Mobile"
+                            icon={FaShieldAlt}
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder="To receive a verification code"
+                        />
 
-                        <div className="space-y-4 mb-6">
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                                    <span className="text-gray-500 font-bold text-sm">+91</span>
-                                </div>
-                                <input
-                                    autoFocus
-                                    type="tel"
-                                    value={mobile}
-                                    onChange={(e) => {
-                                        const val = e.target.value.replace(/\D/g, '');
-                                        if (val.length <= 10) setMobile(val);
-                                    }}
-                                    placeholder="Enter 10-digit number"
-                                    className="w-full bg-gray-100 border-none text-gray-800 text-lg rounded-xl focus:ring-2 focus:ring-[#1e2a4a] block pl-12 p-3.5 font-bold transition-all outline-none"
-                                />
-                            </div>
-                        </div>
+                        <Feedback feedback={feedback} />
 
                         <button
-                            onClick={() => {
-                                const next = viewMode === 'CREATE_MPIN_MOBILE' ? 'CREATE_MPIN_OTP' : 'FORGOT_MPIN_OTP';
-                                handleSendOtp(next);
-                            }}
-                            disabled={loading || mobile.length !== 10}
-                            className="w-full bg-[#1e2a4a] text-white font-bold py-3.5 rounded-xl shadow-lg transition-all"
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-[#1e2a4a] text-white font-black py-4 rounded-2xl shadow-xl transition-all disabled:opacity-50"
                         >
-                            {loading ? 'Sending OTP...' : 'Send OTP'}
+                            {loading ? 'Sending Code...' : 'Send Verification Code'}
                         </button>
-                    </div>
+                    </motion.form>
                 )}
 
-                {/* 4. CREATE / FORGOT FLOWS - STEP 2: OTP */}
-                {(viewMode === 'CREATE_MPIN_OTP' || viewMode === 'FORGOT_MPIN_OTP') && (
-                    <div className="animate-fade-in">
-                        <button
-                            onClick={() => setViewMode(viewMode === 'CREATE_MPIN_OTP' ? 'CREATE_MPIN_MOBILE' : 'FORGOT_MPIN_MOBILE')}
-                            className="absolute left-6 top-8 text-gray-400 hover:text-[#1e2a4a]"
-                        >
-                            <FaArrowLeft />
-                        </button>
-                        <div className="text-center mb-6 mt-2">
-                            <h2 className="text-xl font-bold text-[#1e2a4a]">Verify OTP</h2>
-                            <p className="text-xs text-gray-400 mt-1">Sent to +91 {mobile}</p>
+                {viewMode === 'RESET' && (
+                    <motion.form
+                        key="reset"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        onSubmit={handleResetPassword}
+                        className="space-y-6"
+                    >
+                        <div className="text-center mb-4">
+                            <p className="text-xs text-blue-600 font-bold bg-blue-50 py-2 rounded-lg">Verification code sent to your registered email</p>
                         </div>
-                        {FeedbackDisplay()}
+                        <InputField
+                            label="Verification Code"
+                            icon={FaShieldAlt}
+                            type="text"
+                            maxLength={4}
+                            value={resetCode}
+                            onChange={(e) => setResetCode(e.target.value)}
+                            placeholder="0 0 0 0"
+                        />
+                        <InputField
+                            label="Set New Password"
+                            icon={FaLock}
+                            type={showPassword ? "text" : "password"}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Enter new password"
+                            suffixIcon={showPassword ? FaEyeSlash : FaEye}
+                            onSuffixClick={() => setShowPassword(!showPassword)}
+                        />
 
-                        <div className="mb-6">
-                            <input
-                                autoFocus
-                                ref={otpInputRef}
-                                type="text"
-                                maxLength={4}
-                                value={otp}
-                                onChange={(e) => setOtp(e.target.value)}
-                                placeholder="X X X X"
-                                className="w-full bg-gray-100 border-none text-gray-800 text-2xl tracking-[0.5em] text-center rounded-xl focus:ring-2 focus:ring-[#1e2a4a] block p-3.5 font-bold transition-all outline-none"
-                            />
-                            <div className="text-right mt-2">
-                                {timer > 0 ? (
-                                    <span className="text-xs text-gray-500 font-medium">Resend in {timer}s</span>
-                                ) : (
-                                    <button
-                                        onClick={() => handleSendOtp(viewMode)}
-                                        className="text-xs font-bold text-[#1e2a4a] hover:underline"
-                                    >
-                                        Resend Code
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+                        <Feedback feedback={feedback} />
 
                         <button
-                            onClick={() => {
-                                const next = viewMode === 'CREATE_MPIN_OTP' ? 'CREATE_MPIN_SET' : 'FORGOT_MPIN_SET';
-                                handleVerifyOtp(next);
-                            }}
-                            disabled={loading || otp.length !== 4}
-                            className="w-full bg-[#1e2a4a] text-white font-bold py-3.5 rounded-xl shadow-lg transition-all"
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-[#1e2a4a] text-white font-black py-4 rounded-2xl shadow-xl transition-all disabled:opacity-50"
                         >
-                            {loading ? 'Verifying...' : 'Verify & Proceed'}
+                            {loading ? 'Saving...' : 'Save Password & Continue'}
                         </button>
-                    </div>
+                    </motion.form>
                 )}
-
-                {/* 5. CREATE / FORGOT FLOWS - STEP 3: SET MPIN */}
-                {(viewMode === 'CREATE_MPIN_SET' || viewMode === 'FORGOT_MPIN_SET') && (
-                    <div className="animate-fade-in">
-                        <div className="text-center mb-6 mt-2">
-                            <h2 className="text-xl font-bold text-[#1e2a4a]">
-                                {viewMode === 'CREATE_MPIN_SET' ? 'Set New MPIN' : 'Reset MPIN'}
-                            </h2>
-                            <p className="text-xs text-gray-400 mt-1">Create a secure 4-digit PIN</p>
-                        </div>
-                        {FeedbackDisplay()}
-
-                        <div className="space-y-6 mb-8">
-                            <div className="space-y-2">
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">New 4-Digit MPIN</label>
-                                <MpinInput
-                                    value={mpin}
-                                    onChange={setMpin}
-                                    length={4}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Confirm MPIN</label>
-                                <MpinInput
-                                    value={confirmMpin}
-                                    onChange={setConfirmMpin}
-                                    length={4}
-                                    autoFocus={false}
-                                />
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={viewMode === 'CREATE_MPIN_SET' ? handleCreateMpinSubmit : handleResetMpinSubmit}
-                            disabled={loading || mpin.length !== 4 || confirmMpin !== mpin}
-                            className="w-full bg-[#1e2a4a] text-white font-bold py-3.5 rounded-xl shadow-lg transition-all"
-                        >
-                            {loading ? 'Saving...' : 'Save MPIN'}
-                        </button>
-                    </div>
-                )}
-
-            </div>
-        </div>
+            </AnimatePresence>
+        </LoginLayout>
     );
 };
 

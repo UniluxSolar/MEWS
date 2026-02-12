@@ -1,12 +1,7 @@
-const twilio = require('twilio');
 const fs = require('fs');
 const path = require('path');
 
-// Initialize credentials from Environment or Fallback JSON
-let accountSid = process.env.TWILIO_ACCOUNT_SID;
-let authToken = process.env.TWILIO_AUTH_TOKEN;
-let fromNumber = process.env.TWILIO_PHONE_NUMBER;
-let whatsappFrom = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886'; // Default Sandbox
+// Initialize credentials from Environment
 let frontendUrl = process.env.FRONTEND_URL;
 
 if (!frontendUrl) {
@@ -23,56 +18,20 @@ if (frontendUrl.endsWith('/')) {
     frontendUrl = frontendUrl.slice(0, -1);
 }
 
-// Attempt to load from twilio-key.json if env vars missing (Backwards compatibility)
-if (!accountSid || !authToken || !fromNumber) {
-    const keyPath = path.join(__dirname, '../twilio-key.json');
-    if (fs.existsSync(keyPath)) {
-        try {
-            const keyConfig = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
-            if (!accountSid) accountSid = keyConfig.TWILIO_ACCOUNT_SID || keyConfig.accountSid;
-            if (!authToken) authToken = keyConfig.TWILIO_AUTH_TOKEN || keyConfig.authToken;
-            if (!fromNumber) fromNumber = keyConfig.TWILIO_PHONE_NUMBER || keyConfig.fromNumber;
-            if (keyConfig.TWILIO_WHATSAPP_NUMBER) whatsappFrom = keyConfig.TWILIO_WHATSAPP_NUMBER;
-        } catch (e) {
-            console.error('[Notify] Failed to parse twilio-key.json', e);
-        }
-    }
-}
-
-const client = (accountSid && authToken) ? twilio(accountSid, authToken) : null;
-
-if (client) {
-    console.log('[Notify] Twilio SMS Service initialized successfully.');
-} else {
-    console.warn('[Notify] Twilio SMS Service NOT initialized. Missing credentials in env or twilio-key.json.');
-}
+const { sendEmail } = require('./emailService');
 
 /**
- * Sends a welcome notification via SMS and WhatsApp.
+ * Sends a welcome notification via Email.
  * @param {Object} member - The member document.
  */
 const sendRegistrationNotification = async (member) => {
-    if (!client) {
-        console.warn('[Notify] Twilio client not initialized - notifications skipped');
-        return;
-    }
-
-    const { mewsId, mobileNumber, name, _id } = member;
-    if (!mobileNumber) {
-        console.warn(`[Notify] Member ${_id} has no mobile number. Skipping.`);
-        return;
-    }
-
-    // Ensure E.164 format (+91 for India default)
-    const formattedMobile = mobileNumber.startsWith('+') ? mobileNumber : `+91${mobileNumber}`;
+    const { mewsId, name, email, _id, surname } = member;
 
     // Link to the user's profile documents via Login Redirect
-    // Users must login first to access these protected routes
-    // Link to the user's secure documents
     const appFormUrl = `${frontendUrl}/dashboard/member/application/${_id}`;
     const idCardUrl = `${frontendUrl}/dashboard/member/id-card/${_id}`;
 
-    const messageBody = `Dear ${name} ${member.surname || ''} ,
+    const messageBody = `Dear ${name} ${surname || ''},
 
 Thank you for registering with MEWS, Your Member ID: ${mewsId} 
 
@@ -85,16 +44,28 @@ We appreciate your registration with MEWS and welcome you to the community.
 
 – MEWS`;
 
-    // 1. Send SMS
-    try {
-        const smsMsg = await client.messages.create({
-            body: messageBody,
-            from: fromNumber,
-            to: formattedMobile
-        });
-        console.log(`[Notify] SMS sent to ${formattedMobile} (SID: ${smsMsg.sid})`);
-    } catch (e) {
-        console.error(`[Notify] SMS failed for ${formattedMobile}: ${e.message}`);
+    // Send Email
+    if (email) {
+        try {
+            await sendEmail(
+                email,
+                'Welcome to MEWS - Registration Successful',
+                messageBody,
+                `<h3>Welcome to MEWS, ${name}!</h3>
+                <p>Thank you for registering. Your Member ID is <strong>${mewsId}</strong>.</p>
+                <p>You can access your documents here:</p>
+                <ul>
+                    <li><a href="${appFormUrl}">Application Form</a></li>
+                    <li><a href="${idCardUrl}">Digital ID Card</a></li>
+                </ul>
+                <p>Regards,<br/>MEWS Team</p>`
+            );
+            console.log(`[Notify] Welcome email sent to ${email}`);
+        } catch (e) {
+            console.error(`[Notify] Welcome email failed for ${email}: ${e.message}`);
+        }
+    } else {
+        console.warn(`[Notify] Skip registration email for ${name} (no email provided)`);
     }
 };
 
@@ -105,12 +76,7 @@ We appreciate your registration with MEWS and welcome you to the community.
  * @param {String} locationName - Name of the assigned location.
  */
 const sendAdminPromotionNotification = async (member, user, locationName) => {
-    if (!client) return;
-
-    const { mobileNumber, name } = member;
-    if (!mobileNumber) return;
-
-    const formattedMobile = mobileNumber.startsWith('+') ? mobileNumber : `+91${mobileNumber}`;
+    const { name, email, surname } = member;
 
     // Links
     const loginLink = `${frontendUrl}/login`;
@@ -119,27 +85,39 @@ const sendAdminPromotionNotification = async (member, user, locationName) => {
     const roleName = user.role.replace('_', ' ');
     const locationStr = locationName ? ` for ${locationName}` : '';
 
-    const messageBody = `Dear ${name} ,
+    const messageBody = `Dear ${name} ${surname || ''},
 
 Congratulations! You have been appointed as ${roleName}${locationStr}.
 
-You can now login using your registered mobile number:
+You can now login using your registered credentials:
 Login: ${loginLink}
 ID Card: ${idCardUrl}
 
 Welcome to the Admin Team!
 – MEWS`;
 
-    // Send SMS
-    try {
-        await client.messages.create({
-            body: messageBody,
-            from: fromNumber,
-            to: formattedMobile
-        });
-        console.log(`[Notify] Admin Promo SMS sent to ${formattedMobile}`);
-    } catch (e) {
-        console.error(`[Notify] Admin Promo SMS failed: ${e.message}`);
+    // Send Email
+    if (email) {
+        try {
+            await sendEmail(
+                email,
+                'MEWS Admin Appointment',
+                messageBody,
+                `<h3>Congratulations, ${name}!</h3>
+                <p>You have been appointed as <strong>${roleName}${locationStr}</strong>.</p>
+                <p>You can now access the admin portal and your ID card:</p>
+                <ul>
+                    <li><a href="${loginLink}">Admin Login</a></li>
+                    <li><a href="${idCardUrl}">Digital ID Card</a></li>
+                </ul>
+                <p>Welcome to the team!<br/>MEWS</p>`
+            );
+            console.log(`[Notify] Admin Promo email sent to ${email}`);
+        } catch (e) {
+            console.error(`[Notify] Admin Promo email failed for ${email}: ${e.message}`);
+        }
+    } else {
+        console.warn(`[Notify] Skip admin promo email for ${name} (no email provided)`);
     }
 };
 

@@ -190,20 +190,13 @@ const MemberSchema = new mongoose.Schema({
     // K1. Family Linking End (Already closed in line 165)
 
     // M. Role & Permissions (Unified Access)
-    // L. Authentication (OTP & MPIN)
+    // L. Authentication (OTP Only)
     otpHash: { type: String },
     otpExpires: { type: Date },
     otpLastSent: { type: Date },
     isPhoneVerified: { type: Boolean, default: false },
+    passwordHash: { type: String },
 
-    // MPIN Fields
-    mpinHash: { type: String },
-    mpinDigest: { type: String, select: false }, // SHA256 of MPIN for lookup
-    mpinCreated: { type: Boolean, default: false },
-    mpinLockedUntil: { type: Date },
-    mpinFailedAttempts: { type: Number, default: 0 },
-    isMpinEnabled: { type: Boolean, default: false },
-    deviceId: { type: String }, // For binding MPIN to a specific device
 
     // M. Role & Permissions (Unified Access)
     role: {

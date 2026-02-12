@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
 const Location = require('../models/Location');
 const bcrypt = require('bcryptjs');
+const { sendAdminPromotionNotification } = require('../utils/notificationService');
 
 const HIERARCHY_LEVELS = {
     'SUPER_ADMIN': 5,
@@ -430,19 +431,9 @@ const promoteMember = asyncHandler(async (req, res) => {
             if (loc) locationName = loc.name;
         }
 
-        const { sendSms } = require('../utils/smsService');
-        const roleName = user.role.replace(/_/g, ' '); // e.g. VILLAGE_ADMIN -> VILLAGE ADMIN
-        const locString = locationName ? locationName : 'All Locations';
-
-        const message = `Dear ${member.name}, you are appointed as ${roleName} for ${locString}. Login using your registered mobile. Welcome to the MEWS Admin Team!`;
-
-        // Ensure mobile has +91
-        let mobile = user.username; // Username is mobile for promoted admins
-        if (!mobile.startsWith('+')) mobile = `+91${mobile}`;
-
-        await sendSms(mobile, message);
+        await sendAdminPromotionNotification(member, user, locationName);
     } catch (notifErr) {
-        console.error("Failed to send admin promotion SMS:", notifErr);
+        console.error("Failed to send admin promotion notification:", notifErr);
     }
 
     res.json({

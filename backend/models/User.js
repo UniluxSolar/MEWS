@@ -59,14 +59,6 @@ const UserSchema = new mongoose.Schema({
     otpExpires: Date,
     otpLastSent: Date,
 
-    // MPIN Fields
-    mpinHash: { type: String },
-    mpinDigest: { type: String, select: false }, // SHA256 of MPIN for lookup
-    mpinCreated: { type: Boolean, default: false },
-    mpinLockedUntil: { type: Date },
-    mpinFailedAttempts: { type: Number, default: 0 },
-    isMpinEnabled: { type: Boolean, default: false },
-    deviceId: { type: String } // For binding MPIN to a specific device
 }, {
     timestamps: true
 });

@@ -24,15 +24,19 @@ const InstitutionSchema = new mongoose.Schema({
     otpHash: { type: String },
     otpExpires: { type: Date },
     otpLastSent: { type: Date },
+    email: {
+        type: String,
+        trim: true,
+        lowercase: true,
+        unique: true,
+        sparse: true
+    },
+    passwordHash: { type: String },
+    role: {
+        type: String,
+        default: 'INSTITUTION'
+    },
 
-    // MPIN Fields
-    mpinHash: { type: String },
-    mpinDigest: { type: String, select: false }, // SHA256 of MPIN for lookup
-    mpinLockedUntil: { type: Date },
-    mpinFailedAttempts: { type: Number, default: 0 },
-    mpinCreated: { type: Boolean, default: false },
-    isMpinEnabled: { type: Boolean, default: false },
-    deviceId: { type: String },
 
     // Verification
     verificationStatus: {

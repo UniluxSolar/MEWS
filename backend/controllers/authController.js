@@ -7,7 +7,6 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const Member = require('../models/Member');
-const { sendSms } = require('../utils/smsService');
 const crypto = require('crypto'); // Built-in Node.js crypto for SHA256
 
 // Helper to normalize mobile numbers for consistent lookup
@@ -22,70 +21,127 @@ const normalizeMobile = (mobile) => {
 // @desc    Auth user & get token
 // @route   POST /api/auth/login
 // @access  Public
+// @desc    Auth user & get token (Unified Login for all roles)
+// @route   POST /api/auth/login
+// @access  Public
 const loginUser = asyncHandler(async (req, res) => {
-    const { username, password, role } = req.body; // Receive role from frontend
-    console.log("--- DEBUG LOGIN ATTEMPT ---");
-    console.log("Request Body:", { username, role, passwordProvided: !!password });
+    const { username, password } = req.body;
 
-    // Trim and case-insensitive search
-    const loginInput = username ? username.trim() : '';
+    if (!username || !password) {
+        res.status(400);
+        throw new Error('Username (Email/Mobile) and Password are required');
+    }
 
-    const user = await User.findOne({
+    const loginInput = username.trim();
+    const isEmail = loginInput.includes('@');
+    let normalized = loginInput;
+    if (!isEmail) {
+        normalized = normalizeMobile(loginInput);
+    }
+
+    console.log(`[LOGIN] Attempt for: ${normalized} (${isEmail ? 'Email' : 'Mobile'})`);
+
+    const query = isEmail ? { email: normalized.toLowerCase() } : {
         $or: [
-            { username: { $regex: new RegExp(`^${loginInput}$`, "i") } },
-            { email: loginInput.toLowerCase() }
+            { mobileNumber: normalized },
+            { mobileNumber: `+91${normalized}` },
+            { username: normalized },
+            { username: `+91${normalized}` }
         ]
-    }).populate('memberId', 'name surname');
+    };
 
-    console.log("User Found in DB:", user ? "YES" : "NO");
-    if (user) {
-        console.log("User Role in DB:", user.role);
-        console.log("User stored password hash:", user.passwordHash ? "Present" : "Missing");
-        const isMatch = await bcrypt.compare(password, user.passwordHash);
-        console.log("Password Match Result:", isMatch);
+    // 1. Try finding in User (Admins/Institution Users)
+    let user = await User.findOne(query).populate('memberId', 'name surname');
+    let userType = user ? 'ADMIN' : null;
 
-        if (isMatch) {
-            // Enforce role verification
-            if (role && user.role !== role) {
-                console.log(`Role Mismatch! Expected ${user.role}, got ${role}`);
-                res.status(401);
-                throw new Error(`Unauthorized: You are not a ${role.replace('_', ' ')}`);
-            }
+    // 2. Try finding in Member (Head/Family)
+    if (!user) {
+        const buildMemberQuery = isEmail ? { email: normalized.toLowerCase() } : {
+            $or: [
+                { mobileNumber: normalized },
+                { mobileNumber: `+91${normalized}` },
+                { "familyMembers.mobileNumber": normalized },
+                { "familyMembers.mobileNumber": `+91${normalized}` }
+            ]
+        };
+        user = await Member.findOne(buildMemberQuery);
+        if (user) userType = 'MEMBER';
+    }
 
-            // Fetch Location Name
-            let locationName = '';
-            if (user.assignedLocation) {
-                const Location = require('../models/Location');
-                const loc = await Location.findById(user.assignedLocation);
-                if (loc) locationName = loc.name;
-            }
+    // 3. Try finding in Institution (if not found in others)
+    if (!user) {
+        const Institution = require('../models/Institution');
+        user = await Institution.findOne(query);
+        if (user) userType = 'INSTITUTION';
+    }
 
-            // Send Token in HttpOnly Cookie
-            res.cookie('jwt', generateToken(user._id, user._id), {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax', // Relaxed for better compatibility with redirections/initial loads
-                maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    if (!user) {
+        res.status(401);
+        throw new Error('Invalid Credentials');
+    }
+
+    // Check Password
+    if (!user.passwordHash) {
+        res.status(401);
+        throw new Error('Password not set. Please use "Forgot Password" to setup your password for the first time.');
+    }
+
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+        res.status(401);
+        throw new Error('Invalid Credentials');
+    }
+
+    // Identify Logged In Record
+    let loggedInUser = {
+        _id: user._id,
+        name: user.name || user.username || 'User',
+        email: user.email,
+        role: user.role || userType,
+        token: generateToken(user._id, user._id)
+    };
+
+    // Specific logic for Member (Head/Dependent)
+    if (userType === 'MEMBER') {
+        const userMobileNormalized = normalizeMobile(user.mobileNumber || '');
+        const loginNormalized = isEmail ? user.email.toLowerCase() : normalized;
+
+        if (loginNormalized !== (isEmail ? user.email.toLowerCase() : userMobileNormalized)) {
+            // Check if it's a dependent
+            const dependent = user.familyMembers?.find(fm => {
+                if (isEmail) return fm.email && fm.email.toLowerCase() === loginNormalized;
+                return normalizeMobile(fm.mobileNumber || '') === loginNormalized;
             });
 
-            res.json({
-                _id: user.id,
-                name: user.memberId ? `${user.memberId.name} ${user.memberId.surname}` : user.username,
-                username: user.username,
-                email: user.email,
-                role: user.role,
-                assignedLocation: user.assignedLocation,
-                locationName,
-                institutionId: user.institutionId,
-                token: generateToken(user._id, user._id) // Add token so frontend can set Authorization header
-            });
-            return;
+            if (dependent) {
+                loggedInUser.memberId = dependent._id;
+                loggedInUser.name = `${dependent.name} ${dependent.surname || user.surname}`;
+                loggedInUser.memberType = 'DEPENDENT';
+                // Regerate token for dependent
+                loggedInUser.token = generateToken(user._id, dependent._id);
+            }
+        } else {
+            loggedInUser.memberType = 'HEAD';
+            loggedInUser.name = `${user.name} ${user.surname}`;
         }
     }
 
-    console.log("--- DEBUG FAILURE: Invalid Credentials ---");
-    res.status(401);
-    throw new Error('Invalid Credentials');
+    // Fetch Location Name for Admins
+    if (userType === 'ADMIN' && user.assignedLocation) {
+        const Location = require('../models/Location');
+        const loc = await Location.findById(user.assignedLocation);
+        if (loc) loggedInUser.locationName = loc.name;
+    }
+
+    // Send Token in HttpOnly Cookie
+    res.cookie('jwt', loggedInUser.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000
+    });
+
+    res.json(loggedInUser);
 });
 
 // @desc    Logout user / clear cookie
@@ -189,86 +245,82 @@ const generateToken = (id, memberId) => {
 // @desc    Request OTP for Member/Institution Login
 // @route   POST /api/auth/request-otp
 // @access  Public
+// @desc    Request OTP for Member/Institution/Admin Login
+// @route   POST /api/auth/request-otp
+// @access  Public
 const requestOtp = asyncHandler(async (req, res) => {
-    const { mobile, userType } = req.body;
+    const { loginInput, userType } = req.body;
 
-    if (!mobile) {
+    if (!loginInput) {
         res.status(400);
-        throw new Error('Mobile number is required');
+        throw new Error('Email or Mobile Number is required');
     }
 
-    const normalized = normalizeMobile(mobile);
+    // Determine if input is Email or Mobile
+    const isEmail = loginInput.includes('@');
+    let normalized = loginInput;
+    if (!isEmail) {
+        normalized = normalizeMobile(loginInput);
+    }
 
-    // STRICT CHECKING BASED ON userType
+    let user;
+    let foundUserType = '';
+
+    // Search query construction
+    const buildQuery = (emailOrMobile) => {
+        if (isEmail) {
+            return { email: emailOrMobile.toLowerCase() };
+        } else {
+            return {
+                $or: [
+                    { mobileNumber: emailOrMobile },
+                    { mobileNumber: `+91${emailOrMobile}` },
+                    { username: emailOrMobile },
+                    { username: `+91${emailOrMobile}` },
+                    { "familyMembers.mobileNumber": emailOrMobile },
+                    { "familyMembers.mobileNumber": `+91${emailOrMobile}` }
+                ]
+            };
+        }
+    };
+
+    // 1. Find the User
     if (userType === 'MEMBER') {
-        user = await Member.findOne({
-            $or: [
-                { mobileNumber: normalized },
-                { mobileNumber: `+91${normalized}` },
-                { "familyMembers.mobileNumber": normalized },
-                { "familyMembers.mobileNumber": `+91${normalized}` }
-            ]
-        });
+        user = await Member.findOne(buildQuery(normalized));
         foundUserType = 'MEMBER';
     } else if (userType === 'INSTITUTION') {
         const Institution = require('../models/Institution');
-        user = await Institution.findOne({
-            $or: [
-                { mobileNumber: normalized },
-                { mobileNumber: `+91${normalized}` }
-            ]
-        });
+        user = await Institution.findOne(buildQuery(normalized));
         foundUserType = 'INSTITUTION';
     } else if (userType === 'ADMIN') {
-        user = await User.findOne({
-            $or: [
-                { mobileNumber: normalized },
-                { mobileNumber: `+91${normalized}` },
-                { username: normalized },
-                { username: `+91${normalized}` }
-            ]
-        });
+        user = await User.findOne(buildQuery(normalized));
         foundUserType = 'ADMIN';
     } else {
         // Fallback: Check Member first, then Institution, then Admin
-        user = await Member.findOne({
-            $or: [
-                { mobileNumber: normalized },
-                { mobileNumber: `+91${normalized}` },
-                { "familyMembers.mobileNumber": normalized },
-                { "familyMembers.mobileNumber": `+91${normalized}` }
-            ]
-        });
+        user = await Member.findOne(buildQuery(normalized));
         foundUserType = 'MEMBER';
 
         if (!user) {
             const Institution = require('../models/Institution');
-            user = await Institution.findOne({
-                $or: [
-                    { mobileNumber: normalized },
-                    { mobileNumber: `+91${normalized}` }
-                ]
-            });
+            user = await Institution.findOne(buildQuery(normalized));
             foundUserType = 'INSTITUTION';
         }
 
         if (!user) {
-            // Check Admin
-            user = await User.findOne({
-                $or: [
-                    { mobileNumber: normalized },
-                    { mobileNumber: `+91${normalized}` },
-                    { username: normalized },
-                    { username: `+91${normalized}` }
-                ]
-            });
+            user = await User.findOne(buildQuery(normalized));
             foundUserType = 'ADMIN';
         }
     }
 
     if (!user) {
         res.status(404);
-        throw new Error(`No ${userType ? (userType === 'MEMBER' ? 'Member' : 'Institution') : 'User'} found with this mobile number`);
+        throw new Error(`Record not found for the provided ${isEmail ? 'email' : 'mobile number'}`);
+    }
+
+    // 2. Ensure Email Exists (CRITICAL: Required for OTP)
+    if (!user.email) {
+        res.status(400);
+        throw new Error('No email address is registered for this account. Please contact support to register your email.');
     }
 
     // 3. Rate Limiting Check
@@ -276,126 +328,111 @@ const requestOtp = asyncHandler(async (req, res) => {
         const timeSinceLastSent = Date.now() - new Date(user.otpLastSent).getTime();
         const waitTime = 60 * 1000; // 60 seconds
         if (timeSinceLastSent < waitTime) {
-            res.status(429); // Too Many Requests
-            throw new Error(`Please wait ${Math.ceil((waitTime - timeSinceLastSent) / 1000)} seconds before requesting a new OTP.`);
+            res.status(429);
+            throw new Error(`Please wait ${Math.ceil((waitTime - timeSinceLastSent) / 1000)} seconds before requesting a new code.`);
         }
     }
 
-    // 4. Generate 6-digit OTP
+    // 4. Generate 4-digit OTP
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
     // 5. Hash OTP
     const salt = await bcrypt.genSalt(10);
     const otpHash = await bcrypt.hash(otp, salt);
 
-    // 6. Update User with OTP Hash, Expiry (5 mins), and Last Sent
+    // 6. Update User
     user.otpHash = otpHash;
     user.otpExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
     user.otpLastSent = Date.now();
-
-    // Clear any previous plain text OTP if it exists (migration cleanup)
     if (user.otp) user.otp = undefined;
 
     await user.save();
 
-    // 7. Send SMS via Twilio
-    // Format Mobile Number for Twilio (Ensure +91 for India if missing)
-    let formattedMobile = normalized;
-    if (!formattedMobile.startsWith('+')) {
-        formattedMobile = `+91${formattedMobile}`;
-    }
+    // 7. Send Email OTP
+    const { sendEmail } = require('../utils/emailService');
+    try {
+        await sendEmail(
+            user.email,
+            'MEWS Verification Code',
+            `Your MEWS Verification Code is: ${otp}. Valid for 5 minutes.`,
+            `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e1e8ed; border-radius: 12px;">
+                <h2 style="color: #1e2a4a; text-align: center;">MEWS Verification</h2>
+                <p>Hello,</p>
+                <p>Your verification code for logging into the MEWS portal is:</p>
+                <div style="background-color: #f0f4f8; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                    <h1 style="color: #1e2a4a; letter-spacing: 10px; font-size: 32px; margin: 0;">${otp}</h1>
+                </div>
+                <p style="color: #657786; font-size: 14px;">This code is valid for 5 minutes. Please do not share this with anyone.</p>
+                <hr style="border: none; border-top: 1px solid #e1e8ed; margin: 20px 0;" />
+                <p style="color: #657786; font-size: 12px; text-align: center;">Regards,<br/>MEWS Team</p>
+            </div>`
+        );
+        console.log(`[OTP] Email sent to ${user.email}`);
 
-    const smsResult = await sendSms(formattedMobile, `Your MEWS ${userType ? userType : 'User'} Login Verification Code is: ${otp}. Valid for 5 minutes. Do not share this code with anyone.`);
-
-    console.log(`[OTP] Generated for ${mobile} (${userType}): ${otp} | SMS Result:`, smsResult);
-
-    if (smsResult.success) {
         res.json({
-            message: 'OTP sent successfully to your mobile number',
-            mobile,
-            userType,
-            otp // Included for testing purposes // Optional: let frontend know what type was found
+            message: `Verification code sent to your registered email: ${user.email.replace(/(.{2})(.*)(?=@)/, (gp1, gp2, gp3) => gp2 + '*'.repeat(gp3.length))}`,
+            loginInput: loginInput,
+            userType: foundUserType,
+            otp: process.env.NODE_ENV !== 'production' ? otp : undefined // Return OTP for dev
         });
-    } else {
-        // Fallback for Trial Accounts / Dev Mode
-        console.warn('--- TWILIO FALLBACK ---');
-        console.warn(`SMS failed. Use OTP ${otp} (View Console)`);
-        console.warn('-----------------------');
-
-        const errorMsg = smsResult.error || 'Unknown Twilio Error';
-        res.json({
-            message: `SMS Failed (${errorMsg}). Use OTP ${otp} (View Console)`,
-            mobile,
-            otp,
-            userType,
-            error: errorMsg
-        });
+    } catch (e) {
+        console.error(`[OTP] Email failed to ${user.email}:`, e.message);
+        res.status(500);
+        throw new Error('Failed to send verification email. Please check your internet connection or try again later.');
     }
 });
 
-// @desc    Verify OTP and Login Member/Institution
+// @desc    Verify OTP and Login Member/Institution/Admin
 // @route   POST /api/auth/verify-otp
 // @access  Public
 const verifyOtp = asyncHandler(async (req, res) => {
-    const { mobile, otp, userType } = req.body;
+    const { loginInput, otp, userType } = req.body;
 
-    if (!mobile || !otp) {
+    if (!loginInput || !otp) {
         res.status(400);
-        throw new Error('Mobile and OTP are required');
+        throw new Error('Email/Mobile and OTP are required');
     }
 
-    const normalized = normalizeMobile(mobile);
+    const isEmail = loginInput.includes('@');
+    let normalized = loginInput;
+    if (!isEmail) {
+        normalized = normalizeMobile(loginInput);
+    }
+
+    // Reuse buildQuery logic
+    const query = isEmail ? { email: normalized.toLowerCase() } : {
+        $or: [
+            { mobileNumber: normalized },
+            { mobileNumber: `+91${normalized}` },
+            { username: normalized },
+            { username: `+91${normalized}` },
+            { "familyMembers.mobileNumber": normalized },
+            { "familyMembers.mobileNumber": `+91${normalized}` }
+        ]
+    };
+
+    let user;
+    let foundUserType = '';
 
     // STRICT CHECKING BASED ON userType
     if (userType === 'MEMBER') {
-        user = await Member.findOne({
-            $or: [
-                { mobileNumber: normalized },
-                { mobileNumber: `+91${normalized}` },
-                { "familyMembers.mobileNumber": normalized },
-                { "familyMembers.mobileNumber": `+91${normalized}` }
-            ]
-        });
+        user = await Member.findOne(query);
         foundUserType = 'MEMBER';
     } else if (userType === 'INSTITUTION') {
         const Institution = require('../models/Institution');
-        user = await Institution.findOne({
-            $or: [
-                { mobileNumber: normalized },
-                { mobileNumber: `+91${normalized}` }
-            ]
-        });
+        user = await Institution.findOne(query);
         foundUserType = 'INSTITUTION';
     } else if (userType === 'ADMIN') {
-        user = await User.findOne({
-            $or: [
-                { mobileNumber: normalized },
-                { mobileNumber: `+91${normalized}` },
-                { username: normalized },
-                { username: `+91${normalized}` }
-            ]
-        });
+        user = await User.findOne(query);
         foundUserType = 'ADMIN';
     } else {
         // Fallback
-        user = await Member.findOne({
-            $or: [
-                { mobileNumber: normalized },
-                { mobileNumber: `+91${normalized}` },
-                { "familyMembers.mobileNumber": normalized },
-                { "familyMembers.mobileNumber": `+91${normalized}` }
-            ]
-        });
+        user = await Member.findOne(query);
         foundUserType = 'MEMBER';
 
         if (!user) {
             const Institution = require('../models/Institution');
-            user = await Institution.findOne({
-                $or: [
-                    { mobileNumber: normalized },
-                    { mobileNumber: `+91${normalized}` }
-                ]
-            });
+            user = await Institution.findOne(query);
             foundUserType = 'INSTITUTION';
         }
     }
@@ -441,6 +478,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
         name: user.name,
         surname: user.surname,
         mobileNumber: user.mobileNumber,
+        email: user.email,
         photoUrl: user.photoUrl,
         memberType: 'HEAD'
     };
@@ -448,21 +486,29 @@ const verifyOtp = asyncHandler(async (req, res) => {
     if (foundUserType === 'ADMIN') {
         loggedInMember = {
             _id: user._id,
-            name: user.username, // Admins might not have separate name field
+            name: user.username,
             surname: '',
             mobileNumber: user.mobileNumber,
-            photoUrl: '', // Admins might not have photo
+            email: user.email,
+            photoUrl: '',
             memberType: 'ADMIN'
         };
     }
 
     if (userType === 'MEMBER') {
-        if (user.mobileNumber === mobile) {
+        const userMobileNormalized = normalizeMobile(user.mobileNumber || '');
+        const loginNormalized = isEmail ? user.email.toLowerCase() : normalized;
+
+        if (loginNormalized === (isEmail ? user.email.toLowerCase() : userMobileNormalized)) {
             // Head is logging in
             loggedInMember.memberType = 'HEAD';
         } else if (user.familyMembers && user.familyMembers.length > 0) {
             // Check dependents
-            const dependent = user.familyMembers.find(fm => fm.mobileNumber === mobile);
+            const dependent = user.familyMembers.find(fm => {
+                if (isEmail) return fm.email && fm.email.toLowerCase() === loginNormalized;
+                return normalizeMobile(fm.mobileNumber || '') === loginNormalized;
+            });
+
             if (dependent) {
                 loggedInMember = {
                     _id: user._id, // Main Document ID (for API calls)
@@ -470,6 +516,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
                     name: dependent.name,
                     surname: dependent.surname || user.surname, // Fallback to family surname
                     mobileNumber: dependent.mobileNumber,
+                    email: dependent.email,
                     photoUrl: dependent.photo,
                     memberType: 'DEPENDENT',
                     relation: dependent.relation
@@ -508,340 +555,191 @@ const verifyOtp = asyncHandler(async (req, res) => {
         locationName, // Added locationName
         institutionType: user.type, // Optional: if Institution, send type
         isFamilyLogin: loggedInMember.memberType === 'DEPENDENT',
-        isMpinEnabled: user.isMpinEnabled,
-        mpinStatus: user.isMpinEnabled ? 'CREATED' : 'NOT_CREATED', // ADDED: Explicit status
         token: generateToken(user._id, loggedInMember.memberId || loggedInMember._id) // Fallback for Header-based Auth
     });
 });
 
-// @desc    Create/Setup MPIN
-// @route   POST /api/auth/create-mpin
-// @access  Private
-const createMpin = asyncHandler(async (req, res) => {
-    const { mpin, deviceId } = req.body;
-    // Trim and validate MPIN
-    const cleanMpin = mpin ? mpin.toString().trim() : '';
 
-    if (!cleanMpin || cleanMpin.length !== 4) {
+// @desc    Forgot Password - Send OTP to Email
+// @route   POST /api/auth/forgot-password
+// @access  Public
+const forgotPassword = asyncHandler(async (req, res) => {
+    const { loginInput } = req.body;
+
+    if (!loginInput) {
         res.status(400);
-        throw new Error('MPIN must be exactly 4 digits');
+        throw new Error('Email or Mobile Number is required');
     }
 
-    const userId = req.user._id;
-    let user = await User.findById(userId);
-    if (!user) {
-        user = await Member.findById(userId);
+    const isEmail = loginInput.includes('@');
+    let normalized = loginInput;
+    if (!isEmail) {
+        normalized = normalizeMobile(loginInput);
     }
+
+    const query = isEmail ? { email: normalized.toLowerCase() } : {
+        $or: [
+            { mobileNumber: normalized },
+            { mobileNumber: `+91${normalized}` },
+            { username: normalized },
+            { username: `+91${normalized}` }
+        ]
+    };
+
+    // 1. Try User
+    let user = await User.findOne(query);
+
+    // 2. Try Member
+    if (!user) {
+        const buildMemberQuery = isEmail ? { email: normalized.toLowerCase() } : {
+            $or: [
+                { mobileNumber: normalized },
+                { mobileNumber: `+91${normalized}` },
+                { "familyMembers.mobileNumber": normalized },
+                { "familyMembers.mobileNumber": `+91${normalized}` }
+            ]
+        };
+        user = await Member.findOne(buildMemberQuery);
+    }
+
+    // 3. Try Institution
     if (!user) {
         const Institution = require('../models/Institution');
-        user = await Institution.findById(userId);
+        user = await Institution.findOne(query);
     }
 
     if (!user) {
         res.status(404);
-        throw new Error('User not found');
+        throw new Error('No account found with the provided details');
     }
 
-    // Check if MPIN already exists for this specific user
-    if (user.isMpinEnabled && user.mpinHash) {
-        res.status(400);
-        throw new Error("MPIN already exists for this account. If you do not remember your MPIN, please use 'Forgot MPIN' to reset it.");
-    }
+    // Get email to send to
+    let targetEmail = user.email;
 
-    // Hash MPIN (Bcrypt) for verification
-    const salt = await bcrypt.genSalt(10);
-    user.mpinHash = await bcrypt.hash(mpin, salt);
-
-    // Create Digest (SHA256) for lookup
-    user.mpinDigest = crypto.createHash('sha256').update(mpin).digest('hex');
-
-    user.isMpinEnabled = true;
-    user.mpinCreated = true;
-    user.deviceId = deviceId; // Bind to device
-    user.mpinFailedAttempts = 0;
-    user.mpinLockedUntil = undefined;
-
-    // user.save(); // BLOCKED BY VALIDATION ERRORS IN ADDRESS
-
-    // Bypass validation by using updateOne on the specific collection
-    // user.constructor refers to the Model (Member, User, or Institution)
-    await user.constructor.updateOne(
-        { _id: user._id },
-        {
-            $set: {
-                mpinHash: user.mpinHash,
-                mpinDigest: user.mpinDigest,
-                isMpinEnabled: true,
-                mpinCreated: true,
-                deviceId: deviceId,
-                mpinFailedAttempts: 0
-            },
-            $unset: {
-                mpinLockedUntil: 1 // Remove lock if exists
-            }
-        }
-    );
-
-    res.json({ message: 'MPIN created successfully' });
-});
-
-// @desc    Login with MPIN (Unified)
-// @route   POST /api/auth/login-mpin
-// @access  Public
-const loginMpin = asyncHandler(async (req, res) => {
-    const { mpin, deviceId, identifier, userType: requestedUserType } = req.body;
-    const cleanMpin = mpin ? mpin.toString().trim() : '';
-
-    if (!cleanMpin || cleanMpin.length !== 4) {
-        res.status(400);
-        throw new Error('MPIN must be exactly 4 digits');
-    }
-
-    // Compute Digest for Lookup
-    const mpinDigest = crypto.createHash('sha256').update(cleanMpin).digest('hex');
-
-    let user = null;
-    let userType = 'MEMBER';
-    let candidates = [];
-
-    // 1. Parallel lookup with optional userType filtering
-    const [memberCandidates, userCandidates, institutionCandidates] = await Promise.all([
-        (!requestedUserType || requestedUserType === 'MEMBER') ? Member.find({ mpinDigest }) : Promise.resolve([]),
-        (!requestedUserType || requestedUserType === 'ADMIN') ? User.find({ mpinDigest }) : Promise.resolve([]),
-        (!requestedUserType || requestedUserType === 'INSTITUTION') ? require('../models/Institution').find({ mpinDigest }) : Promise.resolve([])
-    ]);
-
-    // Aggregate all potential matches
-    memberCandidates.forEach(u => candidates.push({ user: u, type: 'MEMBER' }));
-    userCandidates.forEach(u => candidates.push({ user: u, type: 'ADMIN' }));
-    institutionCandidates.forEach(u => candidates.push({ user: u, type: 'INSTITUTION' }));
-
-    // 2. Logic to resolve user (Banking Style: identify via bound device)
-    console.log(`[LoginMpin] Digest: ${mpinDigest} | Candidates Found: ${candidates.length} | Device: ${deviceId}`);
-
-    if (candidates.length === 0) {
-        res.status(401);
-        throw new Error('Incorrect MPIN. Please try again.');
-    }
-
-    // Filter by deviceId (strictly identifies which user created this MPIN on this device)
-    const validDeviceCandidates = candidates.filter(c => c.user.deviceId === deviceId);
-
-    if (validDeviceCandidates.length === 0) {
-        // MPIN is valid for SOMEONE, but not for this device.
-        // To prevent account hopping/unauthorized discovery, we return 401.
-        res.status(401);
-        throw new Error('Device not recognized or MPIN invalid for this device.');
-    }
-
-    if (validDeviceCandidates.length === 1) {
-        user = validDeviceCandidates[0].user;
-        userType = validDeviceCandidates[0].type;
-    } else {
-        // Collision within the SAME device (Extreme edge case)
-        // Try to matching the portal's requested user type
-        const typeMatch = validDeviceCandidates.find(c => c.type === (requestedUserType || 'MEMBER'));
-        user = typeMatch ? typeMatch.user : validDeviceCandidates[0].user;
-        userType = typeMatch ? typeMatch.type : validDeviceCandidates[0].type;
-    }
-
-    if (!user) {
-        res.status(404);
-        throw new Error('User not found');
-    }
-
-    // Check Lockout
-    if (user.mpinLockedUntil && user.mpinLockedUntil > Date.now()) {
-        res.status(423); // Locked
-        throw new Error(`Account locked. Try again after ${new Date(user.mpinLockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
-    }
-
-    // Double Check Hash (Security measure against digest collisions if any, though SHA256 is strong)
-    const isMatch = await bcrypt.compare(cleanMpin, user.mpinHash);
-
-    if (isMatch) {
-        // Reset attempts
-        user.mpinFailedAttempts = 0;
-        user.mpinLockedUntil = undefined;
-        await user.save();
-
-        // Prepare Response
-        let loggedInMember = {
-            _id: user._id,
-            name: user.name || user.username,
-            mobileNumber: user.mobileNumber,
-            photoUrl: user.photoUrl,
-            role: user.role || userType,
-            institutionId: user.institutionId,
-            assignedLocation: user.assignedLocation
-        };
-
-        // Handle Dependent Login if identifier was used/needed? 
-        // If login was purely by MPIN, we log in as HEAD/Main User.
-        // If user wants to login as dependent, they likely need to use OTP or be selected after login.
-        // For now, MPIN login defaults to Main User/Head.
-
-        res.cookie('jwt', generateToken(user._id, user._id), {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 30 * 24 * 60 * 60 * 1000
+    // If it's a dependent, they might have their own email or use head's?
+    // Usually, we want the email associated with the login identifier if it's a dependent.
+    if (!targetEmail && user.familyMembers) {
+        const loginNormalized = isEmail ? normalized.toLowerCase() : normalized;
+        const dependent = user.familyMembers.find(fm => {
+            if (isEmail) return fm.email && fm.email.toLowerCase() === loginNormalized;
+            return normalizeMobile(fm.mobileNumber || '') === loginNormalized;
         });
+        if (dependent && dependent.email) targetEmail = dependent.email;
+    }
+
+    if (!targetEmail) {
+        res.status(400);
+        throw new Error('No email address registered for this account. Please contact support.');
+    }
+
+    // Generate 4-digit reset code
+    const resetCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const salt = await bcrypt.genSalt(10);
+    user.otpHash = await bcrypt.hash(resetCode, salt);
+    user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    user.otpLastSent = Date.now();
+    await user.save();
+
+    // Send Email
+    const { sendEmail } = require('../utils/emailService');
+    try {
+        await sendEmail(
+            targetEmail,
+            'MEWS Verification Code',
+            `Your MEWS Verification Code is: ${resetCode}. Valid for 10 minutes.`,
+            `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e1e8ed; border-radius: 12px;">
+                <h2 style="color: #1e2a4a; text-align: center;">Verification Code</h2>
+                <p>Hello,</p>
+                <p>Use the following code to verify your identity and set/reset your password:</p>
+                <div style="background-color: #f0f4f8; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                    <h1 style="color: #1e2a4a; letter-spacing: 10px; font-size: 32px; margin: 0;">${resetCode}</h1>
+                </div>
+                <p style="color: #657786; font-size: 14px;">This code is valid for 10 minutes. If you did not request this, please ignore this email.</p>
+                <hr style="border: none; border-top: 1px solid #e1e8ed; margin: 20px 0;" />
+                <p style="color: #657786; font-size: 12px; text-align: center;">Regards,<br/>MEWS Team</p>
+            </div>`
+        );
 
         res.json({
-            _id: user._id,
-            name: loggedInMember.name,
-            role: loggedInMember.role,
-            mobile: loggedInMember.mobileNumber,
-            photoUrl: loggedInMember.photoUrl,
-            message: 'Logged in with MPIN',
-            token: generateToken(user._id, user._id)
+            message: `Verification code sent to: ${targetEmail.replace(/(.{2})(.*)(?=@)/, (gp1, gp2, gp3) => gp2 + '*'.repeat(gp3.length))}`
         });
-
-    } else {
-        // Increment Failed Attempts
-        user.mpinFailedAttempts = (user.mpinFailedAttempts || 0) + 1;
-
-        if (user.mpinFailedAttempts >= 5) {
-            user.mpinLockedUntil = Date.now() + 15 * 60 * 1000; // 15 minutes
-            await user.save();
-            res.status(423); // Locked
-            throw new Error('Account locked for 15 minutes due to 5 wrong MPIN attempts');
-        }
-
-        await user.save();
-        res.status(401);
-        throw new Error(`Invalid MPIN. Attempts remaining: ${5 - user.mpinFailedAttempts}`);
+    } catch (e) {
+        console.error('[ForgotPassword] Email sending failed:', e);
+        res.status(500);
+        throw new Error('Failed to send verification email. Please try again later.');
     }
 });
 
-// @desc    Check MPIN Status
-// @route   GET /api/auth/check-mpin
-// @access  Private
-const checkMpinStatus = asyncHandler(async (req, res) => {
-    // Current user context from 'protect' middleware
-    const user = req.user;
-    res.json({
-        isMpinEnabled: !!user.isMpinEnabled,
-        isLocked: user.mpinLockedUntil && user.mpinLockedUntil > Date.now()
-    });
-});
+const resetPassword = asyncHandler(async (req, res) => {
+    const { loginInput, resetCode, newPassword } = req.body;
 
-// @desc    Forgot MPIN - Forward to OTP Request
-// @route   POST /api/auth/forgot-mpin
-// @access  Public
-const forgotMpin = asyncHandler(async (req, res) => {
-    // Forward to requestOtp logic for OTP generation
-    // Client should then call resetMpin
-    return requestOtp(req, res);
-});
-
-// @desc    Reset MPIN (after OTP verify)
-// @route   POST /api/auth/reset-mpin
-// @access  Public
-const resetMpin = asyncHandler(async (req, res) => {
-    const { mobile, otp, newMpin, deviceId, userType } = req.body;
-
-    // 1. Fetch User (Prioritize Session established by verify-otp)
-    let user = req.user;
-
-    if (!user) {
-        // Fallback for non-session calls (Manual verification)
-        const normalized = normalizeMobile(mobile);
-        if (userType === 'MEMBER') {
-            user = await Member.findOne({
-                $or: [
-                    { mobileNumber: normalized },
-                    { mobileNumber: `+91${normalized}` },
-                    { "familyMembers.mobileNumber": normalized },
-                    { "familyMembers.mobileNumber": `+91${normalized}` }
-                ]
-            });
-        } else if (userType === 'INSTITUTION') {
-            const Institution = require('../models/Institution');
-            user = await Institution.findOne({
-                $or: [
-                    { mobileNumber: normalized },
-                    { mobileNumber: `+91${normalized}` }
-                ]
-            });
-        } else if (userType === 'ADMIN') {
-            user = await User.findOne({
-                $or: [
-                    { mobileNumber: normalized },
-                    { mobileNumber: `+91${normalized}` },
-                    { username: normalized },
-                    { username: `+91${normalized}` }
-                ]
-            });
-        } else {
-            // Generic Fallback
-            user = await Member.findOne({
-                $or: [
-                    { mobileNumber: normalized },
-                    { mobileNumber: `+91${normalized}` }
-                ]
-            });
-            if (!user) {
-                user = await User.findOne({
-                    $or: [
-                        { mobileNumber: normalized },
-                        { mobileNumber: `+91${normalized}` }
-                    ]
-                });
-            }
-        }
-    }
-
-    if (!user) {
-        res.status(404); throw new Error('User not found');
-    }
-
-    // 2. Verification (Session or OTP)
-    // If we have a session (req.user), we consider it verified by verify-otp call.
-    // Otherwise, we must check the OTP hash in the body.
-    if (!req.user) {
-        if (!otp) {
-            res.status(400);
-            throw new Error('Verification code is required for this action');
-        }
-        if (!user.otpHash) {
-            res.status(400); throw new Error('No OTP requested for this account. Please request a code first.');
-        }
-        if (!user.otpExpires || user.otpExpires < Date.now()) {
-            res.status(400); throw new Error('OTP has expired. Please request a new one.');
-        }
-        const isMatch = await bcrypt.compare(otp, user.otpHash);
-        if (!isMatch) {
-            res.status(400); throw new Error('Incorrect OTP. Please check the code and try again.');
-        }
-    }
-
-    // 3. Set New MPIN
-    const cleanMpin = newMpin ? newMpin.toString().trim() : '';
-    if (!cleanMpin || cleanMpin.length !== 4) {
+    if (!loginInput || !resetCode || !newPassword) {
         res.status(400);
-        throw new Error('MPIN must be exactly 4 digits');
+        throw new Error('All fields are required');
     }
 
+    const isEmail = loginInput.includes('@');
+    let normalized = loginInput;
+    if (!isEmail) {
+        normalized = normalizeMobile(loginInput);
+    }
+
+    const query = isEmail ? { email: normalized.toLowerCase() } : {
+        $or: [
+            { mobileNumber: normalized },
+            { mobileNumber: `+91${normalized}` },
+            { username: normalized },
+            { username: `+91${normalized}` }
+        ]
+    };
+
+    // 1. Try User
+    let user = await User.findOne(query);
+
+    // 2. Try Member
+    if (!user) {
+        const buildMemberQuery = isEmail ? { email: normalized.toLowerCase() } : {
+            $or: [
+                { mobileNumber: normalized },
+                { mobileNumber: `+91${normalized}` },
+                { "familyMembers.mobileNumber": normalized },
+                { "familyMembers.mobileNumber": `+91${normalized}` }
+            ]
+        };
+        user = await Member.findOne(buildMemberQuery);
+    }
+
+    // 3. Try Institution
+    if (!user) {
+        const Institution = require('../models/Institution');
+        user = await Institution.findOne(query);
+    }
+
+    if (!user || !user.otpHash || !user.otpExpires) {
+        res.status(400);
+        throw new Error('Invalid request or session expired');
+    }
+
+    if (user.otpExpires < Date.now()) {
+        res.status(400);
+        throw new Error('Verification code has expired');
+    }
+
+    const isMatch = await bcrypt.compare(resetCode, user.otpHash);
+    if (!isMatch) {
+        res.status(400);
+        throw new Error('Invalid verification code');
+    }
+
+    // Hash new password
     const salt = await bcrypt.genSalt(10);
-    user.mpinHash = await bcrypt.hash(cleanMpin, salt);
-    user.mpinDigest = crypto.createHash('sha256').update(cleanMpin).digest('hex');
-
-    user.isMpinEnabled = true;
-    user.mpinCreated = true;
-    user.deviceId = deviceId;
-    user.mpinFailedAttempts = 0;
-    user.mpinLockedUntil = undefined;
-
-    // Clear OTP context
+    user.passwordHash = await bcrypt.hash(newPassword, salt);
     user.otpHash = undefined;
     user.otpExpires = undefined;
-
     await user.save();
-    res.json({ message: 'MPIN reset successfully' });
-});
 
+    res.json({ message: 'Password has been set successfully. You can now login with your new password.' });
+});
 
 module.exports = {
     loginUser,
@@ -851,10 +749,6 @@ module.exports = {
     verifyOtp,
     logoutUser,
     getMe,
-    // MPIN Exports
-    createMpin,
-    loginMpin,
-    checkMpinStatus,
-    forgotMpin,
-    resetMpin
+    forgotPassword,
+    resetPassword
 };

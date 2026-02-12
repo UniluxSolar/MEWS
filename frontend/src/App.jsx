@@ -53,8 +53,11 @@ import TermsAndConditions from './pages/TermsAndConditions';
 import CampaignDetails from './pages/CampaignDetails';
 import MemberApplicationView from './pages/MemberApplicationView';
 import MemberIDCardView from './pages/MemberIDCardView';
-import MpinSetup from './pages/MpinSetup';
-import MpinLogin from './pages/MpinLogin';
+
+import AboutUs from './pages/AboutUs';
+import ContactUs from './pages/ContactUs';
+import SupportPage from './pages/SupportPage';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 const ThemeInitializer = () => {
     useEffect(() => {
@@ -74,6 +77,10 @@ function App() {
             <ThemeInitializer />
             <Routes>
                 <Route path="/" element={<UserLandingPage />} />
+                <Route path="/about" element={<AboutUs />} />
+                <Route path="/contact" element={<ContactUs />} />
+                <Route path="/support" element={<SupportPage />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="/campaigns/:id" element={<CampaignDetails />} />
                 <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
                 <Route path="/login" element={<LoginPage />} />
@@ -110,18 +117,14 @@ function App() {
                     <Route path="/admin/members/edit/:id" element={<MemberRegistration />} />
                 </Route>
 
-                <Route path="/about" element={<div className="p-10 text-center">About Page Coming Soon</div>} />
                 <Route path="/benefits" element={<div className="p-10 text-center">Benefits Page Coming Soon</div>} />
                 <Route path="/donate" element={<div className="p-10 text-center">Donate Page Coming Soon</div>} />
 
-                {/* MPIN Routes */}
-                <Route path="/mpin/login" element={<MpinLogin />} />
 
                 {/* Dashboard Area - Protected (Member & Institution & Admins) */}
                 <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['MEMBER', 'INSTITUTION', 'SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'ADMIN']} />}>
                     <Route element={<DashboardLayout />}>
                         <Route index element={<DashboardHome />} />
-                        <Route path="mpin/setup" element={<MpinSetup />} />
                         <Route path="applications" element={<MyApplications />} />
                         <Route path="applications/new" element={<NewApplication />} />
                         <Route path="services" element={<MEWSServices />} />

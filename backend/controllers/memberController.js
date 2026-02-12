@@ -6,7 +6,6 @@ const mongoose = require('mongoose');
 const { getSignedUrl } = require('../utils/gcsSigner');
 const { generateMemberId } = require('../utils/idGenerator');
 const { sendRegistrationNotification } = require('../utils/notificationService');
-const { createNotification } = require('./notificationController');
 const User = require('../models/User'); // For finding admins
 
 // Helper to sign all URLs in a member object
@@ -436,17 +435,11 @@ const registerMember = asyncHandler(async (req, res) => {
 
         if (transactionStarted) await session.commitTransaction();
 
-        // Notify Head
+        // Send Registration Notifications (SMS & Email)
         try {
-            const { sendSms } = require('../utils/smsService');
-            const message = `Dear ${member.name} ${member.surname}, your MEWS registration is successful. Member ID: ${member.mewsId}. Welcome to the MEWS community! – MEWS`;
-            // Ensure mobile number has +91
-            let mobile = member.mobileNumber;
-            if (!mobile.startsWith('+')) mobile = `+91${mobile}`;
-
-            await sendSms(mobile, message);
+            await sendRegistrationNotification(member);
         } catch (err) {
-            console.error("Notify Warning:", err);
+            console.error("[Notify] Registration Notification Warning:", err);
         }
 
         // Notify Dependents (if they have a different mobile number) - REMOVED per user request
