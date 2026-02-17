@@ -25,7 +25,7 @@ const normalizeMobile = (mobile) => {
 // @route   POST /api/auth/login
 // @access  Public
 const loginUser = asyncHandler(async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, portal } = req.body;
 
     if (!username || !password) {
         res.status(400);
@@ -39,7 +39,7 @@ const loginUser = asyncHandler(async (req, res) => {
         normalized = normalizeMobile(loginInput);
     }
 
-    console.log(`[LOGIN] Attempt for: ${normalized} (${isEmail ? 'Email' : 'Mobile'})`);
+    console.log(`[LOGIN] Attempt: ${normalized} | Portal: ${portal || 'LEGACY'}`);
 
     const query = isEmail ? { email: normalized.toLowerCase() } : {
         $or: [
@@ -50,12 +50,15 @@ const loginUser = asyncHandler(async (req, res) => {
         ]
     };
 
-    // 1. Try finding in User (Admins/Institution Users)
-    let user = await User.findOne(query).populate('memberId', 'name surname');
-    let userType = user ? 'ADMIN' : null;
+    let user = null;
+    let userType = null;
 
-    // 2. Try finding in Member (Head/Family)
-    if (!user) {
+    // STRICT CONTEXT SWITCHING
+    if (portal === 'ADMIN') {
+        user = await User.findOne(query).populate('memberId', 'name surname');
+        if (user) userType = 'ADMIN';
+    }
+    else if (portal === 'MEMBER') {
         const buildMemberQuery = isEmail ? { email: normalized.toLowerCase() } : {
             $or: [
                 { mobileNumber: normalized },
@@ -67,12 +70,37 @@ const loginUser = asyncHandler(async (req, res) => {
         user = await Member.findOne(buildMemberQuery);
         if (user) userType = 'MEMBER';
     }
-
-    // 3. Try finding in Institution (if not found in others)
-    if (!user) {
+    else if (portal === 'INSTITUTION') {
         const Institution = require('../models/Institution');
         user = await Institution.findOne(query);
         if (user) userType = 'INSTITUTION';
+    }
+    else {
+        // Fallback for legacy calls (or if portal missing) -> Sequential Search
+        // 1. User
+        user = await User.findOne(query).populate('memberId', 'name surname');
+        if (user) userType = 'ADMIN';
+
+        // 2. Member
+        if (!user) {
+            const buildMemberQuery = isEmail ? { email: normalized.toLowerCase() } : {
+                $or: [
+                    { mobileNumber: normalized },
+                    { mobileNumber: `+91${normalized}` },
+                    { "familyMembers.mobileNumber": normalized },
+                    { "familyMembers.mobileNumber": `+91${normalized}` }
+                ]
+            };
+            user = await Member.findOne(buildMemberQuery);
+            if (user) userType = 'MEMBER';
+        }
+
+        // 3. Institution
+        if (!user) {
+            const Institution = require('../models/Institution');
+            user = await Institution.findOne(query);
+            if (user) userType = 'INSTITUTION';
+        }
     }
 
     if (!user) {
@@ -163,7 +191,7 @@ const getMe = asyncHandler(async (req, res) => {
         _id: req.user._id,
         name: req.user.username || req.user.name, // Handle User vs Member
         email: req.user.email,
-        role: req.user.role,
+        role: req.user.role || 'MEMBER', // Default to MEMBER if role is missing
         assignedLocation: req.user.assignedLocation,
         institutionId: req.user.institutionId,
         // photoUrl for frontend

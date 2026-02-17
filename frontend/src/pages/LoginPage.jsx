@@ -59,20 +59,29 @@ const LoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
 
     const handleLoginSuccess = (data) => {
-        localStorage.setItem('adminInfo', JSON.stringify(data));
-        localStorage.setItem('memberInfo', JSON.stringify(data));
+        const role = data.role || 'MEMBER'; // Default fallback
+
+        // Clear old sessions first
+        localStorage.removeItem('adminInfo');
+        localStorage.removeItem('memberInfo');
+        localStorage.removeItem('savedUser');
+
+        // Store member info
+        if (role === 'MEMBER' || role === 'INSTITUTION' || role === 'HEAD' || role === 'DEPENDENT') {
+            localStorage.setItem('memberInfo', JSON.stringify(data));
+        }
 
         const userToSave = {
             _id: data._id,
             name: data.name,
             email: data.email,
-            role: data.role,
+            role: role,
             memberType: data.memberType
         };
         localStorage.setItem('savedUser', JSON.stringify(userToSave));
 
-        const target = (data.role === 'MEMBER' || data.role === 'INSTITUTION') ? '/dashboard' : '/admin/dashboard';
-        navigate(target, { replace: true });
+        console.log('[LOGIN] Member Access Granted:', role);
+        navigate('/dashboard', { replace: true });
     };
 
     const handleLogin = async (e) => {
@@ -85,7 +94,8 @@ const LoginPage = () => {
         setLoading(true);
         setFeedback(null);
         try {
-            const { data } = await API.post('/auth/login', { username, password });
+            // Updated to send portal: 'MEMBER'
+            const { data } = await API.post('/auth/login', { username, password, portal: 'MEMBER' });
             handleLoginSuccess(data);
         } catch (error) {
             setFeedback({ type: 'error', text: error.response?.data?.message || 'Invalid Credentials' });
@@ -186,7 +196,7 @@ const LoginPage = () => {
                             disabled={loading}
                             className="w-full bg-[#1e2a4a] text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-900/20 hover:shadow-blue-900/30 active:scale-[0.98] transition-all disabled:opacity-50"
                         >
-                            {loading ? 'Logging in...' : 'Sign In'}
+                            {loading ? 'Sign In' : 'Sign In'}
                         </button>
                     </motion.form>
                 )}

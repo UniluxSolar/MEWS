@@ -91,7 +91,7 @@ const AdminLoginPage = () => {
         setLoading(true);
         setFeedback(null);
         try {
-            const { data } = await API.post('/auth/login', { username, password });
+            const { data } = await API.post('/auth/login', { username, password, portal: 'ADMIN' });
             handleLoginSuccess(data);
         } catch (error) {
             setFeedback({ type: 'error', text: error.response?.data?.message || 'Invalid Credentials' });

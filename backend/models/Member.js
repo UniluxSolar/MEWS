@@ -21,8 +21,9 @@ const MemberSchema = new mongoose.Schema({
     educationLevel: { type: String },
     mobileNumber: { type: String }, // Made optional per request for testing
     bloodGroup: { type: String },
-    email: { type: String, required: true, unique: true, sparse: true, lowercase: true, trim: true },
+    email: { type: String, unique: true,sparse: true, lowercase: true, trim: true }, // Optional Email
     isEmailVerified: { type: Boolean, default: false },
+    role: { type: String, default: 'MEMBER', required: true }, // Explicit role field
     alternateMobile: { type: String },
     aadhaarNumber: { type: String, unique: true, sparse: true }, // Sparse allows multiple documents to have no value
 

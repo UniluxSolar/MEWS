@@ -59,9 +59,16 @@ const InstitutionLoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
 
     const handleLoginSuccess = (data) => {
+        // STRICT ROLE CHECK
+        if (data.role !== 'INSTITUTION') {
+            setFeedback({ type: 'error', text: 'Access Denied: Please use the correct login portal.' });
+            return;
+        }
+
         localStorage.setItem('adminInfo', JSON.stringify(data));
         localStorage.setItem('memberInfo', JSON.stringify(data));
 
+        // ... rest of logic
         const userToSave = {
             _id: data._id,
             name: data.name,
@@ -71,8 +78,7 @@ const InstitutionLoginPage = () => {
         };
         localStorage.setItem('savedUser', JSON.stringify(userToSave));
 
-        const target = (data.role === 'MEMBER' || data.role === 'INSTITUTION') ? '/dashboard' : '/admin/dashboard';
-        navigate(target, { replace: true });
+        navigate('/dashboard', { replace: true });
     };
 
     const handleLogin = async (e) => {
@@ -80,7 +86,7 @@ const InstitutionLoginPage = () => {
         setLoading(true);
         setFeedback(null);
         try {
-            const { data } = await API.post('/auth/login', { username, password });
+            const { data } = await API.post('/auth/login', { username, password, portal: 'INSTITUTION' });
             handleLoginSuccess(data);
         } catch (error) {
             setFeedback({ type: 'error', text: error.response?.data?.message || 'Authentication Failed' });

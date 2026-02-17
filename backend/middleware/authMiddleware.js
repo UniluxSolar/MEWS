@@ -26,6 +26,9 @@ const protect = async (req, res, next) => {
                 const Member = require('../models/Member');
                 user = await Member.findById(decoded.id);
                 // Role handling for Member...
+                if (user) {
+                    user.role = user.role || 'MEMBER';
+                }
             }
 
             // 3. If not found in Member, check Institution (Institution Login)

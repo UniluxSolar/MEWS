@@ -1508,9 +1508,28 @@ const MemberRegistration = () => {
     // --- ADMIN AUTO-FILL & LOCKING LOGIC ---
     const { adminLocation, isFieldLocked, userRole } = useAdminLocation();
 
+    // Fetch Districts on Mount for New Registration (required for Admin Auto-fill to show correct names)
+    useEffect(() => {
+        if (!isEditMode && districts.length === 0) {
+            const fetchDistricts = async () => {
+                try {
+                    const { data: states } = await API.get('/locations?type=STATE');
+                    const telangana = states.find(s => s.name === 'Telangana') || states[0];
+                    if (telangana) {
+                        const { data: dists } = await API.get(`/locations?parent=${telangana._id}`);
+                        setDistricts(dists);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch districts:", error);
+                }
+            };
+            fetchDistricts();
+        }
+    }, [isEditMode, districts.length]);
+
     // Auto-fill Address based on Role (Only for New Registration)
     useEffect(() => {
-        if (isEditMode || !userRole || districts.length === 0) return;
+        if (isEditMode || !userRole) return;
 
         const roleHierarchy = {
             'SUPER_ADMIN': 0,
@@ -1522,15 +1541,10 @@ const MemberRegistration = () => {
             'WARD_ADMIN': 4
         };
 
-        const currentLevel = roleHierarchy[userRole] || 0;
+        const currentLevel = roleHierarchy[userRole ? userRole.toUpperCase() : ''] || 0;
 
         const autoFill = async () => {
             let updates = {};
-            let currentPermMandals = [];
-            let currentPermMunicipalities = [];
-            let currentPermVillages = [];
-            let currentPermWards = [];
-            let currentPermConstituencies = [];
 
             // State Level
             if (currentLevel >= 1) {
@@ -1538,13 +1552,30 @@ const MemberRegistration = () => {
             }
 
             // District Level
-            if (currentLevel >= 2 && adminLocation.districtId) {
-                updates.permDistrict = adminLocation.districtId;
-                updates.permDistrictName = adminLocation.districtName;
+            let dId = adminLocation.districtId;
+            // Fallback: Try to find District ID from loaded districts if missing but name exists
+            if (!dId && adminLocation.districtName && districts.length > 0) {
+                const match = districts.find(d => d.name === adminLocation.districtName);
+                if (match) {
+                    dId = match._id;
+                    console.log("AutoFill: Resolved District ID from name:", dId);
+                }
             }
 
-            // Constituency Level (New Hierarchy Layer)
-            // Even if not strictly an Admin Level, if we have the ID, we should fill it to enable filtering down
+            if (currentLevel >= 2 && dId) {
+                updates.permDistrict = dId;
+
+                // If District Admin, fetch Constituencies if not present
+                if (currentLevel === 2 && !adminLocation.constituencyId && permConstituencies.length === 0) {
+                    try {
+                        const { data: children } = await API.get(`/locations?parent=${dId}`);
+                        const consts = children.filter(c => c.type === 'CONSTITUENCY');
+                        setPermConstituencies(consts);
+                    } catch (err) { console.error("Auto-fill fetch error", err); }
+                }
+            }
+
+            // Constituency Level
             if (adminLocation.constituencyId) {
                 updates.permConstituency = adminLocation.constituencyId;
                 // Pre-populate dropdown so it shows the value
@@ -1558,27 +1589,35 @@ const MemberRegistration = () => {
                 if (adminLocation.mandalId) {
                     updates.permAreaType = 'Rural';
                     updates.permMandal = adminLocation.mandalId;
-                    updates.permMandalName = adminLocation.mandalName;
 
                     if (adminLocation.mandalName) {
                         setPermMandals([{ _id: adminLocation.mandalId, name: adminLocation.mandalName }]);
-                        // Also set allPermMandals to avoid filter issues
                         setAllPermMandals([{ _id: adminLocation.mandalId, name: adminLocation.mandalName }]);
+                    }
+
+                    // Fetch Villages for this Mandal
+                    if (permVillages.length === 0 && !adminLocation.villageId) {
+                        try {
+                            const { data: vills } = await API.get(`/locations?parent=${adminLocation.mandalId}`);
+                            setPermVillages(vills);
+                        } catch (err) { console.error("Auto-fetch villages error", err); }
                     }
                 }
                 else if (adminLocation.municipalityId) {
                     updates.permAreaType = 'Urban';
-                    updates.permMandal = adminLocation.municipalityId; // Form likely uses permMandal state for Municipality ID too? OR permMunicipality?
-                    // Checking JSX around line 3240: 
-                    // <select value={formData.permMandal} ...> for Mandal
-                    // <select value={formData.permMunicipality} ...> for Municipality
-                    // The 'permMandal' state variable might be shared in backend or separate? 
-                    // Let's assume separate based on logic: setPermMunicipalities
                     updates.permMunicipality = adminLocation.municipalityId;
 
                     if (adminLocation.municipalityName) {
                         setPermMunicipalities([{ _id: adminLocation.municipalityId, name: adminLocation.municipalityName }]);
                         setAllPermMunicipalities([{ _id: adminLocation.municipalityId, name: adminLocation.municipalityName }]);
+                    }
+
+                    // Fetch Wards
+                    if (permWards.length === 0 && !adminLocation.wardId) {
+                        try {
+                            const { data: wards } = await API.get(`/locations?parent=${adminLocation.municipalityId}`);
+                            setPermWards(wards);
+                        } catch (err) { console.error("Auto-fetch wards error", err); }
                     }
                 }
             }
@@ -1587,13 +1626,12 @@ const MemberRegistration = () => {
             if (currentLevel >= 4) {
                 if (adminLocation.villageId) {
                     updates.permVillage = adminLocation.villageId;
-                    updates.permVillageName = adminLocation.villageName;
                     if (adminLocation.villageName) {
                         setPermVillages([{ _id: adminLocation.villageId, name: adminLocation.villageName }]);
                     }
                 }
                 else if (adminLocation.wardId) {
-                    updates.permWardNumber = adminLocation.wardId; // Assuming variable is permWardNumber
+                    updates.permWardNumber = adminLocation.wardId;
                     if (adminLocation.wardName) {
                         setPermWards([{ _id: adminLocation.wardId, name: adminLocation.wardName }]);
                     }
@@ -1605,7 +1643,9 @@ const MemberRegistration = () => {
             }
         };
 
-        autoFill();
+        if (adminLocation.districtId || currentLevel >= 1) {
+            autoFill();
+        }
     }, [isEditMode, userRole, adminLocation, districts]);
 
     // Helper locked check replaced by Hook
@@ -1675,8 +1715,8 @@ const MemberRegistration = () => {
         else if (formData.aadhaarNumber.replace(/\s/g, '').length !== 12) newErrors.aadhaarNumber = "Aadhaar number must be 12 digits";
 
         // Email Validation
-        if (!formData.email) newErrors.email = "Email is required";
-        else {
+        // Email Validation - Optional
+        if (formData.email) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(formData.email)) newErrors.email = "Invalid email format";
         }
@@ -2350,8 +2390,8 @@ const MemberRegistration = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        // Check email verification first
-        if (!emailVerification.isVerified) {
+        // Check email verification first (ONLY IF EMAIL IS PROVIDED)
+        if (formData.email && !emailVerification.isVerified) {
             setErrors(prev => ({ ...prev, email: 'Please verify your email before submitting' }));
             setEmailVerification(prev => ({ ...prev, error: 'Email verification is required' }));
             // Open Basic Details section
@@ -3136,7 +3176,7 @@ const MemberRegistration = () => {
                                         {/* Email Verification Section */}
                                         <div className="col-span-1 md:col-span-3">
                                             <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
-                                                Email Address <span className="text-red-500">*</span>
+                                                Email Address
                                             </label>
 
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
