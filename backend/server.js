@@ -67,6 +67,7 @@ app.use('/api/carousel', require('./routes/carouselRoutes')); // Moved to top fo
 app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
 app.use('/api/locations', require('./routes/locationRoutes'));
 app.use('/api/members', require('./routes/memberRoutes'));
+app.use('/api/email-verification', require('./routes/emailVerificationRoutes'));
 app.use('/api/institutions', require('./routes/institutionRoutes'));
 
 app.use('/api/admin', require('./routes/adminRoutes'));

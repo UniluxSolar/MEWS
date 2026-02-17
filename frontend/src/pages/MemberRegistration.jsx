@@ -423,6 +423,18 @@ const MemberRegistration = () => {
     });
     const [familyMemberFiles, setFamilyMemberFiles] = useState({});
 
+    // Email Verification State
+    const [emailVerification, setEmailVerification] = useState({
+        isVerified: false,
+        codeSent: false,
+        lastSentTime: null,
+        verificationCode: '',
+        loading: false,
+        error: '',
+        success: '',
+        resendCountdown: 0
+    });
+
     const handleFamilyChange = (e) => {
         const { name, value } = e.target;
 
@@ -1332,6 +1344,104 @@ const MemberRegistration = () => {
         }
     };
 
+    // Email Verification Handlers
+    const handleSendVerificationCode = async () => {
+        const email = formData.email;
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || !emailRegex.test(email)) {
+            setEmailVerification(prev => ({ ...prev, error: 'Please enter a valid email address' }));
+            return;
+        }
+
+        setEmailVerification(prev => ({ ...prev, loading: true, error: '', success: '' }));
+
+        try {
+            const response = await API.post('/email-verification/send', {
+                email,
+                name: formData.name || 'User'
+            });
+
+            setEmailVerification(prev => ({
+                ...prev,
+                loading: false,
+                codeSent: true,
+                lastSentTime: Date.now(),
+                success: 'Verification code sent to your email',
+                resendCountdown: 60
+            }));
+
+            // Start countdown timer
+            const countdownInterval = setInterval(() => {
+                setEmailVerification(prev => {
+                    if (prev.resendCountdown <= 1) {
+                        clearInterval(countdownInterval);
+                        return { ...prev, resendCountdown: 0 };
+                    }
+                    return { ...prev, resendCountdown: prev.resendCountdown - 1 };
+                });
+            }, 1000);
+
+        } catch (error) {
+            console.error('Send verification code error:', error);
+            setEmailVerification(prev => ({
+                ...prev,
+                loading: false,
+                error: error.response?.data?.message || 'Failed to send verification code'
+            }));
+        }
+    };
+
+    const handleVerifyCode = async () => {
+        const { verificationCode } = emailVerification;
+        const email = formData.email;
+
+        if (!verificationCode || verificationCode.length !== 6) {
+            setEmailVerification(prev => ({ ...prev, error: 'Please enter a 6-digit verification code' }));
+            return;
+        }
+
+        setEmailVerification(prev => ({ ...prev, loading: true, error: '', success: '' }));
+
+        try {
+            const response = await API.post('/email-verification/verify', {
+                email,
+                code: verificationCode
+            });
+
+            setEmailVerification(prev => ({
+                ...prev,
+                loading: false,
+                isVerified: true,
+                success: 'Email verified successfully',
+                error: ''
+            }));
+
+            // Clear any email errors
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors.email;
+                return newErrors;
+            });
+
+        } catch (error) {
+            console.error('Verify code error:', error);
+            setEmailVerification(prev => ({
+                ...prev,
+                loading: false,
+                error: error.response?.data?.message || 'Invalid verification code'
+            }));
+        }
+    };
+
+    const handleResendCode = async () => {
+        if (emailVerification.resendCountdown > 0) {
+            return; // Still in cooldown
+        }
+        await handleSendVerificationCode();
+    };
+
     // Handle File Change
     const handleFileChange = async (e) => {
         const { name, files: selectedFiles } = e.target;
@@ -1563,6 +1673,13 @@ const MemberRegistration = () => {
         else if (formData.mobileNumber.length !== 10) newErrors.mobileNumber = "Mobile number must be 10 digits";
         if (!formData.aadhaarNumber) newErrors.aadhaarNumber = "Aadhaar number is required";
         else if (formData.aadhaarNumber.replace(/\s/g, '').length !== 12) newErrors.aadhaarNumber = "Aadhaar number must be 12 digits";
+
+        // Email Validation
+        if (!formData.email) newErrors.email = "Email is required";
+        else {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(formData.email)) newErrors.email = "Invalid email format";
+        }
 
         if (!formData.occupation) newErrors.occupation = "Occupation is required";
 
@@ -2232,6 +2349,22 @@ const MemberRegistration = () => {
     // Initial Submission - Check Validation then decide
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        // Check email verification first
+        if (!emailVerification.isVerified) {
+            setErrors(prev => ({ ...prev, email: 'Please verify your email before submitting' }));
+            setEmailVerification(prev => ({ ...prev, error: 'Email verification is required' }));
+            // Open Basic Details section
+            setOpenSections(prev => ({ ...prev, 1: true }));
+            // Scroll to email field
+            setTimeout(() => {
+                const emailElement = document.getElementsByName('email')[0];
+                if (emailElement) {
+                    emailElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 300);
+            return;
+        }
 
         const currentErrors = validateForm();
         const errorFields = Object.keys(currentErrors);
@@ -3000,7 +3133,101 @@ const MemberRegistration = () => {
                                         />
                                         <FormInput label="Alternate Mobile Number" name="alternateMobile" value={formData.alternateMobile} onChange={handleChange} placeholder="Enter alternate mobile number" />
 
-                                        <FormInput label="Email Address" name="email" value={formData.email} onChange={handleChange} placeholder="Enter email address" colSpan="md:col-span-2" />
+                                        {/* Email Verification Section */}
+                                        <div className="col-span-1 md:col-span-3">
+                                            <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
+                                                Email Address <span className="text-red-500">*</span>
+                                            </label>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                {/* Email Input + Send Code Button */}
+                                                <div className="col-span-1 md:col-span-2 flex gap-2">
+                                                    <input
+                                                        type="email"
+                                                        name="email"
+                                                        value={formData.email}
+                                                        onChange={handleChange}
+                                                        disabled={emailVerification.isVerified}
+                                                        className={`flex-1 bg-white border ${errors.email ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-400 ${emailVerification.isVerified ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                                                        placeholder="Enter email address"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleSendVerificationCode}
+                                                        disabled={emailVerification.loading || emailVerification.isVerified || !formData.email}
+                                                        className={`px-4 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${emailVerification.isVerified
+                                                            ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                                                            : emailVerification.loading || !formData.email
+                                                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                                                            }`}
+                                                    >
+                                                        {emailVerification.loading ? 'Sending...' : emailVerification.isVerified ? '✓ Verified' : 'Send Code'}
+                                                    </button>
+                                                </div>
+
+                                                {/* Verification Code Input + Verify Button (Only show after code sent) */}
+                                                {emailVerification.codeSent && !emailVerification.isVerified && (
+                                                    <div className="col-span-1 flex gap-2">
+                                                        <input
+                                                            type="text"
+                                                            value={emailVerification.verificationCode}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                                                setEmailVerification(prev => ({ ...prev, verificationCode: val, error: '' }));
+                                                            }}
+                                                            maxLength={6}
+                                                            className="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-400"
+                                                            placeholder="6-digit code"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleVerifyCode}
+                                                            disabled={emailVerification.loading || emailVerification.verificationCode.length !== 6}
+                                                            className={`px-4 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${emailVerification.loading || emailVerification.verificationCode.length !== 6
+                                                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                                : 'bg-green-600 text-white hover:bg-green-700'
+                                                                }`}
+                                                        >
+                                                            {emailVerification.loading ? 'Verifying...' : 'Verify'}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Success/Error Messages */}
+                                            {emailVerification.success && (
+                                                <p className="text-green-600 text-xs mt-2 font-medium flex items-center gap-1">
+                                                    <span className="text-green-600">✓</span> {emailVerification.success}
+                                                </p>
+                                            )}
+                                            {emailVerification.error && (
+                                                <p className="text-red-500 text-xs mt-2 font-medium">{emailVerification.error}</p>
+                                            )}
+                                            {errors.email && (
+                                                <p className="text-red-500 text-xs mt-2 font-medium">{errors.email}</p>
+                                            )}
+
+                                            {/* Resend Code Link */}
+                                            {emailVerification.codeSent && !emailVerification.isVerified && (
+                                                <div className="mt-2">
+                                                    {emailVerification.resendCountdown > 0 ? (
+                                                        <p className="text-gray-500 text-xs">
+                                                            Resend code in {emailVerification.resendCountdown}s
+                                                        </p>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleResendCode}
+                                                            className="text-blue-600 text-xs font-medium hover:underline"
+                                                        >
+                                                            Resend Code
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <FormInput label="Aadhar Number" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleChange} onBlur={(e) => { handleBlur && handleBlur(e); handleDuplicateCheck('aadhaarNumber', e.target.value); }} placeholder="Enter 12-digit Aadhar number" required error={errors.aadhaarNumber} />
 
                                         {/* Member Photo removed from here as requested, moved to bottom */}
