@@ -21,6 +21,7 @@ import InstitutionRegistration from './pages/InstitutionRegistration';
 import InstitutionDetail from './pages/InstitutionDetail';
 import EditInstitution from './pages/EditInstitution';
 import ProtectedRoute from './components/ProtectedRoute';
+import ScrollToTop from './components/ScrollToTop';
 
 import FundingRequests from './pages/FundingRequests';
 import AdminAnnouncements from './pages/AdminAnnouncements';
@@ -75,6 +76,7 @@ function App() {
     return (
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <ThemeInitializer />
+            <ScrollToTop />
             <Routes>
                 <Route path="/" element={<UserLandingPage />} />
                 <Route path="/about" element={<AboutUs />} />
