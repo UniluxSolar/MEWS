@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
     FaArrowLeft, FaShieldAlt, FaUsers, FaBuilding, FaExclamationTriangle, FaFileAlt,
     FaHandHoldingUsd, FaChartLine, FaCog, FaQuestionCircle, FaBullhorn,
@@ -23,6 +23,7 @@ const DetailRow = ({ label, value }) => (
 
 const MemberProfile = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
 
     const [member, setMember] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
@@ -64,7 +65,7 @@ const MemberProfile = () => {
                     income: data.familyDetails?.annualIncome,
 
                     rationCard: data.rationCard?.number,
-                    aadhar: data.aadhaarNumber,
+
                     bankDetails: data.bankDetails
                 });
             } catch (error) {
@@ -97,9 +98,9 @@ const MemberProfile = () => {
                             </div>
                             <h1 className="text-2xl font-bold text-gray-900">Member Profile</h1>
                         </div>
-                        <Link to="/admin/members" className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition">
-                            <FaArrowLeft size={12} /> Back to List
-                        </Link>
+                        <button onClick={() => navigate(-1)} className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition">
+                            <FaArrowLeft size={12} /> Back
+                        </button>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -202,7 +203,7 @@ const MemberProfile = () => {
                                     <DetailRow label="Present Address" value={member.address} />
                                     <DetailRow label="Permanent Address" value={member.permAddress} />
                                     <DetailRow label="Ration Card" value={member.rationCard} />
-                                    <DetailRow label="Aadhar Number" value={member.aadhar} />
+
                                     <DetailRow label="Family Income" value={member.income} />
                                 </div>
                             </div>

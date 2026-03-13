@@ -303,7 +303,7 @@ const NewApplication = () => {
                     <div className="mb-8">
                         <h3 className="text-sm font-bold text-gray-800 mb-3">Required Documents</h3>
                         <ul className="space-y-3">
-                            {["Identity Proof (Aadhaar)", "Bank Passbook", "Supporting Documents (Bills/Fees)"].map((item, i) => (
+                            {["Identity Proof", "Bank Passbook", "Supporting Documents (Bills/Fees)"].map((item, i) => (
                                 <li key={i} className="flex items-start gap-3 text-xs text-gray-600">
                                     <FaCheckCircle className="text-green-500 mt-0.5 flex-shrink-0" /> <span>{item}</span>
                                 </li>
@@ -317,9 +317,9 @@ const NewApplication = () => {
             <div className="flex-1">
                 {/* Top Back Button */}
                 <div className="mb-4">
-                    <Link to="/dashboard/applications" className="flex items-center gap-2 text-gray-500 hover:text-primary transition font-bold text-sm">
-                        <FaArrowLeft size={12} /> Back to Funding Request
-                    </Link>
+                    <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-primary transition font-bold text-sm">
+                        <FaArrowLeft size={12} /> Back
+                    </button>
                 </div>
 
                 {/* Stepper */}
@@ -534,8 +534,8 @@ const NewApplication = () => {
 
                     {/* Action Bar */}
                     <div className="flex items-center justify-between pt-6 border-t border-gray-100 mt-auto">
-                        <button onClick={currentStep === 1 ? () => navigate('/dashboard/applications') : handleBack} className="text-gray-500 font-bold text-sm hover:text-gray-800 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
-                            <FaArrowLeft size={12} /> {currentStep === 1 ? 'Back to Dashboard' : 'Back'}
+                        <button onClick={currentStep === 1 ? () => navigate(-1) : handleBack} className="text-gray-500 font-bold text-sm hover:text-gray-800 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+                            <FaArrowLeft size={12} /> Back
                         </button>
                         <button onClick={currentStep === 4 ? handleSubmit : handleNext} disabled={(currentStep === 1 && !selectedType) || isSubmitting}
                             className={`flex items-center gap-2 px-8 py-3 rounded-lg text-sm font-bold text-white transition-all shadow-md ${(currentStep === 1 && !selectedType) || isSubmitting ? 'bg-gray-300 cursor-not-allowed' : 'bg-primary hover:bg-[#151f38]'}`}>

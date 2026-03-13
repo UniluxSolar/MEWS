@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
     FaCheckCircle, FaMapMarkerAlt, FaEye, FaShareAlt, FaMapMarkedAlt,
     FaUniversity, FaUserGraduate, FaChartLine, FaRupeeSign, FaShieldAlt,
@@ -8,6 +8,7 @@ import {
 
 const StudentProfile = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [donationType, setDonationType] = useState('full'); // 'full' | 'partial'
     const [amount, setAmount] = useState('');
 
@@ -39,9 +40,9 @@ const StudentProfile = () => {
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-                <Link to="/dashboard/donate" className="inline-flex items-center gap-2 text-sm text-gray-500 font-bold mb-6 hover:text-[#1e2a4a] transition">
-                    <FaChevronLeft size={10} /> Back to Sponsorships
-                </Link>
+                <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-sm text-gray-500 font-bold mb-6 hover:text-[#1e2a4a] transition">
+                    <FaChevronLeft size={10} /> Back
+                </button>
 
                 {/* Main Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

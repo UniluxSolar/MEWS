@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import API from '../api';
 import subCastes from '../utils/subCastes.json';
 import partnerCastes from '../utils/partnerCastes.json';
 import casteSubCastes from '../utils/casteSubCastes.json';
 import {
     FaArrowLeft, FaShieldAlt, FaSave, FaIdCard, FaMapMarkerAlt,
-    FaUsers, FaUniversity, FaVoteYea, FaCreditCard, FaRing, FaScroll
+    FaUsers, FaUniversity, FaVoteYea, FaCreditCard, FaRing, FaScroll, FaCalendarAlt
 } from 'react-icons/fa';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
@@ -21,24 +21,34 @@ const SectionHeader = ({ title, icon: Icon }) => (
     </div>
 );
 
-const FormInput = ({ label, placeholder, type = "text", required = false, colSpan = "col-span-1", value, onChange, name, disabled = false }) => (
+const FormInput = ({ label, placeholder, type = "text", required = false, colSpan = "col-span-1", value, onChange, onBlur, name, disabled = false, error, maxLength, suffix }) => (
     <div className={colSpan}>
         <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
             {label} {required && <span className="text-red-500">*</span>}
         </label>
-        <input
-            type={type}
-            name={name}
-            value={value || ''}
-            onChange={onChange}
-            disabled={disabled}
-            className={`w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-400 ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
-            placeholder={placeholder}
-        />
+        <div className={`relative ${suffix ? 'flex items-center rounded-lg border focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500' : ''} ${suffix && error ? 'border-red-500 ring-red-500' : suffix ? 'border-gray-300' : ''}`}>
+            <input
+                type={type}
+                name={name}
+                value={value || ''}
+                onChange={onChange}
+                onBlur={onBlur}
+                disabled={disabled}
+                maxLength={maxLength}
+                className={`${suffix ? 'flex-1 border-none bg-transparent' : 'w-full border rounded-lg bg-white'} ${!suffix && error ? 'border-red-500 ring-1 ring-red-500' : !suffix ? 'border-gray-300' : ''} px-4 py-2.5 text-sm text-gray-900 focus:outline-none ${!suffix ? 'focus:border-blue-500 focus:ring-1 focus:ring-blue-500' : ''} transition-all placeholder-gray-400 ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
+                placeholder={placeholder}
+            />
+            {suffix && (
+                <span className="px-3 py-2.5 bg-gray-50 text-gray-500 text-sm font-medium border-l border-gray-200 select-none">
+                    {suffix}
+                </span>
+            )}
+        </div>
+        {error && <p className="text-red-500 text-xs mt-1 font-medium">{error}</p>}
     </div>
 );
 
-const FormSelect = ({ label, options, required = false, colSpan = "col-span-1", value, onChange, name, disabled = false }) => (
+const FormSelect = ({ label, options, required = false, colSpan = "col-span-1", value, onChange, name, disabled = false, error }) => (
     <div className={colSpan}>
         <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
             {label} {required && <span className="text-red-500">*</span>}
@@ -48,7 +58,7 @@ const FormSelect = ({ label, options, required = false, colSpan = "col-span-1", 
             value={value || ''}
             onChange={onChange}
             disabled={disabled}
-            className={`w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
+            className={`w-full bg-white border ${error ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
         >
             <option value="">Select {label}</option>
             {options.map((opt) => (
@@ -57,6 +67,7 @@ const FormSelect = ({ label, options, required = false, colSpan = "col-span-1", 
                 </option>
             ))}
         </select>
+        {error && <p className="text-red-500 text-xs mt-1 font-medium">{error}</p>}
     </div>
 );
 
@@ -75,6 +86,7 @@ const EditMember = () => {
     };
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [errors, setErrors] = useState({});
 
     // Flattened initial state for form handling ease
     const [formData, setFormData] = useState({
@@ -82,7 +94,7 @@ const EditMember = () => {
         surname: '', name: '', fatherName: '', dob: '', age: '',
         gender: '', mobile: '', alternateMobile: '', email: '',
 
-        bloodGroup: '', aadhaarNumber: '', maritalStatus: '',
+        bloodGroup: '', maritalStatus: '',
         occupation: '', jobSector: '', jobOrganization: '', jobDesignation: '', educationLevel: '',
 
         // B. Address (Present)
@@ -109,6 +121,28 @@ const EditMember = () => {
         bankName: '', branchName: '', accountNo: '', ifsc: '', bankHolder: ''
     });
 
+    // Helper: Validate DOB
+    const validateDOB = (dob) => {
+        if (!dob) return null;
+        if (dob.length < 10) return "Please enter DOB in DD-MM-YYYY format";
+        if (!/^\d{2}-\d{2}-\d{4}$/.test(dob)) return "Please enter DOB in DD-MM-YYYY format";
+
+        const [d, m, y] = dob.split('-').map(Number);
+        const date = new Date(y, m - 1, d);
+
+        if (date.getFullYear() !== y || date.getMonth() !== (m - 1) || date.getDate() !== d) {
+            return "Please enter DOB in DD-MM-YYYY format";
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (date > today) {
+            return "Please enter DOB in DD-MM-YYYY format";
+        }
+
+        return null;
+    };
+
     useEffect(() => {
         const fetchMember = async () => {
             try {
@@ -117,14 +151,14 @@ const EditMember = () => {
                     surname: data.surname || '',
                     name: data.name || '',
                     fatherName: data.fatherName || '',
-                    dob: data.dob ? data.dob.split('T')[0] : '',
+                    dob: data.dob ? new Date(data.dob).toLocaleDateString('en-GB').replace(/\//g, '-') : '',
                     age: data.age || '',
                     gender: data.gender || '',
                     mobile: data.mobileNumber || '',
                     alternateMobile: data.alternateMobile || '',
                     email: data.email || '',
                     bloodGroup: data.bloodGroup || '',
-                    aadhaarNumber: data.aadhaarNumber || '',
+
 
                     maritalStatus: data.maritalStatus || '',
                     occupation: data.occupation || '',
@@ -198,16 +232,83 @@ const EditMember = () => {
             if (value.length > 10) return;
         }
 
-        if (name === 'aadhaarNumber') {
-            // Only allow digits and max 12
-            if (!/^\d*$/.test(value)) return;
-            if (value.length > 12) return;
+        if (name === 'dob') {
+            let val = value.replace(/\D/g, '');
+            if (val.length > 8) val = val.substring(0, 8);
+            if (val.length > 4) val = `${val.slice(0, 2)}-${val.slice(2, 4)}-${val.slice(4)}`;
+            else if (val.length > 2) val = `${val.slice(0, 2)}-${val.slice(2)}`;
+
+            setFormData(prev => ({ ...prev, dob: val }));
+            return;
         }
 
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleEmailUsernameChange = (e) => {
+        const { value } = e.target;
+        // Strip any whitespace and '@' characters if they exist
+        const username = value.replace(/[\s@]/g, '');
+        const fullEmail = username ? `${username}@gmail.com` : '';
+        setFormData(prev => ({ ...prev, email: fullEmail }));
+
+        // Clear email error
+        setErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.email;
+            return newErrors;
+        });
+    };
+
+    const handleBlur = (e) => {
+        const { name, value } = e.target;
+        if (name === 'dob') {
+            const err = validateDOB(value);
+            setErrors(prev => ({ ...prev, dob: err || undefined }));
+        }
+    };
+
+    const handleEmailBlur = (e) => {
+        const fullEmail = formData.email;
+        if (!fullEmail) {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors.email;
+                return newErrors;
+            });
+        } else if (!/^[^\s@]+@gmail\.com$/.test(fullEmail)) {
+            setErrors(prev => ({ ...prev, email: "Invalid email format" }));
+        } else {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors.email;
+                return newErrors;
+            });
+        }
+    };
+
     const handleSave = async () => {
+        const newErrors = {};
+        if (!formData.gender) newErrors.gender = "Please select your gender.";
+
+        if (formData.email) {
+            if (!/^[^\s@]+@gmail\.com$/.test(formData.email)) {
+                newErrors.email = "Invalid email format";
+            }
+        }
+
+        const dobErr = validateDOB(formData.dob);
+        if (dobErr) newErrors.dob = dobErr;
+        else if (!formData.dob) newErrors.dob = "Please enter valid DOB";
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            alert("Please fill in all required fields.");
+            // Scroll to the first error if possible, or just return
+            return;
+        }
+        setErrors({});
+
         setSaving(true);
         try {
             // Re-nest data for API
@@ -215,7 +316,10 @@ const EditMember = () => {
                 surname: formData.surname,
                 name: formData.name,
                 fatherName: formData.fatherName,
-                dob: formData.dob,
+                dob: formData.dob ? (() => {
+                    const [d, m, y] = formData.dob.split('-');
+                    return `${y}-${m}-${d}`;
+                })() : undefined,
                 age: formData.age,
                 gender: formData.gender,
                 mobile: formData.mobile,
@@ -223,7 +327,7 @@ const EditMember = () => {
                 email: formData.email,
                 bloodGroup: formData.bloodGroup,
                 maritalStatus: formData.maritalStatus,
-                aadhaarNumber: formData.aadhaarNumber,
+
 
 
                 occupation: formData.occupation,
@@ -308,7 +412,7 @@ const EditMember = () => {
                             <p className="text-sm text-gray-500 mt-1">Update all information for member ID: {id}</p>
                         </div>
                         <button onClick={handleBack} className="bg-[#1e2a4a] hover:bg-[#2a3b66] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition">
-                            <FaArrowLeft size={12} /> Back to Members
+                            <FaArrowLeft size={12} /> Back
                         </button>
                     </div>
 
@@ -319,14 +423,23 @@ const EditMember = () => {
                             <FormInput label="Sur Name" name="surname" value={formData.surname} onChange={handleChange} />
                             <FormInput label="Name" name="name" value={formData.name} onChange={handleChange} />
                             <FormInput label="S/o, W/o, D/o" name="fatherName" value={formData.fatherName} onChange={handleChange} />
-                            <FormInput label="Date of Birth" name="dob" value={formData.dob} onChange={handleChange} type="date" />
+                            <FormInput label="Date of Birth" name="dob" value={formData.dob} onChange={handleChange} onBlur={handleBlur} maxLength={10} placeholder="DD-MM-YYYY" error={errors.dob} />
                             <FormInput label="Age" name="age" value={formData.age} onChange={handleChange} />
-                            <FormSelect label="Gender" name="gender" value={formData.gender} onChange={handleChange} options={['Female', 'Male', 'Other']} />
+                            <FormSelect label="Gender" name="gender" value={formData.gender} onChange={handleChange} options={['Female', 'Male', 'Other']} required={true} error={errors.gender} />
                             <FormInput label="Mobile" name="mobile" value={formData.mobile} onChange={handleChange} />
                             <FormInput label="Alt Mobile" name="alternateMobile" value={formData.alternateMobile} onChange={handleChange} />
-                            <FormInput label="Email" name="email" value={formData.email} onChange={handleChange} />
+                            <FormInput
+                                label="Email"
+                                name="email_username"
+                                value={formData.email ? formData.email.split('@')[0] : ''}
+                                onChange={handleEmailUsernameChange}
+                                onBlur={handleEmailBlur}
+                                required={false}
+                                error={errors.email}
+                                suffix="@gmail.com"
+                            />
                             <FormSelect label="Blood Group" name="bloodGroup" value={formData.bloodGroup} onChange={handleChange} options={['A+', 'A-', 'AB+', 'AB-', 'B+', 'B-', 'O+', 'O-', 'Oh (Bombay Blood Group)']} />
-                            <FormInput label="Aadhaar Number" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleChange} />
+
                             <FormSelect label="Marital Status" name="maritalStatus" value={formData.maritalStatus} onChange={handleChange} options={['Divorced', 'Married', 'Unmarried', 'Widowed']} />
 
                             {/* New Fields */}

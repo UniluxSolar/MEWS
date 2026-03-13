@@ -41,19 +41,26 @@ const MemberApplicationView = () => {
         input.style.width = '210mm';
 
         try {
-            const canvas = await html2canvas(input, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff'
-            });
-
-            const imgData = canvas.toDataURL('image/png');
+            const pages = input.querySelectorAll('.print-page');
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            for (let i = 0; i < pages.length; i++) {
+                const page = pages[i];
+                const canvas = await html2canvas(page, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                const pdfWidth = 210;
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+                if (i > 0) pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            }
+
             pdf.save(`Application_${member.name || 'Member'}.pdf`);
         } catch (err) {
             console.error("PDF Generation failed:", err);
@@ -82,6 +89,14 @@ const MemberApplicationView = () => {
             </div>
         </div>
     );
+
+    const handleBack = () => {
+        if (window.history.length > 1) {
+            navigate(-1);
+        } else {
+            navigate('/admin/members');
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col font-sans">
@@ -112,7 +127,7 @@ const MemberApplicationView = () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

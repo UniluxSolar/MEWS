@@ -372,7 +372,7 @@ const AdminManagement = () => {
             "Role": a.role,
             "Location": a.assignedLocation?.name || 'N/A',
             "Status": a.isActive ? 'Active' : 'Inactive',
-            "Joined": new Date(a.createdAt).toLocaleDateString()
+            "Joined": new Date(a.createdAt).toLocaleDateString('en-GB').replace(/\//g, '-')
         }));
         const worksheet = XLSX.utils.json_to_sheet(data);
         const workbook = XLSX.utils.book_new();
@@ -592,7 +592,7 @@ const AdminManagement = () => {
                                                     {admin.assignedLocation?.type && <span className="ml-1 text-[10px] text-slate-400 uppercase font-bold">({admin.assignedLocation.type})</span>}
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-slate-500">
-                                                    {new Date(admin.createdAt).toLocaleDateString()}
+                                                    {new Date(admin.createdAt).toLocaleDateString('en-GB').replace(/\//g, '-')}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {admin.isActive ? (

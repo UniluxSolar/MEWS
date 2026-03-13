@@ -21,11 +21,11 @@ const MemberSchema = new mongoose.Schema({
     educationLevel: { type: String },
     mobileNumber: { type: String }, // Made optional per request for testing
     bloodGroup: { type: String },
-    email: { type: String, unique: true,sparse: true, lowercase: true, trim: true }, // Optional Email
+    email: { type: String, unique: true, sparse: true, lowercase: true, trim: true }, // Optional Email
     isEmailVerified: { type: Boolean, default: false },
     role: { type: String, default: 'MEMBER', required: true }, // Explicit role field
     alternateMobile: { type: String },
-    aadhaarNumber: { type: String, unique: true, sparse: true }, // Sparse allows multiple documents to have no value
+
 
     // B. Address Details
     address: {
@@ -114,8 +114,7 @@ const MemberSchema = new mongoose.Schema({
 
     // I. Other Docs
     photoUrl: String,
-    aadhaarCardUrl: String,
-    aadhaarCardBackUrl: String,
+
 
     // J. Admin Verification & System Fields
     mewsId: { type: String, unique: true }, // Generated after approval
@@ -142,7 +141,7 @@ const MemberSchema = new mongoose.Schema({
         gender: String,
         occupation: String,
         mobileNumber: String,
-        aadhaarNumber: String,
+
         mewsId: { type: String, sparse: true }, // Added mewsId for family members
         annualIncome: String, // Propagated from Head
         memberCount: Number,  // Propagated from Head
@@ -158,8 +157,7 @@ const MemberSchema = new mongoose.Schema({
 
         // Documents (Paths)
         photo: String,
-        aadhaarFront: String,
-        aadhaarBack: String,
+
         voterIdFront: String,
         voterIdBack: String,
 

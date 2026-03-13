@@ -17,11 +17,7 @@ const GenerateIDCard = () => {
     const navigate = useNavigate();
 
     const handleBack = () => {
-        if (window.history.length > 2) {
-            navigate(-1);
-        } else {
-            navigate('/admin/members');
-        }
+        navigate(-1);
     };
 
     // Default valid until date (5 years from now)

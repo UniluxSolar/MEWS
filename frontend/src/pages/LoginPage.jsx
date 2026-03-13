@@ -81,7 +81,8 @@ const LoginPage = () => {
         localStorage.setItem('savedUser', JSON.stringify(userToSave));
 
         console.log('[LOGIN] Member Access Granted:', role);
-        navigate('/dashboard', { replace: true });
+        // Redirect members directly to their profile view
+        navigate('/dashboard/profile', { replace: true });
     };
 
     const handleLogin = async (e) => {
@@ -98,7 +99,7 @@ const LoginPage = () => {
             const { data } = await API.post('/auth/login', { username, password, portal: 'MEMBER' });
             handleLoginSuccess(data);
         } catch (error) {
-            setFeedback({ type: 'error', text: error.response?.data?.message || 'Invalid Credentials' });
+            setFeedback({ type: 'error', text: 'Invalid username or password' });
         } finally {
             setLoading(false);
         }
@@ -149,9 +150,9 @@ const LoginPage = () => {
 
     return (
         <LoginLayout
-            title="Member Access"
+            title="MEMBER ACCESS"
             subtitle="Secure login for MEWS family"
-            footerLink={viewMode === 'LOGIN' ? 'First Time Login / Forgot Password?' : 'Back to Login'}
+            footerLink={viewMode === 'LOGIN' ? 'Forgot Password?' : 'Back to Login'}
             onFooterClick={() => {
                 setViewMode(viewMode === 'LOGIN' ? 'FORGOT' : 'LOGIN');
                 setFeedback(null);

@@ -117,9 +117,9 @@ const DonationCheckout = () => {
 
             {/* Header */}
             <div>
-                <Link to="/dashboard/donate" className="flex items-center gap-2 text-gray-500 hover:text-[#1e2a4a] text-sm font-bold mb-2 transition">
-                    <FaChevronLeft size={10} /> Back to Donate
-                </Link>
+                <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-[#1e2a4a] text-sm font-bold mb-2 transition">
+                    <FaChevronLeft size={10} /> Back
+                </button>
                 <h1 className="text-3xl font-bold text-[#1e2a4a]">Complete Your Donation</h1>
                 <p className="text-gray-500 mt-1">Review your donation details and complete payment securely.</p>
             </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
     FaSearch, FaGraduationCap, FaUserShield, FaCreditCard,
     FaDesktop, FaEnvelope, FaPhoneAlt, FaCommentDots, FaChevronDown, FaChevronUp, FaArrowLeft
@@ -86,6 +86,7 @@ const FAQS_DATA = [
 ];
 
 const HelpSupport = () => {
+    const navigate = useNavigate();
     const [activeCategory, setActiveCategory] = useState(null);
 
     const filteredFAQs = activeCategory
@@ -101,9 +102,9 @@ const HelpSupport = () => {
         <div className="w-full space-y-10 pb-12">
             {/* Back Button */}
             <div className="">
-                <Link to="/dashboard" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
-                    <FaArrowLeft size={12} /> Back to Dashboard
-                </Link>
+                <button onClick={() => navigate(-1)} className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
+                    <FaArrowLeft size={12} /> Back
+                </button>
             </div>
 
             {/* Hero Search */}

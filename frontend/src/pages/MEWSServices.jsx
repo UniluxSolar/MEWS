@@ -5,7 +5,7 @@ import {
     FaGavel, FaFileContract, FaUserTie, FaChalkboardTeacher, FaBuilding, FaUsers,
     FaRing, FaUtensils, FaHome, FaArrowLeft
 } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const ServiceCard = ({ title, icon: Icon, color, bg, mainStat, subItems }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
@@ -46,6 +46,7 @@ const ServiceCard = ({ title, icon: Icon, color, bg, mainStat, subItems }) => (
 );
 
 const MEWSServices = () => {
+    const navigate = useNavigate();
     const [filter, setFilter] = React.useState('OverAll');
 
     const services = [
@@ -115,9 +116,9 @@ const MEWSServices = () => {
         <div className="w-full space-y-8">
             {/* Back Button */}
             <div className="">
-                <Link to="/dashboard" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
-                    <FaArrowLeft size={12} /> Back to Dashboard
-                </Link>
+                <button onClick={() => navigate(-1)} className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
+                    <FaArrowLeft size={12} /> Back
+                </button>
             </div>
 
             {/* Header Section */}

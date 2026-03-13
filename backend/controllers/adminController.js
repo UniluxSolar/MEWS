@@ -69,6 +69,54 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                 memberQuery = { 'address.municipality': { $in: locIds } };
                 institutionQuery = { fullAddress: locationRegex };
 
+                // Aggregate active villages/wards with members inside Municipality
+                const villageAgg = await Member.aggregate([
+                    { $match: { 'address.municipality': { $in: locIds }, 'address.village': { $ne: null } } },
+                    {
+                        $group: {
+                            _id: '$address.village',
+                            members: { $sum: 1 },
+                            pending: {
+                                $sum: {
+                                    $cond: [{ $eq: ['$verificationStatus', 'PENDING'] }, 1, 0]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: 'locations',
+                            localField: '_id',
+                            foreignField: '_id',
+                            as: 'locationDetails'
+                        }
+                    },
+                    { $match: { 'locationDetails.0': { $exists: true } } },
+                    {
+                        $project: {
+                            _id: 1,
+                            names: { $arrayElemAt: ['$locationDetails.name', 0] },
+                            members: 1,
+                            pending: 1
+                        }
+                    }
+                ]);
+
+                // Aggregate stats per active village
+                villagesData = await Promise.all(villageAgg.map(async (village) => {
+                    const instCount = await Institution.countDocuments({ fullAddress: { $regex: village.names, $options: 'i' } });
+
+                    return {
+                        id: village._id.toString(),
+                        name: village.names,
+                        members: village.members,
+                        pending: village.pending,
+                        institutions: instCount,
+                        sos: 0,
+                        status: 'Active'
+                    };
+                }));
+
             } else if (contextRole === 'MANDAL_ADMIN') {
                 // Robust Fix: Handle duplicate Location IDs by Name
                 const escapedName = location.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -83,28 +131,48 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 
                 institutionQuery = { fullAddress: locationRegex };
 
-                // Fetch child villages for ALL matching mandals
-                const villages = await Location.find({ parent: { $in: mandalIds }, type: 'VILLAGE' });
-                console.log(`[DASHBOARD] Mandal Admin - Found ${villages.length} villages for parents ${mandalIds.join(', ')}`);
+                // Aggregate active villages with members
+                const villageAgg = await Member.aggregate([
+                    { $match: { 'address.mandal': { $in: mandalIds }, 'address.village': { $ne: null } } },
+                    {
+                        $group: {
+                            _id: '$address.village',
+                            members: { $sum: 1 },
+                            pending: {
+                                $sum: {
+                                    $cond: [{ $eq: ['$verificationStatus', 'PENDING'] }, 1, 0]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: 'locations',
+                            localField: '_id',
+                            foreignField: '_id',
+                            as: 'locationDetails'
+                        }
+                    },
+                    { $match: { 'locationDetails.0': { $exists: true } } },
+                    {
+                        $project: {
+                            _id: 1,
+                            names: { $arrayElemAt: ['$locationDetails.name', 0] },
+                            members: 1,
+                            pending: 1
+                        }
+                    }
+                ]);
 
-                // Aggregate stats per village
-                villagesData = await Promise.all(villages.map(async (village) => {
-                    const mCount = await Member.countDocuments({
-                        'address.village': village._id
-                    });
-
-                    const pCount = await Member.countDocuments({
-                        'address.village': village._id,
-                        verificationStatus: 'PENDING'
-                    });
-
-                    const instCount = await Institution.countDocuments({ fullAddress: { $regex: village.name, $options: 'i' } });
+                // Aggregate stats per active village
+                villagesData = await Promise.all(villageAgg.map(async (village) => {
+                    const instCount = await Institution.countDocuments({ fullAddress: { $regex: village.names, $options: 'i' } });
 
                     return {
                         id: village._id.toString(),
-                        name: village.name,
-                        members: mCount,
-                        pending: pCount,
+                        name: village.names,
+                        members: village.members,
+                        pending: village.pending,
                         institutions: instCount,
                         sos: 0,
                         status: 'Active'
@@ -113,33 +181,46 @@ const getDashboardStats = asyncHandler(async (req, res) => {
             } else if (contextRole === 'DISTRICT_ADMIN') {
                 memberQuery = { 'address.district': location._id };
 
-                // Get Mandals for breakdown
-                const mandals = await Location.find({ parent: location._id, type: 'MANDAL' });
+                // Aggregate to get active mandals with members
+                const mandalAgg = await Member.aggregate([
+                    { $match: { 'address.district': location._id, 'address.mandal': { $ne: null } } },
+                    {
+                        $group: {
+                            _id: '$address.mandal',
+                            members: { $sum: 1 },
+                            pending: {
+                                $sum: {
+                                    $cond: [{ $eq: ['$verificationStatus', 'PENDING'] }, 1, 0]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: 'locations',
+                            localField: '_id',
+                            foreignField: '_id',
+                            as: 'locationDetails'
+                        }
+                    },
+                    { $match: { 'locationDetails.0': { $exists: true } } },
+                    {
+                        $project: {
+                            _id: 1,
+                            names: { $arrayElemAt: ['$locationDetails.name', 0] },
+                            members: 1,
+                            pending: 1
+                        }
+                    }
+                ]);
 
-                // Build a regex that matches the District Name OR Any Mandal Name range
-                const locationNames = [location.name, ...mandals.map(m => m.name)].map(name =>
-                    name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                ).join('|');
-                const locationRegexExtended = new RegExp(locationNames, 'i');
-
-                institutionQuery = { fullAddress: locationRegexExtended };
-
-                const mandalsData = await Promise.all(mandals.map(async (mandal) => {
-                    const mCount = await Member.countDocuments({
-                        'address.mandal': mandal._id
-                    });
-                    // For pending, we can add a count if needed, similar to village. Let's populate pending too if useful.
-                    const pCount = await Member.countDocuments({
-                        'address.mandal': mandal._id,
-                        verificationStatus: 'PENDING'
-                    });
-
-                    const instCount = await Institution.countDocuments({ fullAddress: { $regex: mandal.name, $options: 'i' } });
+                const mandalsData = await Promise.all(mandalAgg.map(async (m) => {
+                    const instCount = await Institution.countDocuments({ fullAddress: { $regex: m.names, $options: 'i' } });
                     return {
-                        id: mandal._id.toString(),
-                        name: mandal.name,
-                        members: mCount,
-                        pending: pCount, // Added pending count
+                        id: m._id.toString(),
+                        name: m.names,
+                        members: m.members,
+                        pending: m.pending,
                         institutions: instCount,
                         sos: 0,
                         status: 'Active'
@@ -149,21 +230,45 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                 req.mandalsData = mandalsData;
 
                 // --- MUNICIPALITIES FETCHING ---
-                const municipalities = await Location.find({ parent: location._id, type: 'MUNICIPALITY' });
-                const municipalitiesData = await Promise.all(municipalities.map(async (mun) => {
-                    const mCount = await Member.countDocuments({
-                        'address.municipality': mun._id
-                    });
-                    const pCount = await Member.countDocuments({
-                        'address.municipality': mun._id,
-                        verificationStatus: 'PENDING'
-                    });
-                    const instCount = await Institution.countDocuments({ fullAddress: { $regex: mun.name, $options: 'i' } });
+                const munAgg = await Member.aggregate([
+                    { $match: { 'address.district': location._id, 'address.municipality': { $ne: null } } },
+                    {
+                        $group: {
+                            _id: '$address.municipality',
+                            members: { $sum: 1 },
+                            pending: {
+                                $sum: {
+                                    $cond: [{ $eq: ['$verificationStatus', 'PENDING'] }, 1, 0]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: 'locations',
+                            localField: '_id',
+                            foreignField: '_id',
+                            as: 'locationDetails'
+                        }
+                    },
+                    { $match: { 'locationDetails.0': { $exists: true } } },
+                    {
+                        $project: {
+                            _id: 1,
+                            names: { $arrayElemAt: ['$locationDetails.name', 0] },
+                            members: 1,
+                            pending: 1
+                        }
+                    }
+                ]);
+
+                const municipalitiesData = await Promise.all(munAgg.map(async (mun) => {
+                    const instCount = await Institution.countDocuments({ fullAddress: { $regex: mun.names, $options: 'i' } });
                     return {
                         id: mun._id.toString(),
-                        name: mun.name,
-                        members: mCount,
-                        pending: pCount,
+                        name: mun.names,
+                        members: mun.members,
+                        pending: mun.pending,
                         institutions: instCount,
                         sos: 0,
                         status: 'Active'
@@ -173,30 +278,59 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 
             } else if (contextRole === 'STATE_ADMIN' || contextRole === 'SUPER_ADMIN') {
                 // Determine logic for State Dashboard
-                // Usually State Admin sees Districts Breakdown
-                // Robust Fix: Get all districts and query per district instead of relying on address.state
-                const districts = await Location.find({ parent: location._id, type: 'DISTRICT' });
-                const districtIds = districts.map(d => d._id);
+                // Robust Fix: Get all districts populated with members using aggregation
+                const districtsObjIds = await Location.find({ parent: location._id, type: 'DISTRICT' }).distinct('_id');
+                const adminMemberQuery = { 'address.district': { $in: districtsObjIds } };
+                memberQuery = adminMemberQuery;
 
-                memberQuery = { 'address.district': { $in: districtIds } };
+                const districtAgg = await Member.aggregate([
+                    { $match: adminMemberQuery },
+                    {
+                        $group: {
+                            _id: '$address.district',
+                            members: { $sum: 1 },
+                            pending: {
+                                $sum: {
+                                    $cond: [{ $eq: ['$verificationStatus', 'PENDING'] }, 1, 0]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: 'locations',
+                            localField: '_id',
+                            foreignField: '_id',
+                            as: 'locationDetails'
+                        }
+                    },
+                    { $match: { 'locationDetails.0': { $exists: true } } },
+                    {
+                        $project: {
+                            _id: 1,
+                            names: { $arrayElemAt: ['$locationDetails.name', 0] },
+                            members: 1,
+                            pending: 1
+                        }
+                    }
+                ]);
 
-                // Institution Query: regex match state name or district names
-                const locationNames = [location.name, ...districts.map(d => d.name)].map(name =>
+                // Institution Query: regex match state name or active district names
+                const locationNames = [location.name, ...districtAgg.map(d => d.names)].map(name =>
                     name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
                 ).join('|');
                 const locationRegexExtended = new RegExp(locationNames, 'i');
                 institutionQuery = { fullAddress: locationRegexExtended };
 
-                const districtsData = await Promise.all(districts.map(async (district) => {
-                    const mCount = await Member.countDocuments({ 'address.district': district._id });
-                    const pCount = await Member.countDocuments({ 'address.district': district._id, verificationStatus: 'PENDING' });
-                    const instCount = await Institution.countDocuments({ fullAddress: { $regex: district.name, $options: 'i' } });
+
+                const districtsData = await Promise.all(districtAgg.map(async (district) => {
+                    const instCount = await Institution.countDocuments({ fullAddress: { $regex: district.names, $options: 'i' } });
 
                     return {
                         id: district._id.toString(),
-                        name: district.name,
-                        members: mCount,
-                        pending: pCount,
+                        name: district.names,
+                        members: district.members,
+                        pending: district.pending,
                         institutions: instCount,
                         sos: 0,
                         status: 'Active'

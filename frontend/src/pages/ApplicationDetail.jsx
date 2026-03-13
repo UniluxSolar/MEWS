@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
     FaArrowLeft, FaPrint, FaDownload, FaTrash, FaPhoneAlt, FaEnvelope, FaClock,
     FaFilePdf, FaEye, FaCheckCircle, FaPaperclip, FaPaperPlane, FaUserTie, FaChevronLeft
@@ -83,14 +83,15 @@ const ChatMessage = ({ sender, time, text, isMe, attachment }) => (
 const ApplicationDetail = () => {
     // In a real app, use useParams() to fetch data
     const { id } = useParams();
+    const navigate = useNavigate();
 
     return (
         <div className="w-full pb-12">
             {/* Back Link */}
             <div className="mb-6">
-                <Link to="/dashboard/applications" className="text-gray-500 hover:text-primary text-sm flex items-center gap-2 font-bold transition">
-                    <FaChevronLeft size={10} /> Back to Funding Request
-                </Link>
+                <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-primary text-sm flex items-center gap-2 font-bold transition">
+                    <FaChevronLeft size={10} /> Back
+                </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -165,7 +166,7 @@ const ApplicationDetail = () => {
                             <DocumentItem name="Marks Memo" size="0.8 MB" date="10 Nov 2025" />
                             <DocumentItem name="Income Certificate" size="1.2 MB" date="10 Nov 2025" />
                             <DocumentItem name="Bank Passbook" size="2.1 MB" date="10 Nov 2025" />
-                            <DocumentItem name="Aadhar Card" size="1.8 MB" date="10 Nov 2025" />
+
                         </div>
                     </div>
                 </div>

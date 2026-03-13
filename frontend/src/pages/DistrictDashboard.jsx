@@ -4,7 +4,7 @@ import { useNavigate, Link, useParams } from 'react-router-dom';
 import {
     FaUsers, FaBuilding, FaExclamationTriangle, FaFileAlt,
     FaMapMarkedAlt, FaClock, FaTable, FaThLarge, FaMapMarkerAlt,
-    FaChevronRight, FaChartPie, FaChartBar
+    FaChevronRight, FaChartPie, FaChartBar, FaCity
 } from 'react-icons/fa';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
@@ -70,6 +70,50 @@ const MandalPerformanceCard = ({ id, name, members, institutions, status, pendin
             </div>
 
             {/* Pending Alerts */}
+            {pending > 0 && (
+                <div className="mt-4 flex items-center gap-2 text-xs font-bold text-orange-600 bg-orange-50 px-3 py-2 rounded-lg border border-orange-100 animate-pulse">
+                    <FaClock /> {pending} Verification{pending !== 1 && 's'} Pending
+                </div>
+            )}
+        </div>
+    );
+};
+
+const MunicipalityPerformanceCard = ({ id, name, members, institutions, status, pending }) => {
+    const navigate = useNavigate();
+    return (
+        <div
+            onClick={() => navigate(`/admin/dashboard/municipality/${id}`)}
+            className="block bg-white rounded-xl border border-slate-200 shadow-sm p-5 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group cursor-pointer"
+        >
+            <div className={`absolute left-0 top-0 bottom-0 w-1 ${status === 'Active' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+
+            <div className="flex justify-between items-start mb-4 pl-2">
+                <div>
+                    <h3 className="font-bold text-[#1e2a4a] text-lg group-hover:text-amber-600 transition-colors flex items-center gap-2">
+                        {name}
+                        <FaChevronRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-500" />
+                    </h3>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                        {status}
+                    </span>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shadow-inner">
+                    <FaCity size={16} />
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pl-2">
+                <div className="bg-slate-50 rounded-lg p-2 text-center border border-slate-100">
+                    <div className="text-xl font-bold text-slate-800">{members.toLocaleString()}</div>
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">Members</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-2 text-center border border-slate-100">
+                    <div className="text-xl font-bold text-slate-800">{institutions}</div>
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">Institutions</div>
+                </div>
+            </div>
+
             {pending > 0 && (
                 <div className="mt-4 flex items-center gap-2 text-xs font-bold text-orange-600 bg-orange-50 px-3 py-2 rounded-lg border border-orange-100 animate-pulse">
                     <FaClock /> {pending} Verification{pending !== 1 && 's'} Pending
@@ -463,6 +507,28 @@ const DistrictDashboard = () => {
                                     <h2 className="text-xl font-bold text-[#1e2a4a] border-l-4 border-blue-500 pl-3">
                                         Municipality Breakdown
                                     </h2>
+
+                                    {/* View Toggle */}
+                                    <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                                        <button
+                                            onClick={() => setViewMode('cards')}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'cards' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                                        >
+                                            <FaThLarge /> Cards
+                                        </button>
+                                        <button
+                                            onClick={() => setViewMode('table')}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'table' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                                        >
+                                            <FaTable /> Table
+                                        </button>
+                                        <button
+                                            onClick={() => setViewMode('map')}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'map' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                                        >
+                                            <FaMapMarkedAlt /> Map
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* CONTENT AREA */}
@@ -480,7 +546,7 @@ const DistrictDashboard = () => {
                                         {viewMode === 'cards' && (
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                                 {stats.municipalities.map((mun, idx) => (
-                                                    <MandalPerformanceCard
+                                                  <MunicipalityPerformanceCard
                                                         key={`mun-${idx}`}
                                                         id={mun.id}
                                                         name={mun.name}
@@ -492,7 +558,91 @@ const DistrictDashboard = () => {
                                                 ))}
                                             </div>
                                         )}
-                                        {/* Reuse Table/Map view logic if needed, or keep it simple for now */}
+
+                                        {/* TABLE VIEW */}
+                                        {viewMode === 'table' && (
+                                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-left text-sm">
+                                                        <thead>
+                                                            <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                                <th className="px-6 py-4">Municipality Name</th>
+                                                                <th className="px-6 py-4 text-center">Members</th>
+                                                                <th className="px-6 py-4 text-center">Institutions</th>
+                                                                <th className="px-6 py-4 text-center">Pending Verifications</th>
+                                                                <th className="px-6 py-4 text-center">Status</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-100">
+                                                            {stats.municipalities.map((mun, idx) => (
+                                                                <tr key={idx} className="hover:bg-blue-50/50 transition-colors group">
+                                                                    <td
+                                                                        className="px-6 py-4 font-bold text-[#1e2a4a] hover:text-blue-600 cursor-pointer transition-colors"
+                                                                        onClick={() => navigate(`/admin/dashboard/municipality/${mun.id}`)}
+                                                                    >
+                                                                        {mun.name}
+                                                                    </td>
+                                                                    <td className="px-6 py-4 text-center text-slate-600 font-medium">{mun.members}</td>
+                                                                    <td className="px-6 py-4 text-center text-slate-600 font-medium">{mun.institutions}</td>
+                                                                    <td className="px-6 py-4 text-center">
+                                                                        {mun.pending > 0 ? (
+                                                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 border border-orange-200">
+                                                                                {mun.pending} Pending
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="text-slate-400">-</span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="px-6 py-4 text-center">
+                                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${mun.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                                                                            {mun.status}
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* MAP VIEW */}
+                                        {viewMode === 'map' && (
+                                            <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-200 h-[600px] overflow-hidden relative">
+                                                <MapContainer center={[17.0500, 79.2667]} zoom={9} style={{ height: '100%', width: '100%', borderRadius: '12px' }} scrollWheelZoom={false}>
+                                                    <LayersControl position="topright">
+                                                        <LayersControl.BaseLayer checked name="Standard">
+                                                            <TileLayer
+                                                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                            />
+                                                        </LayersControl.BaseLayer>
+                                                        <LayersControl.BaseLayer name="Satellite">
+                                                            <TileLayer
+                                                                attribution='Esri'
+                                                                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                                            />
+                                                        </LayersControl.BaseLayer>
+                                                    </LayersControl>
+                                                    {stats.municipalities.map((mun, idx) => (
+                                                        <Marker key={`mun-marker-${idx}`} position={getCoordinates(mun.name)}>
+                                                            <Popup>
+                                                                <div className="text-center p-2">
+                                                                    <h3 className="font-bold text-sm mb-1">{mun.name}</h3>
+                                                                    <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                                                                        <div className="bg-blue-50 p-1 rounded">Mem: <b>{mun.members}</b></div>
+                                                                        <div className="bg-slate-50 p-1 rounded">Inst: <b>{mun.institutions}</b></div>
+                                                                    </div>
+                                                                    <Link to={`/admin/dashboard/municipality/${mun.id}`} className="block w-full bg-[#1e2a4a] text-white text-[10px] font-bold py-1 px-2 rounded hover:bg-amber-600 transition">
+                                                                        View Dashboard
+                                                                    </Link>
+                                                                </div>
+                                                            </Popup>
+                                                        </Marker>
+                                                    ))}
+                                                </MapContainer>
+                                            </div>
+                                        )}
                                     </>
                                 )}
                             </div>

@@ -8,6 +8,30 @@ const { generateMemberId } = require('../utils/idGenerator');
 const { sendRegistrationNotification } = require('../utils/notificationService');
 const User = require('../models/User'); // For finding admins
 
+const isValidDOB = (dobString) => {
+    if (!dobString) return true;
+    const date = new Date(dobString);
+    if (isNaN(date.getTime())) return false;
+
+    // Check for future date
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    if (date > today) return false;
+
+    // Check for "auto-corrected" dates (e.g. Feb 30 -> Mar 2)
+    // dobString is expected to be YYYY-MM-DD from frontend
+    const parts = dobString.split('-');
+    if (parts.length === 3) {
+        const y = parseInt(parts[0]);
+        const m = parseInt(parts[1]);
+        const d = parseInt(parts[2]);
+        if (date.getFullYear() !== y || (date.getMonth() + 1) !== m || date.getDate() !== d) {
+            return false;
+        }
+    }
+    return true;
+};
+
 // Helper to sign all URLs in a member object
 const signMemberData = async (memberDoc) => {
     // Convert to plain object if it's a Mongoose document
@@ -15,7 +39,6 @@ const signMemberData = async (memberDoc) => {
 
     // 1. Top Level Fields
     if (member.photoUrl) member.photoUrl = await getSignedUrl(member.photoUrl);
-    if (member.aadhaarCardUrl) member.aadhaarCardUrl = await getSignedUrl(member.aadhaarCardUrl);
 
     // 2. Nested Objects
     if (member.casteDetails?.certificateUrl) {
@@ -38,8 +61,7 @@ const signMemberData = async (memberDoc) => {
     if (member.familyMembers && Array.isArray(member.familyMembers)) {
         for (const fam of member.familyMembers) {
             if (fam.photo) fam.photo = await getSignedUrl(fam.photo);
-            if (fam.aadhaarFront) fam.aadhaarFront = await getSignedUrl(fam.aadhaarFront);
-            if (fam.aadhaarBack) fam.aadhaarBack = await getSignedUrl(fam.aadhaarBack);
+
             if (fam.voterIdFront) fam.voterIdFront = await getSignedUrl(fam.voterIdFront);
             if (fam.voterIdBack) fam.voterIdBack = await getSignedUrl(fam.voterIdBack);
         }
@@ -152,19 +174,23 @@ const registerMember = asyncHandler(async (req, res) => {
         if (dLoc) districtId = dLoc._id;
     }
 
-    // Check Existence
-    const userExists = await Member.findOne({ aadhaarNumber: clean(data.aadhaarNumber) });
-    if (userExists) {
-        res.status(400);
-        throw new Error('Member with this Aadhaar number already exists');
-    }
+
 
     // Prepare Member Data
     const memberData = {
         surname: clean(data.surname),
         name: clean(data.name),
         fatherName: clean(data.fatherName),
-        dob: data.dob ? new Date(data.dob) : undefined,
+        dob: (() => {
+            if (data.dob !== undefined) {
+                if (data.dob && !isValidDOB(data.dob)) {
+                    res.status(400);
+                    throw new Error("Please enter DOB in DD-MM-YYYY format");
+                }
+                return data.dob ? new Date(data.dob) : undefined;
+            }
+            return undefined; // If data.dob is explicitly undefined, return undefined
+        })(),
         age: cleanNum(data.age),
         occupation: clean(data.occupation),
         politicalDetails: {
@@ -184,7 +210,7 @@ const registerMember = asyncHandler(async (req, res) => {
         bloodGroup: clean(data.bloodGroup),
         email: clean(data.email),
         alternateMobile: clean(data.alternateMobile),
-        aadhaarNumber: clean(data.aadhaarNumber),
+
         address: {
             district: districtId,
             constituency: clean(data.presentConstituency),
@@ -255,11 +281,19 @@ const registerMember = asyncHandler(async (req, res) => {
             passbookUrl: getFilePath('bankPassbook')
         },
         photoUrl: getFilePath('photo'),
-        aadhaarCardUrl: getFilePath('aadhaarFront'),
-        aadhaarCardBackUrl: getFilePath('aadhaarBack'),
         verificationStatus: 'ACTIVE', // Auto-Activate
         legalConsent: data.legalConsent === 'true'
     };
+
+    // --- AUTO GENERATE PASSWORD ---
+    const bcrypt = require('bcryptjs');
+    if (memberData.mobileNumber) {
+        const rawMobile = memberData.mobileNumber.toString().trim().replace(/\D/g, '').slice(-10);
+        const rawPassword = `Mews@${rawMobile}`;
+        const salt = await bcrypt.genSalt(10);
+        memberData.passwordHash = await bcrypt.hash(rawPassword, salt);
+        console.log(`[REG] Password generated for mobile: ${rawMobile}`);
+    }
 
     // Process Family Members
     if (data.familyMembers) {
@@ -304,15 +338,14 @@ const registerMember = asyncHandler(async (req, res) => {
                         businessType: clean(fm.businessType),
                         educationLevel: clean(fm.educationLevel),
                         mobileNumber: clean(fm.mobileNumber),
-                        aadhaarNumber: clean(fm.aadhaarNumber),
+
                         memberId: new mongoose.Types.ObjectId(),
                         epicNumber: clean(fm.epicNumber),
                         voterName: clean(fm.voterName),
                         pollingBooth: clean(fm.pollingBooth),
                         // Files
                         photo: getFamilyFile('familyMemberPhotos', getIndex(fm.photo)),
-                        aadhaarFront: getFamilyFile('familyMemberAadhaarFronts', getIndex(fm.aadhaarFront)),
-                        aadhaarBack: getFamilyFile('familyMemberAadhaarBacks', getIndex(fm.aadhaarBack)),
+
                         voterIdFront: getFamilyFile('familyMemberVoterIdFronts', getIndex(fm.voterIdFront)),
                         voterIdBack: getFamilyFile('familyMemberVoterIdBacks', getIndex(fm.voterIdBack)),
                         // Inherit Address
@@ -375,15 +408,14 @@ const registerMember = asyncHandler(async (req, res) => {
                     jobSubCategory: fm.jobSubCategory,
                     educationLevel: fm.educationLevel,
                     mobileNumber: fm.mobileNumber,
-                    aadhaarNumber: fm.aadhaarNumber,
+
                     address: memberData.address,
                     permanentAddress: memberData.permanentAddress,
                     verificationStatus: 'ACTIVE',
                     headOfFamily: member._id,
                     relationToHead: fm.relation,
                     photoUrl: fm.photo,
-                    aadhaarCardUrl: fm.aadhaarFront,
-                    aadhaarCardBackUrl: fm.aadhaarBack,
+
                     voterIdUrl: fm.voterIdFront,
                     voterIdBackUrl: fm.voterIdBack,
                     familyDetails: { ...memberData.familyDetails, memberCount: undefined, dependentCount: undefined },
@@ -1012,7 +1044,13 @@ const updateMember = asyncHandler(async (req, res) => {
             if (data.surname !== undefined) member.surname = clean(data.surname);
             if (data.name !== undefined) member.name = clean(data.name);
             if (data.fatherName !== undefined) member.fatherName = clean(data.fatherName);
-            if (data.dob) member.dob = new Date(data.dob);
+            if (data.dob !== undefined) {
+                if (data.dob && !isValidDOB(data.dob)) {
+                    res.status(400);
+                    throw new Error("Please enter DOB in DD-MM-YYYY format");
+                }
+                member.dob = data.dob ? new Date(data.dob) : undefined;
+            }
             if (data.age) member.age = cleanNum(data.age);
             if (data.occupation !== undefined) member.occupation = clean(data.occupation);
             // Update Political Details
@@ -1034,16 +1072,13 @@ const updateMember = asyncHandler(async (req, res) => {
             if (data.bloodGroup !== undefined) member.bloodGroup = clean(data.bloodGroup);
             if (data.email !== undefined) member.email = clean(data.email);
             if (data.alternateMobile !== undefined) member.alternateMobile = clean(data.alternateMobile);
-            if (data.aadhaarNumber !== undefined) member.aadhaarNumber = clean(data.aadhaarNumber);
+
             if (data.maritalStatus !== undefined) member.maritalStatus = clean(data.maritalStatus);
 
             // Update Files
             const newPhoto = getFilePath('photo');
             if (newPhoto) member.photoUrl = newPhoto;
-            const newAadhaarFront = getFilePath('aadhaarFront');
-            if (newAadhaarFront) member.aadhaarCardUrl = newAadhaarFront;
-            const newAadhaarBack = getFilePath('aadhaarBack');
-            if (newAadhaarBack) member.aadhaarCardBackUrl = newAadhaarBack;
+
 
             // Helper to resolve location (Name -> ID)
             const resolveLocation = async (val, type) => {
@@ -1155,8 +1190,7 @@ const updateMember = asyncHandler(async (req, res) => {
                     if (Array.isArray(removedFields)) {
                         removedFields.forEach(field => {
                             if (field === 'photo') member.photoUrl = undefined;
-                            if (field === 'aadhaarFront') member.aadhaarCardUrl = undefined;
-                            if (field === 'aadhaarBack') member.aadhaarCardBackUrl = undefined;
+
                             if (field === 'communityCert') member.casteDetails.certificateUrl = undefined;
                             if (field === 'marriageCert') member.partnerDetails.certificateUrl = undefined;
                             if (field === 'rationCardFile') member.rationCard.fileUrl = undefined;
@@ -1206,8 +1240,7 @@ const updateMember = asyncHandler(async (req, res) => {
 
                         member.familyMembers = parsedMembers.map(fm => {
                             const photoIndex = getIndex(fm.photo);
-                            const aadhaarFrontIndex = getIndex(fm.aadhaarFront);
-                            const aadhaarBackIndex = getIndex(fm.aadhaarBack);
+
                             const voterIdFrontIndex = getIndex(fm.voterIdFront);
                             const voterIdBackIndex = getIndex(fm.voterIdBack);
                             const relation = clean(fm.relation);
@@ -1230,7 +1263,7 @@ const updateMember = asyncHandler(async (req, res) => {
                                 jobCategory: clean(fm.jobCategory),
                                 jobSubCategory: clean(fm.jobSubCategory),
                                 mobileNumber: clean(fm.mobileNumber),
-                                aadhaarNumber: clean(fm.aadhaarNumber),
+
                                 annualIncome: member.familyDetails ? member.familyDetails.annualIncome : undefined,
                                 memberCount: member.familyDetails ? member.familyDetails.memberCount : undefined,
                                 dependentCount: member.familyDetails ? member.familyDetails.dependentCount : undefined,
@@ -1239,8 +1272,7 @@ const updateMember = asyncHandler(async (req, res) => {
                                 voterName: clean(fm.voterName),
                                 pollingBooth: clean(fm.pollingBooth),
                                 photo: resolveFile(fm.photo, 'familyMemberPhotos', photoIndex),
-                                aadhaarFront: resolveFile(fm.aadhaarFront, 'familyMemberAadhaarFronts', aadhaarFrontIndex),
-                                aadhaarBack: resolveFile(fm.aadhaarBack, 'familyMemberAadhaarBacks', aadhaarBackIndex),
+
                                 voterIdFront: resolveFile(fm.voterIdFront, 'familyMemberVoterIdFronts', voterIdFrontIndex),
                                 voterIdBack: resolveFile(fm.voterIdBack, 'familyMemberVoterIdBacks', voterIdBackIndex),
                                 presentAddress: member.address,
@@ -1264,7 +1296,7 @@ const updateMember = asyncHandler(async (req, res) => {
                 for (const fm of updatedMember.familyMembers) {
                     try {
                         let dependentDoc = existingDependents.find(d => d.name === fm.name && d.relationToHead === fm.relation);
-                        if (!dependentDoc && fm.aadhaarNumber) dependentDoc = existingDependents.find(d => d.aadhaarNumber === fm.aadhaarNumber);
+
 
                         if (dependentDoc) {
                             // UPDATE
@@ -1282,7 +1314,7 @@ const updateMember = asyncHandler(async (req, res) => {
                             dependentDoc.address = updatedMember.address;
                             dependentDoc.permanentAddress = updatedMember.permanentAddress;
                             if (fm.photo) dependentDoc.photoUrl = fm.photo;
-                            if (fm.aadhaarFront) dependentDoc.aadhaarCardUrl = fm.aadhaarFront;
+
                             await dependentDoc.save(opts);
                         } else {
                             // CREATE
@@ -1301,7 +1333,7 @@ const updateMember = asyncHandler(async (req, res) => {
                                 jobCategory: fm.jobCategory,
                                 jobSubCategory: fm.jobSubCategory,
                                 mobileNumber: fm.mobileNumber,
-                                aadhaarNumber: fm.aadhaarNumber,
+
                                 address: updatedMember.address,
                                 permanentAddress: updatedMember.permanentAddress,
                                 casteDetails: updatedMember.casteDetails,
@@ -1309,7 +1341,7 @@ const updateMember = asyncHandler(async (req, res) => {
                                 relationToHead: fm.relation,
                                 maritalStatus: fm.maritalStatus,
                                 photoUrl: fm.photo,
-                                aadhaarCardUrl: fm.aadhaarFront,
+
                                 voterId: {
                                     epicNumber: fm.epicNumber,
                                     nameOnCard: fm.voterName,
@@ -1436,9 +1468,7 @@ const checkDuplicate = asyncHandler(async (req, res) => {
     }
 
     let query = {};
-    if (field === 'aadhaarNumber') {
-        query.aadhaarNumber = value;
-    } else if (field === 'voterId') {
+    if (field === 'voterId') {
         query['voterId.epicNumber'] = value;
     } else if (field === 'rationCard') {
         query['rationCard.number'] = value;
@@ -1455,7 +1485,7 @@ const checkDuplicate = asyncHandler(async (req, res) => {
     if (exists) {
         return res.status(200).json({
             isDuplicate: true,
-            message: `This ${field === 'voterId' ? 'Voter ID' : (field === 'rationCard' ? 'Ration Card' : (field === 'mobileNumber' ? 'Mobile Number' : (field === 'communityCert' ? 'Community Certificate Number' : 'Aadhaar Number')))} is already registered.`
+            message: `This ${field === 'voterId' ? 'Voter ID' : (field === 'rationCard' ? 'Ration Card' : (field === 'mobileNumber' ? 'Mobile Number' : 'Community Certificate Number'))} is already registered.`
         });
     }
 

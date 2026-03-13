@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import API from '../api';
 import { FaSchool, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaGlobe, FaUser, FaBuilding, FaArrowLeft, FaEdit } from 'react-icons/fa';
 import AdminSidebar from '../components/AdminSidebar';
@@ -7,6 +7,7 @@ import AdminHeader from '../components/AdminHeader';
 
 const InstitutionDetail = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [institution, setInstitution] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -34,9 +35,9 @@ const InstitutionDetail = () => {
                 <AdminSidebar activePage="institutions" />
                 <main className="flex-1 overflow-y-auto p-8">
                     <div className="max-w-4xl mx-auto">
-                        <Link to="/admin/institutions" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 font-medium">
-                            <FaArrowLeft /> Back to Institutions
-                        </Link>
+                        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 font-medium">
+                            <FaArrowLeft /> Back
+                        </button>
 
                         <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
                             <div className="bg-[#1e2a4a] text-white p-8">

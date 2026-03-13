@@ -3,7 +3,7 @@ import {
     FaPlus, FaSearch, FaFilter, FaCircle, FaCommentAlt,
     FaPaperclip, FaChevronRight, FaTicketAlt, FaTimes, FaFileAlt, FaTrash, FaArrowLeft
 } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const TicketRow = ({ id, subject, category, date, status, hasAttachment, onClick }) => {
     const statusColors = {
@@ -301,6 +301,7 @@ const CreateTicketModal = ({ isOpen, onClose, onCreate }) => {
 };
 
 const Helpdesk = () => {
+    const navigate = useNavigate();
     const [activeFilter, setActiveFilter] = useState('All');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // Renamed for clarity
     const [selectedTicket, setSelectedTicket] = useState(null); // New state for details modal
@@ -355,9 +356,9 @@ const Helpdesk = () => {
 
             {/* Back Button */}
             <div className="">
-                <Link to="/dashboard" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
-                    <FaArrowLeft size={12} /> Back to Dashboard
-                </Link>
+                <button onClick={() => navigate(-1)} className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
+                    <FaArrowLeft size={12} /> Back
+                </button>
             </div>
 
             {/* Header */}

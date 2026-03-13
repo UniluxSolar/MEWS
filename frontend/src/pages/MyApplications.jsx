@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import API from '../api';
 import { FaPlus, FaDownload, FaFilter, FaCalendarAlt, FaCheckCircle, FaTimesCircle, FaClock, FaEye, FaUniversity, FaHeartbeat, FaBalanceScale, FaRunning, FaSearch, FaChevronDown, FaArrowLeft } from 'react-icons/fa';
 
@@ -40,6 +40,7 @@ const TypeIcon = ({ type }) => {
 }
 
 const MyApplications = () => {
+    const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilter, setTypeFilter] = useState('All');
     const [statusFilter, setStatusFilter] = useState('All');
@@ -145,9 +146,9 @@ const MyApplications = () => {
         <div className="w-full">
             {/* Back Button */}
             <div className="mb-4">
-                <Link to="/dashboard" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
-                    <FaArrowLeft size={12} /> Back to Dashboard
-                </Link>
+                <button onClick={() => navigate(-1)} className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
+                    <FaArrowLeft size={12} /> Back
+                </button>
             </div>
 
             {/* Header */}

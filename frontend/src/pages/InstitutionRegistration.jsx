@@ -275,9 +275,9 @@ const InstitutionRegistration = () => {
                             </>
                         }
                     >
-                        <Link to="/admin/institutions" className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-md text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all border border-white/20">
-                            <FaArrowLeft /> Back to List
-                        </Link>
+                        <button onClick={handleBack} className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-md text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all border border-white/20">
+                            <FaArrowLeft /> Back
+                        </button>
                     </DashboardHeader>
 
                     <div className="max-w-full px-4 pb-12 -mt-10">

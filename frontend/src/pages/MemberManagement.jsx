@@ -548,9 +548,21 @@ const MemberManagement = () => {
 
                 // Extract values based on key
                 switch (sortConfig.key) {
+                    case 'role':
+                        aValue = (a.role || 'MEMBER').toLowerCase();
+                        bValue = (b.role || 'MEMBER').toLowerCase();
+                        break;
                     case 'name':
                         aValue = `${a.name} ${a.surname}`.toLowerCase();
                         bValue = `${b.name} ${b.surname}`.toLowerCase();
+                        break;
+                    case 'district':
+                        aValue = getLocationName(a.address?.district).toLowerCase();
+                        bValue = getLocationName(b.address?.district).toLowerCase();
+                        break;
+                    case 'mandal':
+                        aValue = getLocationName(a.address?.mandal).toLowerCase();
+                        bValue = getLocationName(b.address?.mandal).toLowerCase();
                         break;
                     case 'village':
                         aValue = getLocationName(a.address?.village).toLowerCase();
@@ -672,7 +684,7 @@ const MemberManagement = () => {
             "Age": m.age,
             "Gender": m.gender,
             "Occupation": m.occupation,
-            "Date Joined": new Date(m.createdAt).toLocaleDateString()
+            "Date Joined": new Date(m.createdAt).toLocaleDateString('en-GB').replace(/\//g, '-')
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(data);
@@ -722,6 +734,9 @@ const MemberManagement = () => {
             }
         }
 
+        // Freeze the top row (header row)
+        worksheet['!views'] = [{ state: 'frozen', ySplit: 1, topLeftCell: 'A2', activeCell: 'A2' }];
+
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Members Filtered");
         XLSX.writeFile(workbook, `Members_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -738,7 +753,7 @@ const MemberManagement = () => {
 
         doc.setFontSize(10);
         doc.setTextColor(100);
-        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 28);
+        doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}`, 14, 28);
         doc.text(`Total Records: ${filteredMembers.length}`, 14, 33);
 
         const tableColumn = ["ID", "Name", "Mobile", "Village", "Age", "Gender", "Occupation"];
@@ -1095,31 +1110,40 @@ const MemberManagement = () => {
                                                                     onChange={handleSelectAll}
                                                                 />
                                                             </th>
-                                                            <th className="px-4 py-3 w-[22%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('name')}>
+                                                            <th className="px-4 py-3 w-[15%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('name')}>
                                                                 <div className="flex items-center gap-1">Name {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-4 py-3 w-[12%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('village')}>
+                                                            <th className="px-4 py-3 w-[10%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('role')}>
+                                                                <div className="flex items-center gap-1">Role {sortConfig.key === 'role' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
+                                                            </th>
+                                                            <th className="px-4 py-3 w-[10%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('district')}>
+                                                                <div className="flex items-center gap-1">District {sortConfig.key === 'district' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
+                                                            </th>
+                                                            <th className="px-4 py-3 w-[9%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('mandal')}>
+                                                                <div className="flex items-center gap-1">Mandal {sortConfig.key === 'mandal' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
+                                                            </th>
+                                                            <th className="px-4 py-3 w-[9%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('village')}>
                                                                 <div className="flex items-center gap-1">Village {sortConfig.key === 'village' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-4 py-3 w-[12%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('mobileNumber')}>
+                                                            <th className="px-4 py-3 w-[10%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('mobileNumber')}>
                                                                 <div className="flex items-center gap-1">Phone {sortConfig.key === 'mobileNumber' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-4 py-3 w-[6%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('age')}>
+                                                            <th className="px-4 py-3 w-[5%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('age')}>
                                                                 <div className="flex items-center gap-1">Age {sortConfig.key === 'age' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-4 py-3 w-[8%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('gender')}>
+                                                            <th className="px-4 py-3 w-[7%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('gender')}>
                                                                 <div className="flex items-center gap-1">Gender {sortConfig.key === 'gender' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-4 py-3 w-[12%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('occupation')}>
+                                                            <th className="px-4 py-3 w-[10%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('occupation')}>
                                                                 <div className="flex items-center gap-1">Occupation {sortConfig.key === 'occupation' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-4 py-3 w-[8%] text-center cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('family')}>
+                                                            <th className="px-4 py-3 w-[6%] text-center cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('family')}>
                                                                 <div className="flex items-center justify-center gap-1">Family {sortConfig.key === 'family' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-4 py-3 w-[10%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('createdAt')}>
+                                                            <th className="px-4 py-3 w-[8%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('createdAt')}>
                                                                 <div className="flex items-center gap-1">Joined {sortConfig.key === 'createdAt' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
-                                                            <th className="px-4 py-3 w-[8%] text-center">Actions</th>
+                                                            <th className="px-4 py-3 w-[6%] text-center">Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-50">
@@ -1146,7 +1170,37 @@ const MemberManagement = () => {
                                                                         <div className="text-[10px] text-slate-400 font-mono truncate">ID: {member.mewsId || member._id.substring(0, 6)}</div>
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-4 py-3 text-xs font-bold text-blue-600 truncate" title={`${getLocationName(member.address?.village) || member.address?.wardNumber || 'N/A'}, ${getLocationName(member.address?.constituency) || ''}, ${getLocationName(member.address?.mandal) || ''}`}>
+                                                                <td className="px-4 py-3">
+                                                                    {(() => {
+                                                                        const roleRaw = member.role || 'MEMBER';
+                                                                        const roleLabel = roleRaw
+                                                                            .replace(/_/g, ' ')
+                                                                            .toLowerCase()
+                                                                            .replace(/\b\w/g, c => c.toUpperCase());
+                                                                        const roleColors = {
+                                                                            SUPER_ADMIN: 'bg-red-100 text-red-700',
+                                                                            STATE_ADMIN: 'bg-purple-100 text-purple-700',
+                                                                            DISTRICT_ADMIN: 'bg-indigo-100 text-indigo-700',
+                                                                            MUNICIPALITY_ADMIN: 'bg-cyan-100 text-cyan-700',
+                                                                            MANDAL_ADMIN: 'bg-orange-100 text-orange-700',
+                                                                            VILLAGE_ADMIN: 'bg-green-100 text-green-700',
+                                                                            MEMBER: 'bg-slate-100 text-slate-500',
+                                                                        };
+                                                                        const colorClass = roleColors[roleRaw] || roleColors.MEMBER;
+                                                                        return (
+                                                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide whitespace-nowrap ${colorClass}`}>
+                                                                                {roleLabel}
+                                                                            </span>
+                                                                        );
+                                                                    })()}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-xs text-slate-600 truncate" title={getLocationName(member.address?.district) || 'N/A'}>
+                                                                    {getLocationName(member.address?.district) || <span className="text-slate-300">N/A</span>}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-xs text-slate-600 truncate" title={getLocationName(member.address?.mandal) || 'N/A'}>
+                                                                    {getLocationName(member.address?.mandal) || <span className="text-slate-300">N/A</span>}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-xs font-bold text-blue-600 truncate" title={`${getLocationName(member.address?.village) || member.address?.wardNumber || 'N/A'}`}>
                                                                     {getLocationName(member.address?.village) || member.address?.wardNumber || 'N/A'}
                                                                     {member.address?.municipality && <span className="text-[9px] text-slate-400 block">{getLocationName(member.address?.municipality)} (Mun)</span>}
                                                                 </td>
@@ -1155,7 +1209,7 @@ const MemberManagement = () => {
                                                                 <td className="px-4 py-3 text-xs text-slate-600">{member.gender}</td>
                                                                 <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide truncate inline-block max-w-full ${(member.occupation || '').toLowerCase().includes('farmer') ? 'bg-green-50 text-green-600' : (member.occupation || '').toLowerCase().includes('student') ? 'bg-blue-50 text-blue-600' : (member.occupation || '').toLowerCase().includes('business') ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>{member.occupation || 'Member'}</span></td>
                                                                 <td className="px-4 py-3 text-xs text-slate-600 text-center">{member.familyDetails?.memberCount || (member.familyMembers?.length ? member.familyMembers.length + 1 : 1)}</td>
-                                                                <td className="px-4 py-3 text-xs text-slate-500">{new Date(member.createdAt).toLocaleDateString()}</td>
+                                                                <td className="px-4 py-3 text-xs text-slate-500">{new Date(member.createdAt).toLocaleDateString('en-GB').replace(/\//g, '-')}</td>
                                                                 <td className="px-4 py-3 text-center relative action-menu-container">
                                                                     <button onClick={(e) => { e.stopPropagation(); toggleMenu(member._id); }} className="p-2 text-slate-400 hover:text-blue-600 transition rounded-full hover:bg-slate-100"><FaEllipsisV /></button>
                                                                     {activeMenuId === member._id && (

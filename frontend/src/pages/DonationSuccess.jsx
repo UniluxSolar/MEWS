@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
     FaCheckCircle, FaDownload, FaHeart, FaFacebookF, FaTwitter, FaWhatsapp, FaLinkedinIn,
     FaFileInvoiceDollar, FaLeaf, FaUserGraduate, FaHandHoldingHeart, FaArrowLeft
@@ -13,6 +13,7 @@ const SocialButton = ({ icon: Icon, color, href }) => (
 
 const DonationSuccess = () => {
     const location = useLocation();
+    const navigate = useNavigate();
     const {
         amount = '5,100',
         transactionId = 'TXN20241215001234',
@@ -26,9 +27,9 @@ const DonationSuccess = () => {
 
             {/* Back Nav */}
             <div className="py-6">
-                <Link to="/dashboard/donations" className="flex items-center gap-2 text-gray-500 hover:text-primary transition font-bold text-sm bg-white w-fit px-4 py-2 rounded-lg shadow-sm border border-gray-100">
-                    <FaArrowLeft size={12} /> Back to Donations
-                </Link>
+                <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-primary transition font-bold text-sm bg-white w-fit px-4 py-2 rounded-lg shadow-sm border border-gray-100">
+                    <FaArrowLeft size={12} /> Back
+                </button>
             </div>
 
             {/* Celebration Header */}

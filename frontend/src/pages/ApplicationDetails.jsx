@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import API from '../api';
 import { FaArrowLeft, FaUniversity, FaUser, FaClock, FaCheckCircle, FaFileAlt, FaMapMarkerAlt } from 'react-icons/fa';
 
 const ApplicationDetails = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [application, setApplication] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -54,9 +55,9 @@ const ApplicationDetails = () => {
         <div className="max-w-5xl mx-auto pb-10">
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
-                <Link to="/dashboard/applications" className="flex items-center gap-2 text-gray-500 hover:text-primary transition font-bold">
-                    <FaArrowLeft /> Back to Funding Request
-                </Link>
+                <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-primary transition font-bold">
+                    <FaArrowLeft /> Back
+                </button>
                 <div className="text-sm text-gray-400">
                     Applied on {new Date(application.createdAt).toLocaleDateString()}
                 </div>

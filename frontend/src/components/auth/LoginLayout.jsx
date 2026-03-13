@@ -1,7 +1,7 @@
 import React from 'react';
 import mewsLogo from '../../assets/mews_main_logo_new.png';
 
-const LoginLayout = ({ children, title, subtitle, footerLink, footerText, onFooterClick }) => {
+const LoginLayout = ({ children, title, subtitle, footerLink, footerText, onFooterClick, backButton }) => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f0f4f8] to-[#d1d9e6] p-4 font-sans text-gray-800 relative overflow-hidden">
             {/* Background Decorative Elements */}
@@ -9,6 +9,11 @@ const LoginLayout = ({ children, title, subtitle, footerLink, footerText, onFoot
             <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#1e2a4a] rounded-full blur-3xl opacity-10 animate-pulse"></div>
 
             <div className="w-full max-w-[450px] bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-white p-8 md:p-10 transition-all duration-500 relative z-10 hover:shadow-blue-900/10">
+                {backButton && (
+                    <div className="mb-4">
+                        {backButton}
+                    </div>
+                )}
                 <div className="mb-8 flex flex-col items-center text-center">
                     <div className="w-24 h-24 bg-gradient-to-tr from-[#1e2a4a] to-[#3a4b7a] rounded-3xl flex items-center justify-center shadow-xl mb-6 transform transition hover:scale-105 duration-300">
                         <img src={mewsLogo} alt="MEWS" className="w-16 h-16 object-contain" />

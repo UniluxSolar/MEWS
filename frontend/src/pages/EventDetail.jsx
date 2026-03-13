@@ -39,9 +39,9 @@ const EventDetail = () => {
 
             {/* Back Nav */}
             <div className="mb-6 flex justify-between items-center">
-                <Link to="/dashboard/jobs" className="text-gray-500 hover:text-primary text-sm flex items-center gap-2 font-bold transition">
-                    <FaChevronLeft size={10} /> Back to Events
-                </Link>
+                <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-primary text-sm flex items-center gap-2 font-bold transition">
+                    <FaChevronLeft size={10} /> Back
+                </button>
                 <div className="flex gap-4">
                     <button className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-primary transition"><FaShareAlt /> Share Event</button>
                 </div>

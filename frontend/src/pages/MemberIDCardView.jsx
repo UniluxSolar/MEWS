@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import API from '../api';
 import MemberIDCardTemplate from '../components/MemberIDCardTemplate';
 import html2canvas from 'html2canvas';
@@ -13,11 +13,7 @@ const MemberIDCardView = () => {
     const location = useLocation();
 
     const handleBack = () => {
-        if (window.history.length > 2) {
-            navigate(-1);
-        } else {
-            navigate('/admin/members');
-        }
+        navigate(-1);
     };
     const [member, setMember] = useState(null);
     const [loading, setLoading] = useState(true);

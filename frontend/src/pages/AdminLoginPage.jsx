@@ -147,12 +147,23 @@ const AdminLoginPage = () => {
         <LoginLayout
             title="Admin Portal"
             subtitle="Internal management & oversight"
-            footerLink={viewMode === 'LOGIN' ? 'First Time Login / Forgot Password?' : 'Back to Login'}
+            footerLink={viewMode === 'LOGIN' ? 'Forgot Password?' : 'Back to Login'}
             onFooterClick={() => {
                 setViewMode(viewMode === 'LOGIN' ? 'FORGOT' : 'LOGIN');
                 setFeedback(null);
                 setShowPassword(false);
             }}
+            backButton={
+                <button
+                    type="button"
+                    onClick={() => navigate('/')}
+                    className="inline-flex items-center gap-2 text-[#1e2a4a] font-bold text-sm px-3 py-2 rounded-xl hover:bg-[#1e2a4a]/10 active:scale-95 transition-all duration-200"
+                    aria-label="Go back to Home"
+                >
+                    <FaArrowLeft size={13} />
+                    <span>Back</span>
+                </button>
+            }
         >
             <CarouselModal />
 

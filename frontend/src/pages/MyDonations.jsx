@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import API from '../api';
 import {
     FaHeart, FaDownload, FaSearch, FaFilter, FaChevronLeft, FaChevronRight,
@@ -68,6 +68,7 @@ const DonationRow = ({ date, amount, purpose, type, transactionId, status }) => 
 );
 
 const MyDonations = () => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('all');
     const [donationsList, setDonationsList] = useState([]);
     const [stats, setStats] = useState({
@@ -152,9 +153,9 @@ const MyDonations = () => {
         <div className="w-full space-y-8 pb-10">
             {/* Back Button */}
             <div className="">
-                <Link to="/dashboard" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
-                    <FaArrowLeft size={12} /> Back to Dashboard
-                </Link>
+                <button onClick={() => navigate(-1)} className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
+                    <FaArrowLeft size={12} /> Back
+                </button>
             </div>
 
             {/* Header Section */}

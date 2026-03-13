@@ -405,20 +405,28 @@ const ProfileSettings = () => {
     useEffect(() => {
         const fetchProfile = async () => {
             try {
+                // Check multiple possible sources for logged-in user information
                 const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
-                // Use adminInfo._id to target specific member if needed, or rely on /auth/me or /members/me
-                // Since this component uses /members/:id, we need the ID. Login provides it.
-                if (!adminInfo?._id) return;
+                const memberInfo = JSON.parse(localStorage.getItem('memberInfo'));
+                const savedUser = JSON.parse(localStorage.getItem('savedUser'));
+                
+                const userInfo = adminInfo || memberInfo || savedUser;
+                const userId = userInfo?._id || userInfo?.id || userInfo?.memberId;
 
-                // Determine Read Only Mode
-                // If the user is a 'member' (not admin), enforce Read Only
-                // Assuming 'adminInfo.role' is available, or based on user request "member login totally on View mode"
-                // We will assume mostly ALL logins here are members unless role says 'admin'
-                if (adminInfo.role !== 'admin') {
-                    setIsReadOnly(true);
+                if (!userId) {
+                    console.error("No user ID found for fetching profile");
+                    setLoading(false);
+                    return;
                 }
 
-                const response = await API.get(`/members/${adminInfo._id}`);
+                // Default to Read Only for members
+                if (userInfo?.role === 'MEMBER' || userInfo?.role === 'HEAD' || userInfo?.role === 'DEPENDENT' || !adminInfo) {
+                    setIsReadOnly(true);
+                } else {
+                    setIsReadOnly(false); // Admins can edit by default
+                }
+
+                const response = await API.get(`/members/${userId}`);
 
                 if (response.data) {
                     let data = response.data;
@@ -454,9 +462,7 @@ const ProfileSettings = () => {
                     // Unified List
                     const allMembers = [headMember, ...dependents];
 
-                    // Mark Current User and Determine their Relation to Head
-                    // adminInfo.memberId is the ID of the logged-in user (Dependent or Head)
-                    const currentMemberId = adminInfo.memberId || adminInfo._id;
+                    const currentMemberId = userId;
 
                     // Find the logged-in user in the list to get their relation to HEAD
                     const currentUserObj = allMembers.find(m => (m._id === currentMemberId || m.mewsId === currentMemberId));
@@ -831,7 +837,7 @@ const ProfileSettings = () => {
                         </div>
                         <div className="flex-1 overflow-auto bg-gray-100 p-8">
                             {/* Render inside correct print container styles */}
-                            <div className="bg-white shadow-lg mx-auto max-w-[210mm] min-h-[297mm]">
+                            <div id="application-form-print" className="bg-white shadow-lg mx-auto max-w-[210mm] min-h-[297mm]">
                                 <MemberDocument data={formData} />
                             </div>
                         </div>
@@ -894,9 +900,9 @@ const ProfileSettings = () => {
 
             {/* Dashboard Link */}
             <div className="mb-6">
-                <Link to="/dashboard" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
-                    <FaArrowLeft size={12} /> Back to Dashboard
-                </Link>
+                <button onClick={() => navigate(-1)} className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
+                    <FaArrowLeft size={12} /> Back
+                </button>
             </div>
 
             {/* Main Content Card */}
@@ -980,10 +986,20 @@ const ProfileSettings = () => {
                                 <div className="text-center md:text-left flex-1">
                                     <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
                                         <h1 className="text-3xl font-bold text-gray-900">{formData.name} {formData.surname}</h1>
-                                        {isReadOnly && (
-                                            <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full border border-gray-200">
-                                                View Only
-                                            </span>
+                                        {isReadOnly ? (
+                                            <button 
+                                                onClick={() => setIsReadOnly(false)}
+                                                className="px-4 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-full border border-blue-200 hover:bg-blue-100 transition shadow-sm flex items-center gap-2"
+                                            >
+                                                <FaEdit size={10} /> Edit Profile
+                                            </button>
+                                        ) : (
+                                            <button 
+                                                onClick={() => setIsReadOnly(true)}
+                                                className="px-4 py-1.5 bg-gray-50 text-gray-600 text-xs font-bold rounded-full border border-gray-200 hover:bg-gray-100 transition shadow-sm flex items-center gap-2"
+                                            >
+                                                <FaTimes size={10} /> Cancel Editing
+                                            </button>
                                         )}
                                     </div>
                                     <div className="flex flex-wrap justify-center md:justify-start gap-6 text-sm text-gray-500">
@@ -1111,12 +1127,12 @@ const ProfileSettings = () => {
                                         <div className="group">
                                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">House Number</label>
                                             {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.permanentAddress.houseNumber || '-'}</p>
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.houseNumber || '-'}</p>
                                             ) : (
                                                 <input
                                                     type="text"
-                                                    name="permanentAddress.houseNumber"
-                                                    value={formData.permanentAddress.houseNumber}
+                                                    name="address.houseNumber"
+                                                    value={formData.address?.houseNumber}
                                                     onChange={handleChange}
                                                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                                 />
@@ -1125,12 +1141,12 @@ const ProfileSettings = () => {
                                         <div className="group">
                                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Street / Colony</label>
                                             {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.permanentAddress.street || '-'}</p>
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.street || '-'}</p>
                                             ) : (
                                                 <input
                                                     type="text"
-                                                    name="permanentAddress.street"
-                                                    value={formData.permanentAddress.street}
+                                                    name="address.street"
+                                                    value={formData.address?.street}
                                                     onChange={handleChange}
                                                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                                 />
@@ -1139,12 +1155,12 @@ const ProfileSettings = () => {
                                         <div className="group">
                                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Landmark</label>
                                             {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.permanentAddress.landmark || '-'}</p>
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.landmark || '-'}</p>
                                             ) : (
                                                 <input
                                                     type="text"
-                                                    name="permanentAddress.landmark"
-                                                    value={formData.permanentAddress.landmark}
+                                                    name="address.landmark"
+                                                    value={formData.address?.landmark}
                                                     onChange={handleChange}
                                                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                                 />
@@ -1153,12 +1169,12 @@ const ProfileSettings = () => {
                                         <div className="group">
                                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Village</label>
                                             {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.permanentAddress.village || '-'}</p>
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.village || '-'}</p>
                                             ) : (
                                                 <input
                                                     type="text"
-                                                    name="permanentAddress.village"
-                                                    value={formData.permanentAddress.village}
+                                                    name="address.village"
+                                                    value={formData.address?.village}
                                                     onChange={handleChange}
                                                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                                 />
@@ -1167,12 +1183,12 @@ const ProfileSettings = () => {
                                         <div className="group">
                                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Mandal</label>
                                             {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.permanentAddress.mandal || '-'}</p>
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.mandal || '-'}</p>
                                             ) : (
                                                 <input
                                                     type="text"
-                                                    name="permanentAddress.mandal"
-                                                    value={formData.permanentAddress.mandal}
+                                                    name="address.mandal"
+                                                    value={formData.address?.mandal}
                                                     onChange={handleChange}
                                                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                                 />
@@ -1181,12 +1197,12 @@ const ProfileSettings = () => {
                                         <div className="group">
                                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Constituency</label>
                                             {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.permanentAddress.constituency?.name || formData.permanentAddress.constituency || '-'}</p>
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.constituency?.name || formData.address?.constituency || '-'}</p>
                                             ) : (
                                                 <input
                                                     type="text"
-                                                    name="permanentAddress.constituency"
-                                                    value={formData.permanentAddress.constituency?.name || formData.permanentAddress.constituency}
+                                                    name="address.constituency"
+                                                    value={formData.address?.constituency?.name || formData.address?.constituency}
                                                     onChange={handleChange}
                                                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                                 />
@@ -1195,12 +1211,12 @@ const ProfileSettings = () => {
                                         <div className="group">
                                             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">District</label>
                                             {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address.district || '-'}</p>
+                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.district || '-'}</p>
                                             ) : (
                                                 <input
                                                     type="text"
                                                     name="address.district"
-                                                    value={formData.address.district}
+                                                    value={formData.address?.district}
                                                     onChange={handleChange}
                                                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                                 />
@@ -1210,12 +1226,12 @@ const ProfileSettings = () => {
                                             <div className="group">
                                                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">State</label>
                                                 {isReadOnly ? (
-                                                    <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address.state || 'Telangana'}</p>
+                                                    <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.state || 'Telangana'}</p>
                                                 ) : (
                                                     <input
                                                         type="text"
                                                         name="address.state"
-                                                        value={formData.address.state}
+                                                        value={formData.address?.state}
                                                         onChange={handleChange}
                                                         className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                                     />
@@ -1224,12 +1240,12 @@ const ProfileSettings = () => {
                                             <div className="group">
                                                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Pin Code</label>
                                                 {isReadOnly ? (
-                                                    <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address.pinCode || '-'}</p>
+                                                    <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.pinCode || '-'}</p>
                                                 ) : (
                                                     <input
                                                         type="text"
                                                         name="address.pinCode"
-                                                        value={formData.address.pinCode}
+                                                        value={formData.address?.pinCode}
                                                         onChange={handleChange}
                                                         className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
                                                     />

@@ -105,19 +105,19 @@ const loginUser = asyncHandler(async (req, res) => {
 
     if (!user) {
         res.status(401);
-        throw new Error('Invalid Credentials');
+        throw new Error('Invalid username or password');
     }
 
     // Check Password
     if (!user.passwordHash) {
         res.status(401);
-        throw new Error('Password not set. Please use "Forgot Password" to setup your password for the first time.');
+        throw new Error('Invalid username or password');
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
         res.status(401);
-        throw new Error('Invalid Credentials');
+        throw new Error('Invalid username or password');
     }
 
     // Identify Logged In Record

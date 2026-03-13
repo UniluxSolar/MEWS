@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FaUser, FaUsers, FaChevronRight, FaArrowLeft, FaSave, FaHospital, FaFileMedical, FaCheckCircle } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const StepIndicator = ({ step, title, subtext, currentStep }) => {
     const isCompleted = step < currentStep;
@@ -52,15 +52,16 @@ const RadioCard = ({ icon: Icon, title, description, selected, onClick }) => (
 );
 
 const HealthAssistance = () => {
+    const navigate = useNavigate();
     const [patientType, setPatientType] = useState('myself');
 
     return (
         <div className="w-full pb-12">
             {/* Back Button */}
             <div className="mb-4">
-                <Link to="/dashboard/services" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
-                    <FaArrowLeft size={12} /> Back to MEWS Services
-                </Link>
+                <button onClick={() => navigate(-1)} className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
+                    <FaArrowLeft size={12} /> Back
+                </button>
             </div>
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-[#1e2a4a]">Health Assistance Application</h1>
@@ -177,7 +178,7 @@ const HealthAssistance = () => {
 
                 {/* Footer Buttons */}
                 <div className="p-6 bg-gray-50 border-t border-gray-200 flex flex-col-reverse md:flex-row justify-between gap-4">
-                    <button className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2">
+                    <button onClick={() => navigate(-1)} className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 transition flex items-center justify-center gap-2">
                         <FaArrowLeft /> Cancel
                     </button>
                     <div className="flex flex-col md:flex-row gap-4">

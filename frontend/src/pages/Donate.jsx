@@ -98,9 +98,9 @@ const Donate = () => {
         <div className="w-full space-y-8 pb-12">
             {/* Back Button */}
             <div className="">
-                <Link to="/dashboard/donations" className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
-                    <FaArrowLeft size={12} /> Back to My Donations
-                </Link>
+                <button onClick={() => navigate(-1)} className="text-secondary hover:text-amber-600 flex items-center gap-2 text-sm font-bold transition-all w-fit">
+                    <FaArrowLeft size={12} /> Back
+                </button>
             </div>
             {/* Page Header - Keeping existing code... */}
             <div className="text-center md:text-left">

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import API, { BASE_URL } from '../api';
 import axios from 'axios'; // Direct import for file upload to bypass interceptor issues
@@ -59,20 +59,24 @@ const CollapsibleSection = ({ title, icon: Icon, sectionNumber, isOpen, onToggle
 
 
 // Form Input Component
-const FormInput = ({ label, placeholder, type = "text", required = false, colSpan = "col-span-1", value, onChange, name, disabled = false, error }) => (
+const FormInput = ({ label, placeholder, type = "text", required = false, colSpan = "col-span-1", value, onChange, onBlur, name, disabled = false, error, maxLength }) => (
     <div className={colSpan}>
         <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
             {label} {required && <span className="text-red-500">*</span>}
         </label>
-        <input
-            type={type}
-            name={name}
-            value={value}
-            onChange={onChange}
-            disabled={disabled}
-            className={`w-full bg-white border ${error ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-400 ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
-            placeholder={placeholder}
-        />
+        <div className="relative">
+            <input
+                type={type}
+                name={name}
+                value={value || ''}
+                onChange={onChange}
+                onBlur={onBlur}
+                disabled={disabled}
+                maxLength={maxLength}
+                className={`w-full bg-white border ${error ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-400 ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
+                placeholder={placeholder}
+            />
+        </div>
         {error && <p className="text-red-500 text-xs mt-1 font-medium">{error}</p>}
     </div>
 );
@@ -280,20 +284,59 @@ const MemberRegistration = () => {
         return age >= 0 ? age : 0;
     };
 
-    // Helper: Handle Date Input with Masking
-    const handleDateChange = (e, setFormState, fieldName) => {
-        let val = e.target.value.replace(/\D/g, ''); // Remove non-digits
-        if (val.length > 8) val = val.substring(0, 8); // Max 8 digits
+    // Helper: Validate DOB
+    const validateDOB = (dob) => {
+        if (!dob) return null;
+        if (dob.length < 10) return "Please enter a valid DOB";
 
-        // Format DD-MM-YYYY
-        if (val.length > 4) {
-            val = `${val.slice(0, 2)}-${val.slice(2, 4)}-${val.slice(4)}`;
-        } else if (val.length > 2) {
-            val = `${val.slice(0, 2)}-${val.slice(2)}`;
+        const [dStr, mStr, yStr] = dob.split('-');
+        const d = parseInt(dStr, 10);
+        const m = parseInt(mStr, 10);
+        const y = parseInt(yStr, 10);
+
+        if (isNaN(d) || isNaN(m) || isNaN(y)) return "Please enter a valid DOB";
+        if (d > 31 || m > 12) return "Please enter a valid DOB";
+
+        const date = new Date(y, m - 1, d);
+        if (date.getFullYear() !== y || date.getMonth() !== (m - 1) || date.getDate() !== d) {
+            return "Please enter a valid DOB";
         }
 
-        setFormState(prev => ({ ...prev, [fieldName]: val }));
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (date > today) {
+            return "Please enter a valid DOB";
+        }
+
+        return null;
     };
+
+    const handleDateChange = (e, setter, fieldName) => {
+        let val = e.target.value.replace(/\D/g, ''); // Keep only digits
+        if (val.length > 8) val = val.slice(0, 8); // Max 8 digits
+
+        let formatted = '';
+        if (val.length > 0) {
+            formatted += val.slice(0, 2);
+            if (val.length > 2) {
+                formatted += '-' + val.slice(2, 4);
+                if (val.length > 4) {
+                    formatted += '-' + val.slice(4, 8);
+                }
+            }
+        }
+
+        setter(prev => ({ ...prev, [fieldName]: formatted }));
+
+        // Clear error as user types
+        setErrors(prev => {
+            const next = { ...prev };
+            delete next[fieldName];
+            return next;
+        });
+    };
+
+
 
     // Duplicate Check Handler
     const handleDuplicateCheck = async (field, value) => {
@@ -340,7 +383,7 @@ const MemberRegistration = () => {
         bloodGroup: '',
         alternateMobile: '',
         email: '',
-        aadhaarNumber: '',
+
 
         // Present Address
         presentDistrict: '',
@@ -408,16 +451,38 @@ const MemberRegistration = () => {
 
     const [files, setFiles] = useState({});
     const [loading, setLoading] = useState(false);
-    const [sameAsPermanent, setSameAsPermanent] = useState(false);
+    const [sameAsPresent, setSameAsPresent] = useState(false);
     // State for Admin Location & Role (Removed - using Hook)
     const [errors, setErrors] = useState({});
+    const [touched, setTouched] = useState({});
+
+    // Helper: only show error for a field the user has already interacted with
+    const getFieldError = (fieldName) => touched[fieldName] ? errors[fieldName] : undefined;
+
+    // Sequential field locking: a field is enabled only when all preceding required fields are filled
+    const BASIC_FIELD_SEQUENCE = [
+        { name: 'surname', isFilled: () => !!formData.surname?.trim() },
+        { name: 'name', isFilled: () => !!formData.name?.trim() },
+        { name: 'fatherName', isFilled: () => !!formData.fatherName?.trim() },
+        { name: 'gender', isFilled: () => !!formData.gender },
+        { name: 'occupation', isFilled: () => !!formData.occupation },
+        { name: 'mobileNumber', isFilled: () => formData.mobileNumber?.length === 10 },
+    ];
+    const isFieldEnabled = (fieldName) => {
+        const idx = BASIC_FIELD_SEQUENCE.findIndex(f => f.name === fieldName);
+        if (idx <= 0) return true; // first field or not in sequence = always enabled
+        for (let i = 0; i < idx; i++) {
+            if (!BASIC_FIELD_SEQUENCE[i].isFilled()) return false;
+        }
+        return true;
+    };
 
     // Family Member State
     const [showFamilyModal, setShowFamilyModal] = useState(false);
     const [familyMembers, setFamilyMembers] = useState([]);
     const [editingMemberIndex, setEditingMemberIndex] = useState(null); // Track which member is being edited
     const [familyMemberForm, setFamilyMemberForm] = useState({
-        relation: '', maritalStatus: '', surname: '', name: '', fatherName: '', dob: '', age: '', occupation: '', educationLevel: '', gender: '', mobileNumber: '', aadhaarNumber: '',
+        relation: '', maritalStatus: '', surname: '', name: '', fatherName: '', dob: '', age: '', occupation: '', educationLevel: '', gender: '', mobileNumber: '',
         epicNumber: '', voterName: '', pollingBooth: '',
         jobSector: '', jobOrganization: '', jobDesignation: '', jobCategory: '', jobSubCategory: ''
     });
@@ -448,11 +513,7 @@ const MemberRegistration = () => {
 
         let updatedForm = { [name]: value };
 
-        if (name === 'aadhaarNumber') {
-            const raw = value.replace(/\D/g, '');
-            if (raw.length > 12) return;
-            updatedForm[name] = raw.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
-        }
+
 
         if (name === 'mobileNumber') {
             if (!/^\d*$/.test(value)) return;
@@ -516,7 +577,7 @@ const MemberRegistration = () => {
         setFamilyMemberForm({
             relation: member.relation, maritalStatus: member.maritalStatus || '', surname: member.surname, name: member.name, fatherName: member.fatherName || '', dob: member.dob, age: member.age,
             occupation: member.occupation, educationLevel: member.educationLevel || '', gender: member.gender,
-            mobileNumber: member.mobileNumber || '', aadhaarNumber: member.aadhaarNumber || '',
+            mobileNumber: member.mobileNumber || '',
             epicNumber: member.epicNumber || '', voterName: member.voterName || '', pollingBooth: member.pollingBooth || '',
             jobSector: member.jobSector || '', jobOrganization: member.jobOrganization || '', jobDesignation: member.jobDesignation || '', jobCategory: member.jobCategory || '', jobSubCategory: member.jobSubCategory || ''
         });
@@ -527,7 +588,7 @@ const MemberRegistration = () => {
 
     const openAddFamilyModal = () => {
         setFamilyMemberForm({
-            relation: '', maritalStatus: '', surname: createdMemberData ? createdMemberData.surname : formData.surname, name: '', fatherName: '', dob: '', age: '', occupation: '', educationLevel: '', gender: '', mobileNumber: '', aadhaarNumber: '',
+            relation: '', maritalStatus: '', surname: createdMemberData ? createdMemberData.surname : formData.surname, name: '', fatherName: '', dob: '', age: '', occupation: '', educationLevel: '', gender: '', mobileNumber: '',
             epicNumber: '', voterName: '', pollingBooth: '',
             jobSector: '', jobOrganization: '', jobDesignation: '', jobCategory: '', jobSubCategory: ''
         });
@@ -548,7 +609,7 @@ const MemberRegistration = () => {
         if (!familyMemberForm.dob) missing.push("Date of Birth");
         if (!familyMemberForm.gender) missing.push("Gender");
         if (!familyMemberForm.mobileNumber) missing.push("Mobile Number");
-        if (!familyMemberForm.aadhaarNumber) missing.push("Aadhaar Number");
+
 
         // Occupation Check
         const ageVal = parseInt(familyMemberForm.age || 0);
@@ -589,9 +650,7 @@ const MemberRegistration = () => {
             alert("Family member mobile number must be 10 digits"); return;
         }
 
-        if (familyMemberForm.aadhaarNumber && familyMemberForm.aadhaarNumber.replace(/\s/g, '').length !== 12) {
-            alert("Family member Aadhaar number must be 12 digits"); return;
-        }
+
 
         if (familyMemberForm.epicNumber) {
             if (familyMemberForm.epicNumber) {
@@ -628,7 +687,7 @@ const MemberRegistration = () => {
 
         setShowFamilyModal(false);
         setFamilyMemberForm({
-            relation: '', surname: '', name: '', fatherName: '', dob: '', age: '', occupation: '', educationLevel: '', gender: '', mobileNumber: '', aadhaarNumber: '',
+            relation: '', surname: '', name: '', fatherName: '', dob: '', age: '', occupation: '', educationLevel: '', gender: '', mobileNumber: '',
             epicNumber: '', voterName: '', pollingBooth: '',
             jobSector: '', jobOrganization: '', jobDesignation: '', jobCategory: '', jobSubCategory: ''
         });
@@ -706,7 +765,7 @@ const MemberRegistration = () => {
                 bloodGroup: '',
                 alternateMobile: '',
                 email: '',
-                aadhaarNumber: '',
+
                 presentDistrict: '',
                 presentConstituency: '',
                 presentMandal: '',
@@ -751,9 +810,10 @@ const MemberRegistration = () => {
             // Reset family members
             setFamilyMembers([]);
             // Reset checkboxes/toggles
-            setSameAsPermanent(false);
-            // Clear errors
+            setSameAsPresent(false);
+            // Clear errors and touched state
             setErrors({});
+            setTouched({});
             // Clear removed files tracking
             setRemovedFiles([]);
             // Reset sections to default (only Basic Info open)
@@ -1217,6 +1277,25 @@ const MemberRegistration = () => {
         }
     };
 
+    const handleEmailBlur = (e) => {
+        const fullEmail = formData.email;
+        if (!fullEmail) {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors.email;
+                return newErrors;
+            });
+        } else if (!/^[^\s@]+@gmail\.com$/.test(fullEmail)) {
+            setErrors(prev => ({ ...prev, email: "Invalid email format" }));
+        } else {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors.email;
+                return newErrors;
+            });
+        }
+    };
+
     // Handle Input Change (Generalized)
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -1234,18 +1313,7 @@ const MemberRegistration = () => {
             if (value.length > 10) return;
         }
 
-        if (name === 'aadhaarNumber') {
-            // Remove non-digits
-            const raw = value.replace(/\D/g, '');
-            // Limit to 12 digits
-            if (raw.length > 12) return;
 
-            // Format: 0000 0000 0000
-            const formatted = raw.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
-
-            setFormData(prev => ({ ...prev, [name]: formatted }));
-            return;
-        }
 
         if (name === 'rationCardNumber') {
             // Only digits, max 12
@@ -1283,23 +1351,28 @@ const MemberRegistration = () => {
 
 
 
-        setFormData(prev => {
-            const newData = { ...prev, [name]: value };
+        const newData = { ...formData, [name]: value };
 
-            // Reset Job Sub-Category if Job Category changes
-            if (name === 'jobCategory') {
-                newData.jobSubCategory = '';
-            }
+        // Reset Job Sub-Category if Job Category changes
+        if (name === 'jobCategory') {
+            newData.jobSubCategory = '';
+        }
 
-            if (sameAsPermanent && name.startsWith('perm')) {
-                const presentField = name.replace('perm', 'present');
-                newData[presentField] = value;
-            }
-            return newData;
-        });
+        if (sameAsPresent && name.startsWith('present')) {
+            const permField = name.replace('present', 'perm');
+            newData[permField] = value;
+        }
 
-        // Clear error when user changes the value
-        if (errors[name]) {
+        setFormData(prev => ({ ...prev, ...newData }));
+
+        // Mark this field as touched
+        setTouched(prev => ({ ...prev, [name]: true }));
+
+        // Real-time validation for the current field only
+        const currentErrors = validateForm(newData);
+        if (currentErrors[name]) {
+            setErrors(prev => ({ ...prev, [name]: currentErrors[name] }));
+        } else if (errors[name]) {
             setErrors(prev => {
                 const newErrs = { ...prev };
                 delete newErrs[name];
@@ -1314,7 +1387,7 @@ const MemberRegistration = () => {
 
         // Map frontend field names to backend expected keys
         let fieldKey = '';
-        if (name === 'aadhaarNumber') fieldKey = 'aadhaarNumber';
+
         if (name === 'epicNumber') fieldKey = 'voterId';
         if (name === 'rationCardNumber') fieldKey = 'rationCard';
         if (name === 'mobileNumber') fieldKey = 'mobileNumber';
@@ -1339,7 +1412,33 @@ const MemberRegistration = () => {
 
     const handleBlur = (e) => {
         const { name, value } = e.target;
-        if (['aadhaarNumber', 'epicNumber', 'rationCardNumber', 'mobileNumber'].includes(name)) {
+
+        // Mark field as touched so its error becomes visible
+        setTouched(prev => ({ ...prev, [name]: true }));
+
+        // Real-time validation for critical fields (like DOB)
+        if (name === 'dob') {
+            const dobErr = validateDOB(value);
+            if (dobErr) {
+                setErrors(prev => ({ ...prev, [name]: dobErr }));
+                return; // Stop further checks if DOB is invalid
+            }
+        }
+
+        // Validate this field and set/clear its error
+        const currentErrors = validateForm(formData);
+        if (currentErrors[name]) {
+            setErrors(prev => ({ ...prev, [name]: currentErrors[name] }));
+        } else if (errors[name]) {
+            setErrors(prev => {
+                const newErrs = { ...prev };
+                delete newErrs[name];
+                return newErrs;
+            });
+        }
+
+        // Also run duplicate check for specific fields
+        if (['epicNumber', 'rationCardNumber', 'mobileNumber'].includes(name)) {
             checkFieldDuplicate(name, value);
         }
     };
@@ -1442,6 +1541,30 @@ const MemberRegistration = () => {
         await handleSendVerificationCode();
     };
 
+    // Handle Email Username Change
+    const handleEmailUsernameChange = (e) => {
+        const { value } = e.target;
+        // Strip any whitespace and '@' characters if they exist
+        const username = value.replace(/[\s@]/g, '');
+        const fullEmail = username ? `${username}@gmail.com` : '';
+
+        setFormData(prev => ({ ...prev, email: fullEmail }));
+
+        // Mark as touched
+        if (username) {
+            setTouched(prev => ({ ...prev, email: true }));
+        }
+
+        // Clear verification status if email changes
+        if (emailVerification.isVerified) {
+            setEmailVerification(prev => ({
+                ...prev,
+                isVerified: false,
+                codeSent: false
+            }));
+        }
+    };
+
     // Handle File Change
     const handleFileChange = async (e) => {
         const { name, files: selectedFiles } = e.target;
@@ -1474,31 +1597,32 @@ const MemberRegistration = () => {
     };
 
 
-    // Handle Checkbox Change (Same as Permanent)
-    const handleSameAsPermanentChange = (e) => {
+    // Handle Checkbox Change (Same as Present)
+    const handleSameAsPresentChange = (e) => {
         const checked = e.target.checked;
-        setSameAsPermanent(checked);
+        setSameAsPresent(checked);
 
         if (checked) {
-            // Copy Permanent to Present
-
-            // Copy Constituencies List
-            setPresentConstituencies(permConstituencies);
-
-            // Copy lists
-            setMandals(permMandals);
-            setVillages(permVillages);
+            // Copy Present to Permanent
+            setPermConstituencies(presentConstituencies);
+            setPermMandals(mandals);
+            setPermVillages(villages);
+            setPermMunicipalities(municipalities);
+            setPermWards(presentWards);
 
             setFormData(prev => ({
                 ...prev,
-                presentDistrict: prev.permDistrict,
-                presentConstituency: prev.permConstituency,
-                presentMandal: prev.permMandal,
-                presentVillage: prev.permVillage,
-                presentHouseNo: prev.permHouseNo,
-                presentStreet: prev.permStreet,
-                presentLandmark: prev.permLandmark,
-                presentPincode: prev.permPincode,
+                permDistrict: prev.presentDistrict,
+                permConstituency: prev.presentConstituency,
+                permMandal: prev.presentMandal,
+                permVillage: prev.presentVillage,
+                permMunicipality: prev.presentMunicipality,
+                permWardNumber: prev.presentWardNumber,
+                permAreaType: prev.presentAreaType,
+                permHouseNo: prev.presentHouseNo,
+                permStreet: prev.presentStreet,
+                permLandmark: prev.presentLandmark,
+                permPincode: prev.presentPincode,
             }));
         }
     };
@@ -1700,38 +1824,41 @@ const MemberRegistration = () => {
         }
     }, [formData.occupation, formData.politicalFromDate]);
 
-    const validateForm = () => {
+    const validateForm = (data = formData) => {
         const newErrors = {};
 
         // Basic Info
-        if (!formData.surname) newErrors.surname = "Surname is required";
-        if (!formData.name) newErrors.name = "Name is required";
-        if (!formData.fatherName) newErrors.fatherName = "Father's name is required";
-        // if (!formData.dob) newErrors.dob = "Date of Birth is required";
-        if (!formData.gender) newErrors.gender = "Gender is required";
-        if (!formData.mobileNumber) newErrors.mobileNumber = "Mobile number is required";
-        else if (formData.mobileNumber.length !== 10) newErrors.mobileNumber = "Mobile number must be 10 digits";
-        if (!formData.aadhaarNumber) newErrors.aadhaarNumber = "Aadhaar number is required";
-        else if (formData.aadhaarNumber.replace(/\s/g, '').length !== 12) newErrors.aadhaarNumber = "Aadhaar number must be 12 digits";
+        if (!data.surname) newErrors.surname = "Surname is required";
+        if (!data.name) newErrors.name = "Name is required";
+        if (!data.fatherName) newErrors.fatherName = "This field is Mandatory";
 
-        // Email Validation
+        // DOB Validation
+        const dobErr = validateDOB(data.dob);
+        if (dobErr) newErrors.dob = dobErr;
+        else if (!data.dob) newErrors.dob = "Date of Birth is required";
+
+        if (!data.gender) newErrors.gender = "Please select your gender.";
+        if (!data.mobileNumber) newErrors.mobileNumber = "Mobile number is required";
+        else if (data.mobileNumber.length !== 10) newErrors.mobileNumber = "Mobile number must be 10 digits";
+
+
         // Email Validation - Optional
-        if (formData.email) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(formData.email)) newErrors.email = "Invalid email format";
+        if (data.email) {
+            const emailRegex = /^[^\s@]+@gmail\.com$/;
+            if (!emailRegex.test(data.email)) newErrors.email = "Invalid email format";
         }
 
-        if (!formData.occupation) newErrors.occupation = "Occupation is required";
+        if (!data.occupation) newErrors.occupation = "Occupation is required";
 
         // Political Elected Validation
-        if (formData.occupation === 'Political Elected') {
-            if (!formData.politicalPosition) newErrors.politicalPosition = "Political Position is required";
-            if (!formData.politicalFromDate) newErrors.politicalFromDate = "From Date is required";
-            if (!formData.politicalToDate) newErrors.politicalToDate = "To Date is required";
+        if (data.occupation === 'Political Elected') {
+            if (!data.politicalPosition) newErrors.politicalPosition = "Political Position is required";
+            if (!data.politicalFromDate) newErrors.politicalFromDate = "From Date is required";
+            if (!data.politicalToDate) newErrors.politicalToDate = "To Date is required";
 
-            if (formData.politicalFromDate && formData.politicalToDate) {
-                const from = new Date(formData.politicalFromDate);
-                const to = new Date(formData.politicalToDate);
+            if (data.politicalFromDate && data.politicalToDate) {
+                const from = new Date(data.politicalFromDate);
+                const to = new Date(data.politicalToDate);
 
                 if (to < from) {
                     newErrors.politicalToDate = "To Date cannot be before From Date";
@@ -1761,47 +1888,47 @@ const MemberRegistration = () => {
             }
         }
 
-        if (formData.occupation === 'Private Employee') {
-            if (!formData.jobSector) newErrors.jobSector = "Job Sector is required";
-            if (!formData.jobOrganization) newErrors.jobOrganization = "Organization is required";
-            if (!formData.jobDesignation) newErrors.jobDesignation = "Designation is required";
+        if (data.occupation === 'Private Employee') {
+            if (!data.jobSector) newErrors.jobSector = "Job Sector is required";
+            if (!data.jobOrganization) newErrors.jobOrganization = "Organization is required";
+            if (!data.jobDesignation) newErrors.jobDesignation = "Designation is required";
         }
 
-        if (formData.occupation === 'Self-Employed / Business') {
-            if (!formData.businessType) newErrors.businessType = "Type of Business is required";
+        if (data.occupation === 'Self-Employed / Business') {
+            if (!data.businessType) newErrors.businessType = "Type of Business is required";
         }
 
         // Present Address
-        if (!formData.presentDistrict) newErrors.presentDistrict = "District is required";
-        if (!formData.presentConstituency) newErrors.presentConstituency = "Constituency is required";
+        if (!data.presentDistrict) newErrors.presentDistrict = "District is required";
+        if (!data.presentConstituency) newErrors.presentConstituency = "Constituency is required";
 
-        if (formData.presentAreaType === 'Urban') {
-            if (!formData.presentMunicipality) newErrors.presentMunicipality = "Municipality is required";
-            if (!formData.presentWardNumber) newErrors.presentWardNumber = "Ward Number is required";
+        if (data.presentAreaType === 'Urban') {
+            if (!data.presentMunicipality) newErrors.presentMunicipality = "Municipality is required";
+            if (!data.presentWardNumber) newErrors.presentWardNumber = "Ward Number is required";
         } else {
-            if (!formData.presentMandal) newErrors.presentMandal = "Mandal is required";
-            if (!formData.presentVillage) newErrors.presentVillage = "Village is required";
+            if (!data.presentMandal) newErrors.presentMandal = "Mandal is required";
+            if (!data.presentVillage) newErrors.presentVillage = "Village is required";
         }
 
-        if (!formData.presentHouseNo) newErrors.presentHouseNo = "House No is required";
-        if (!formData.presentPincode) newErrors.presentPincode = "Pincode is required";
-        else if (formData.presentPincode.length !== 6) newErrors.presentPincode = "Pincode must be 6 digits";
+        if (!data.presentHouseNo) newErrors.presentHouseNo = "House No is required";
+        if (!data.presentPincode) newErrors.presentPincode = "Pincode is required";
+        else if (data.presentPincode.length !== 6) newErrors.presentPincode = "Pincode must be 6 digits";
 
         // Permanent Address
-        if (!formData.permDistrict) newErrors.permDistrict = "District is required";
-        if (!formData.permConstituency) newErrors.permConstituency = "Constituency is required";
+        if (!data.permDistrict) newErrors.permDistrict = "District is required";
+        if (!data.permConstituency) newErrors.permConstituency = "Constituency is required";
 
-        if (formData.permAreaType === 'Urban') {
-            if (!formData.permMunicipality) newErrors.permMunicipality = "Municipality is required";
-            if (!formData.permWardNumber) newErrors.permWardNumber = "Ward Number is required";
+        if (data.permAreaType === 'Urban') {
+            if (!data.permMunicipality) newErrors.permMunicipality = "Municipality is required";
+            if (!data.permWardNumber) newErrors.permWardNumber = "Ward Number is required";
         } else {
-            if (!formData.permMandal) newErrors.permMandal = "Mandal is required";
-            if (!formData.permVillage) newErrors.permVillage = "Village is required";
+            if (!data.permMandal) newErrors.permMandal = "Mandal is required";
+            if (!data.permVillage) newErrors.permVillage = "Village is required";
         }
 
-        if (!formData.permHouseNo) newErrors.permHouseNo = "House No is required";
-        if (!formData.permPincode) newErrors.permPincode = "Pincode is required";
-        else if (formData.permPincode.length !== 6) newErrors.permPincode = "Pincode must be 6 digits";
+        if (!data.permHouseNo) newErrors.permHouseNo = "House No is required";
+        if (!data.permPincode) newErrors.permPincode = "Pincode is required";
+        else if (data.permPincode.length !== 6) newErrors.permPincode = "Pincode must be 6 digits";
 
         // Present Address (if not same) - Validation logic is covered above because we don't conditionally skip validation blocks based on 'sameAsPermanent' checkbox in the object state
         // Actually, if sameAsPermanent is true, typically the UI hides present, but the state is synced.
@@ -1826,7 +1953,7 @@ const MemberRegistration = () => {
         // 2. Present Address is validated ONLY if !sameAsPermanent.
         // BUT the form might require Present Address always to be filled?
         // Let's re-read original code around 1542.
-        // "if (!formData.presentDistrict) newErrors.presentDistrict ..."
+        // "if (!data.presentDistrict) newErrors.presentDistrict ..."
         // This runs unconditionally. So Present Address IS mandatory always in the original code.
         // Then lines 1560 "if (!sameAsPermanent)" repeats the checks?
         // That seems like a bug or legacy code in the original file.
@@ -1838,73 +1965,74 @@ const MemberRegistration = () => {
 
         /* REVISED VALIDATION PLAN */
         // Present Address
-        if (!formData.presentDistrict) newErrors.presentDistrict = "District is required";
-        if (!formData.presentConstituency) newErrors.presentConstituency = "Constituency is required";
+        if (!data.presentDistrict) newErrors.presentDistrict = "District is required";
+        if (!data.presentConstituency) newErrors.presentConstituency = "Constituency is required";
 
-        if (formData.presentAreaType === 'Urban') {
-            if (!formData.presentMunicipality) newErrors.presentMunicipality = "Municipality is required";
-            if (!formData.presentWardNumber) newErrors.presentWardNumber = "Ward Number is required";
+        if (data.presentAreaType === 'Urban') {
+            if (!data.presentMunicipality) newErrors.presentMunicipality = "Municipality is required";
+            if (!data.presentWardNumber) newErrors.presentWardNumber = "Ward Number is required";
         } else {
-            if (!formData.presentMandal) newErrors.presentMandal = "Mandal is required";
-            if (!formData.presentVillage) newErrors.presentVillage = "Village is required";
+            if (!data.presentMandal) newErrors.presentMandal = "Mandal is required";
+            if (!data.presentVillage) newErrors.presentVillage = "Village is required";
         }
 
-        if (!formData.presentHouseNo) newErrors.presentHouseNo = "House No is required";
-        if (!formData.presentPincode) newErrors.presentPincode = "Pincode is required";
-        else if (formData.presentPincode.length !== 6) newErrors.presentPincode = "Pincode must be 6 digits";
+        if (!data.presentHouseNo) newErrors.presentHouseNo = "House No is required";
+        if (!data.presentPincode) newErrors.presentPincode = "Pincode is required";
+        else if (data.presentPincode.length !== 6) newErrors.presentPincode = "Pincode must be 6 digits";
 
         // Permanent Address
-        if (!formData.permDistrict) newErrors.permDistrict = "District is required";
-        if (!formData.permConstituency) newErrors.permConstituency = "Constituency is required";
+        if (!data.permDistrict) newErrors.permDistrict = "District is required";
+        if (!data.permConstituency) newErrors.permConstituency = "Constituency is required";
 
-        if (formData.permAreaType === 'Urban') {
-            if (!formData.permMunicipality) newErrors.permMunicipality = "Municipality is required";
-            if (!formData.permWardNumber) newErrors.permWardNumber = "Ward Number is required";
+        if (data.permAreaType === 'Urban') {
+            if (!data.permMunicipality) newErrors.permMunicipality = "Municipality is required";
+            if (!data.permWardNumber) newErrors.permWardNumber = "Ward Number is required";
         } else {
-            if (!formData.permMandal) newErrors.permMandal = "Mandal is required";
-            if (!formData.permVillage) newErrors.permVillage = "Village is required";
+            if (!data.permMandal) newErrors.permMandal = "Mandal is required";
+            if (!data.permVillage) newErrors.permVillage = "Village is required";
         }
 
-        if (!formData.permHouseNo) newErrors.permHouseNo = "House No is required";
-        if (!formData.permPincode) newErrors.permPincode = "Pincode is required";
-        else if (formData.permPincode.length !== 6) newErrors.permPincode = "Pincode must be 6 digits";
+        if (!data.permHouseNo) newErrors.permHouseNo = "House No is required";
+        if (!data.permPincode) newErrors.permPincode = "Pincode is required";
+        else if (data.permPincode.length !== 6) newErrors.permPincode = "Pincode must be 6 digits";
 
         // Remove the redundant block at 1560 if I replace the whole section.
         // I will replace from 1542 to 1568.
 
         // Ration Card
-        if (formData.hasRationCard && formData.rationCardNumber) {
-            if (formData.rationCardNumber.length !== 12) newErrors.rationCardNumber = "Ration card number must be 12 digits";
+        if (data.hasRationCard && data.rationCardNumber) {
+            if (data.rationCardNumber.length !== 12) newErrors.rationCardNumber = "Ration card number must be 12 digits";
         }
 
         // Voter ID
-        if (formData.epicNumber) {
-            if (formData.epicNumber) {
+        if (data.epicNumber) {
+            if (data.epicNumber) {
                 const epicRegex = /^[A-Z]{4}[0-9]{6}$/;
-                if (!epicRegex.test(formData.epicNumber)) {
+                if (!epicRegex.test(data.epicNumber)) {
                     newErrors.epicNumber = "Invalid Voter ID format (e.g., ABCD123456)";
                 }
             }
         }
 
         // Other Details
-        if (!formData.caste) newErrors.caste = "Caste is required";
-        if (!formData.maritalStatus) newErrors.maritalStatus = "Marital status is required";
+        if (!data.caste) newErrors.caste = "Caste is required";
+        if (!data.maritalStatus) newErrors.maritalStatus = "Marital status is required";
 
-        if (formData.communityCertNumber && formData.communityCertNumber.length !== 15) {
+        if (data.communityCertNumber && data.communityCertNumber.length !== 15) {
             newErrors.communityCertNumber = "Community Certificate Number must be 15 characters";
         }
 
         // Files
         if (!isEditMode && !files.photo) newErrors.photo = "Member Photo is required";
-        // if (!files.aadhaarFront) newErrors.aadhaarFront = "Aadhaar Card Front is required";
+
 
         // Legal Consent
-        if (!isEditMode && !formData.legalConsent) {
+        if (!isEditMode && !data.legalConsent) {
             newErrors.legalConsent = "You must agree to the terms and conditions";
         }
 
-        setErrors(newErrors);
+        // NOTE: validateForm is now a PURE function � it does NOT call setErrors.
+        // Callers (handleChange, handleBlur, handleSubmit) manage which errors to surface.
         return newErrors;
     };
 
@@ -1972,8 +2100,7 @@ const MemberRegistration = () => {
 
             // Process Family Members
             let photoCount = 0;
-            let aadhaarFrontCount = 0;
-            let aadhaarBackCount = 0;
+
             let voterIdFrontCount = 0;
             let voterIdBackCount = 0;
 
@@ -1994,14 +2121,7 @@ const MemberRegistration = () => {
                     memberObj.photo = `INDEX:${photoCount++}`;
                     dataPayload.append('familyMemberPhotos', fmFiles.photo);
                 }
-                if (fmFiles.aadhaarFront) {
-                    memberObj.aadhaarFront = `INDEX:${aadhaarFrontCount++}`;
-                    dataPayload.append('familyMemberAadhaarFronts', fmFiles.aadhaarFront);
-                }
-                if (fmFiles.aadhaarBack) {
-                    memberObj.aadhaarBack = `INDEX:${aadhaarBackCount++}`;
-                    dataPayload.append('familyMemberAadhaarBacks', fmFiles.aadhaarBack);
-                }
+
                 if (fmFiles.voterIdFront) {
                     memberObj.voterIdFront = `INDEX:${voterIdFrontCount++}`;
                     dataPayload.append('familyMemberVoterIdFronts', fmFiles.voterIdFront);
@@ -2109,11 +2229,11 @@ const MemberRegistration = () => {
                     jobDesignation: data.jobDesignation,
                     jobCategory: data.jobCategory || '',
                     jobSubCategory: data.jobSubCategory || '',
-                    aadhaarNumber: data.aadhaarNumber,
+
 
                     // Address Mapping
                     presentDistrict: data.address?.district?._id || data.address?.district || '',
-                    presentConstituency: data.address?.constituency || '',
+                    presentConstituency: data.address?.constituency?._id || data.address?.constituency || '',
                     presentMandal: data.address?.mandal?._id || data.address?.mandal || '',
                     presentMunicipality: data.address?.municipality?._id || data.address?.municipality || '', // Map Municipality
                     presentVillage: data.address?.village?._id || data.address?.village || '',
@@ -2126,7 +2246,7 @@ const MemberRegistration = () => {
 
                     // Permanent Address Mapping
                     permDistrict: data.permanentAddress?.district?._id || data.permanentAddress?.district || '',
-                    permConstituency: data.permanentAddress?.constituency || '',
+                    permConstituency: data.permanentAddress?.constituency?._id || data.permanentAddress?.constituency || '',
                     permMandal: data.permanentAddress?.mandal?._id || data.permanentAddress?.mandal || '',
                     permMunicipality: data.permanentAddress?.municipality?._id || data.permanentAddress?.municipality || '', // Map Municipality
                     permVillage: data.permanentAddress?.village?._id || data.permanentAddress?.village || '',
@@ -2200,8 +2320,7 @@ const MemberRegistration = () => {
                 };
 
                 if (data.photoUrl) initialFiles.photo = resolveExistingFile(data.photoUrl);
-                if (data.aadhaarCardUrl) initialFiles.aadhaarFront = resolveExistingFile(data.aadhaarCardUrl);
-                if (data.aadhaarCardBackUrl) initialFiles.aadhaarBack = resolveExistingFile(data.aadhaarCardBackUrl);
+
                 if (data.casteDetails?.certificateUrl) initialFiles.communityCert = resolveExistingFile(data.casteDetails.certificateUrl);
                 if (data.partnerDetails?.certificateUrl) initialFiles.marriageCert = resolveExistingFile(data.partnerDetails.certificateUrl);
                 if (data.rationCard?.fileUrl) initialFiles.rationCardFile = resolveExistingFile(data.rationCard.fileUrl);
@@ -2228,7 +2347,7 @@ const MemberRegistration = () => {
                 const presentAddressFields = ['presentDistrict', 'presentConstituency', 'presentMandal', 'presentVillage', 'presentHouseNo', 'presentStreet', 'presentLandmark', 'presentPincode'];
                 const permAddressFields = ['permDistrict', 'permConstituency', 'permMandal', 'permVillage', 'permHouseNo', 'permStreet', 'permLandmark', 'permPincode'];
                 const addressesMatch = presentAddressFields.every((field, index) => mappedData[field] === mappedData[permAddressFields[index]]);
-                setSameAsPermanent(addressesMatch);
+                setSameAsPresent(addressesMatch);
 
                 // [FIX] Trigger Cascading Logic to fill Dropdowns
                 // 1. Present Address Cascades
@@ -2248,9 +2367,7 @@ const MemberRegistration = () => {
 
                         if (data.address?.constituency) {
                             // If we have a constituency, fetch its children (Mandals/Municipalities)
-                            const cId = data.address.constituency; // mappedData might just have ID, verify
-                            // api response `data.address.constituency` is likely the ID string based on schema
-                            // But let's use the ID we just set in mappedData.presentConstituency
+                            const cId = mappedData.presentConstituency; // use the unwrapped ID
 
                             const { data: constChildren } = await API.get(`/locations?parent=${cId}`);
                             const mList = constChildren.filter(d => d.type === 'MANDAL');
@@ -2282,7 +2399,7 @@ const MemberRegistration = () => {
                         setPermConstituencies(pConstituencies);
 
                         if (data.permanentAddress?.constituency) {
-                            const pcId = data.permanentAddress.constituency;
+                            const pcId = mappedData.permConstituency;
                             const { data: pConstChildren } = await API.get(`/locations?parent=${pcId}`);
 
                             const pmList = pConstChildren.filter(d => d.type === 'MANDAL');
@@ -2370,12 +2487,12 @@ const MemberRegistration = () => {
     // Helper: Map field names to their section IDs
     const getSectionKeyForField = (fieldName) => {
         const sections = {
-            1: ['surname', 'name', 'fatherName', 'dob', 'gender', 'mobileNumber', 'aadhaarNumber', 'occupation', 'jobSector', 'jobOrganization', 'jobDesignation', 'jobCategory', 'jobSubCategory', 'educationLevel', 'email', 'bloodGroup', 'alternateMobile'],
+            1: ['surname', 'name', 'fatherName', 'dob', 'gender', 'mobileNumber', 'occupation', 'jobSector', 'jobOrganization', 'jobDesignation', 'jobCategory', 'jobSubCategory', 'educationLevel', 'email', 'bloodGroup', 'alternateMobile'],
             2: ['presentDistrict', 'presentConstituency', 'presentMandal', 'presentVillage', 'presentHouseNo', 'presentStreet', 'presentLandmark', 'presentPincode', 'residenceType', 'permDistrict', 'permConstituency', 'permMandal', 'permVillage', 'permHouseNo', 'permStreet', 'permLandmark', 'permPincode'],
             4: ['caste', 'subCaste', 'communityCertNumber', 'communityCert'],
             5: ['maritalStatus', 'partnerCaste', 'partnerSubCaste', 'isInterCaste'],
             6: ['epicNumber', 'voterName', 'pollingBooth', 'voterIdFront', 'voterIdBack'],
-            7: ['photo', 'aadhaarFront', 'aadhaarBack'], // Document Uploads section
+            7: ['photo'], // Document Uploads section
             8: ['annualIncome', 'memberCount', 'dependentCount', 'rationCardTypeFamily'],
             9: ['rationCardNumber', 'rationCardHolderName', 'rationCardTypeFamily', 'hasRationCard', 'rationCardFile', 'legalConsent']
         };
@@ -2392,45 +2509,53 @@ const MemberRegistration = () => {
 
         // Check email verification first (ONLY IF EMAIL IS PROVIDED)
         if (formData.email && !emailVerification.isVerified) {
+            setTouched(prev => ({ ...prev, email: true }));
             setErrors(prev => ({ ...prev, email: 'Please verify your email before submitting' }));
             setEmailVerification(prev => ({ ...prev, error: 'Email verification is required' }));
-            // Open Basic Details section
             setOpenSections(prev => ({ ...prev, 1: true }));
-            // Scroll to email field
             setTimeout(() => {
                 const emailElement = document.getElementsByName('email')[0];
-                if (emailElement) {
-                    emailElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+                if (emailElement) emailElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 300);
             return;
         }
 
         const currentErrors = validateForm();
-        const errorFields = Object.keys(currentErrors);
 
-        if (errorFields.length > 0) {
-            // Find sections to open
-            const sectionsToOpen = {};
-            let requestScroll = false;
+        if (Object.keys(currentErrors).length > 0) {
+            // Show fields one at a time in priority order � field-by-field UX
+            const FIELD_ORDER = [
+                'surname', 'name', 'fatherName', 'gender', 'mobileNumber', 'occupation',
+                'jobSector', 'jobOrganization', 'jobDesignation', 'businessType',
+                'politicalPosition', 'politicalFromDate', 'politicalToDate',
+                'presentDistrict', 'presentConstituency', 'presentMandal',
+                'presentMunicipality', 'presentWardNumber', 'presentVillage',
+                'presentHouseNo', 'presentPincode',
+                'permDistrict', 'permConstituency', 'permMandal',
+                'permMunicipality', 'permWardNumber', 'permVillage',
+                'permHouseNo', 'permPincode',
+                'caste', 'maritalStatus', 'rationCardNumber', 'epicNumber',
+                'communityCertNumber', 'photo', 'legalConsent'
+            ];
 
-            errorFields.forEach((field, index) => {
-                const sectionKey = getSectionKeyForField(field);
-                sectionsToOpen[sectionKey] = true;
-            });
+            // Find the first field that has an error
+            const firstErrorKey = FIELD_ORDER.find(f => currentErrors[f])
+                || Object.keys(currentErrors)[0];
 
-            // Update open sections to reveal errors
-            setOpenSections(prev => ({ ...prev, ...sectionsToOpen }));
+            // Show only this field's error (touched + set error)
+            setTouched(prev => ({ ...prev, [firstErrorKey]: true }));
+            setErrors(prev => ({ ...prev, [firstErrorKey]: currentErrors[firstErrorKey] }));
 
-            // Scroll to the first error after a slight delay to allow expansion
+            // Open the relevant section and scroll to the field
+            const section = getSectionKeyForField(firstErrorKey);
+            setOpenSections(prev => ({ ...prev, [section]: true }));
+
             setTimeout(() => {
-                const firstErrorField = errorFields[0];
-                const element = document.getElementsByName(firstErrorField)[0];
+                const element = document.getElementsByName(firstErrorKey)[0];
                 if (element) {
                     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     element.focus();
                 } else {
-                    // Fallback to top if specific element cant be focused
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             }, 300);
@@ -2500,8 +2625,8 @@ const MemberRegistration = () => {
                                                 <td className="px-4 py-3 text-gray-900 font-mono">{formData.mobileNumber} {formData.alternateMobile ? `/ ${formData.alternateMobile}` : ''}</td>
                                             </tr>
                                             <tr>
-                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Email / Aadhaar</td>
-                                                <td className="px-4 py-3 text-gray-900">{formData.email || '-'} / <span className="font-mono">{formData.aadhaarNumber}</span></td>
+                                                <td className="px-4 py-3 font-medium bg-gray-50 text-gray-700">Email</td>
+                                                <td className="px-4 py-3 text-gray-900">{formData.email || '-'}</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -2673,7 +2798,7 @@ const MemberRegistration = () => {
                                                     <th className="px-4 py-3 border-b border-gray-200">Name & Relation</th>
                                                     <th className="px-4 py-3 border-b border-gray-200">Age / Gender</th>
                                                     <th className="px-4 py-3 border-b border-gray-200">Occupation</th>
-                                                    <th className="px-4 py-3 border-b border-gray-200">Aadhaar</th>
+
                                                     <th className="px-4 py-3 border-b border-gray-200 text-center">Action</th>
                                                 </tr>
                                             </thead>
@@ -2711,7 +2836,7 @@ const MemberRegistration = () => {
                                                         </td>
                                                         <td className="px-4 py-3 text-gray-700">{fm.age} Years / {fm.gender}</td>
                                                         <td className="px-4 py-3 text-gray-700">{fm.occupation}</td>
-                                                        <td className="px-4 py-3 text-gray-700 font-mono">{fm.aadhaarNumber || '-'}</td>
+
                                                         <td className="px-4 py-3 text-center">
                                                             <button
                                                                 onClick={() => handleEditFamilyMember(idx)}
@@ -2778,8 +2903,7 @@ const MemberRegistration = () => {
                                     {[
                                         { key: 'photo', label: 'Member Photo' },
                                         { key: 'communityCert', label: 'Community Cert' },
-                                        { key: 'aadhaarFront', label: 'Aadhaar Front' },
-                                        { key: 'aadhaarBack', label: 'Aadhaar Back' },
+
                                         { key: 'rationCardFile', label: 'Ration Card' },
                                         { key: 'voterIdFront', label: 'Voter Front' },
                                         { key: 'voterIdBack', label: 'Voter Back' },
@@ -2821,8 +2945,7 @@ const MemberRegistration = () => {
                                             {familyMembers.map((fm, idx) => {
                                                 const fmDocs = [
                                                     { key: 'photo', label: 'Photo' },
-                                                    { key: 'aadhaarFront', label: 'Aadhaar Front' },
-                                                    { key: 'aadhaarBack', label: 'Aadhaar Back' },
+
                                                     { key: 'voterIdFront', label: 'Voter Front' },
                                                     { key: 'voterIdBack', label: 'Voter Back' }
                                                 ];
@@ -2902,9 +3025,9 @@ const MemberRegistration = () => {
                                 <FaEdit /> Edit Profile
                             </button>
                         )}
-                        <Link to="/admin/members" className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-md text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all border border-white/20">
-                            <FaArrowLeft /> Back to List
-                        </Link>
+                        <button type="button" onClick={() => navigate(-1)} className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-md text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all border border-white/20">
+                            <FaArrowLeft /> Back
+                        </button>
                     </DashboardHeader>
 
                     <div className="max-w-full px-4 pb-12 -mt-10">
@@ -2926,27 +3049,32 @@ const MemberRegistration = () => {
                                             name="surname"
                                             value={formData.surname || ''}
                                             onChange={handleChange}
+                                            onBlur={handleBlur}
                                             placeholder="Enter surname"
                                             required
-                                            error={errors.surname}
+                                            error={getFieldError('surname')}
                                         />
                                         <FormInput
                                             label="Name"
                                             name="name"
                                             value={formData.name || ''}
                                             onChange={handleChange}
+                                            onBlur={handleBlur}
                                             placeholder="Enter full name"
                                             required
-                                            error={errors.name}
+                                            disabled={!isFieldEnabled('name')}
+                                            error={getFieldError('name')}
                                         />
                                         <FormInput
                                             label="S/o , W/o, D/o"
                                             name="fatherName"
                                             value={formData.fatherName || ''}
                                             onChange={handleChange}
+                                            onBlur={handleBlur}
                                             placeholder="Enter S/o, W/o, D/o Name"
                                             required
-                                            error={errors.fatherName}
+                                            disabled={!isFieldEnabled('fatherName')}
+                                            error={getFieldError('fatherName')}
                                         />
 
                                         <FormInput
@@ -2954,11 +3082,10 @@ const MemberRegistration = () => {
                                             name="dob"
                                             value={formData.dob}
                                             onChange={(e) => handleDateChange(e, setFormData, 'dob')}
-                                            type="text"
+                                            onBlur={handleBlur}
                                             placeholder="DD-MM-YYYY"
                                             maxLength={10}
-                                            // required
-                                            error={errors.dob}
+                                            error={getFieldError('dob')}
                                         />
                                         <FormInput
                                             label="Age"
@@ -2975,9 +3102,9 @@ const MemberRegistration = () => {
                                                     value={formData.occupation}
                                                     onChange={handleChange}
                                                     options={memberOccupations}
-                                                    disabled={false}
+                                                    disabled={!isFieldEnabled('occupation')}
                                                     required
-                                                    error={errors.occupation}
+                                                    error={getFieldError('occupation')}
                                                 />
 
                                                 {formData.occupation === 'Private Employee' && (
@@ -2992,7 +3119,7 @@ const MemberRegistration = () => {
                                                                 "Manufacturing", "Other", "Retail", "Services"
                                                             ]}
                                                             required
-                                                            error={errors.jobSector}
+                                                            error={getFieldError('jobSector')}
                                                         />
                                                         <FormInput
                                                             label="Organization / Company"
@@ -3001,7 +3128,7 @@ const MemberRegistration = () => {
                                                             onChange={handleChange}
                                                             placeholder="Enter company name"
                                                             required
-                                                            error={errors.jobOrganization}
+                                                            error={getFieldError('jobOrganization')}
                                                         />
                                                         <FormInput
                                                             label="Designation"
@@ -3010,7 +3137,7 @@ const MemberRegistration = () => {
                                                             onChange={handleChange}
                                                             placeholder="Enter designation"
                                                             required
-                                                            error={errors.jobDesignation}
+                                                            error={getFieldError('jobDesignation')}
                                                         />
                                                     </>
                                                 )}
@@ -3024,7 +3151,7 @@ const MemberRegistration = () => {
                                                             onChange={handleChange}
                                                             options={Object.keys(GOVT_JOB_CATEGORIES)}
                                                             required
-                                                            error={errors.jobCategory}
+                                                            error={getFieldError('jobCategory')}
                                                         />
                                                         <FormSelect
                                                             label="Job Sub-Category"
@@ -3033,7 +3160,7 @@ const MemberRegistration = () => {
                                                             onChange={handleChange}
                                                             options={formData.jobCategory ? GOVT_JOB_CATEGORIES[formData.jobCategory] : []}
                                                             disabled={!formData.jobCategory}
-                                                            error={errors.jobSubCategory}
+                                                            error={getFieldError('jobSubCategory')}
                                                         />
                                                         <FormSelect
                                                             label="Department / Organization"
@@ -3042,7 +3169,7 @@ const MemberRegistration = () => {
                                                             onChange={handleChange}
                                                             options={GOVT_DEPARTMENTS}
                                                             required
-                                                            error={errors.jobOrganization}
+                                                            error={getFieldError('jobOrganization')}
                                                         />
                                                         <FormInput
                                                             label="Designation"
@@ -3051,7 +3178,7 @@ const MemberRegistration = () => {
                                                             onChange={handleChange}
                                                             placeholder="Enter designation"
                                                             required
-                                                            error={errors.jobDesignation}
+                                                            error={getFieldError('jobDesignation')}
                                                         />
                                                     </>
                                                 )}
@@ -3065,7 +3192,7 @@ const MemberRegistration = () => {
                                                             onChange={handleChange}
                                                             options={POLITICAL_POSITIONS}
                                                             required
-                                                            error={errors.politicalPosition}
+                                                            error={getFieldError('politicalPosition')}
                                                         />
                                                         <FormInput
                                                             label="From (Month & Year)"
@@ -3074,7 +3201,7 @@ const MemberRegistration = () => {
                                                             onChange={handleChange}
                                                             type="month"
                                                             required
-                                                            error={errors.politicalFromDate}
+                                                            error={getFieldError('politicalFromDate')}
                                                             colSpan="col-span-1"
                                                         />
                                                         <FormInput
@@ -3084,7 +3211,7 @@ const MemberRegistration = () => {
                                                             onChange={handleChange}
                                                             type="month"
                                                             required
-                                                            error={errors.politicalToDate}
+                                                            error={getFieldError('politicalToDate')}
                                                             colSpan="col-span-1"
                                                         />
                                                     </>
@@ -3097,8 +3224,7 @@ const MemberRegistration = () => {
                                                         value={formData.jobDesignation}
                                                         onChange={handleChange}
                                                         placeholder="Enter designation"
-                                                        required
-                                                    />
+                                                        required error={getFieldError('jobDesignation')} />
                                                 )}
 
                                                 {formData.occupation === 'Self-Employed / Business' && (
@@ -3109,7 +3235,7 @@ const MemberRegistration = () => {
                                                         onChange={handleChange}
                                                         placeholder="Enter type of business"
                                                         required
-                                                        error={errors.businessType}
+                                                        error={getFieldError('businessType')}
                                                     />
                                                 )}
 
@@ -3120,8 +3246,7 @@ const MemberRegistration = () => {
                                                         value={formData.jobDesignation}
                                                         onChange={handleChange}
                                                         placeholder="Enter occupation details"
-                                                        required
-                                                    />
+                                                        required error={getFieldError('jobDesignation')} />
                                                 )}
 
                                                 {formData.occupation === 'Student' && (
@@ -3131,20 +3256,19 @@ const MemberRegistration = () => {
                                                         value={formData.educationLevel}
                                                         onChange={handleChange}
                                                         options={["Degree", "Engineering & Technology", "High School", "Intermediate", "PG", "Polytechnic / Diploma", "Primary School", "Research / Doctoral Studies (PhD)", "Vocational / ITI"]}
-                                                        required
-                                                    />
+                                                        required error={getFieldError('educationLevel')} />
                                                 )}
                                             </>
                                         )}
 
                                         <div className="col-span-1">
-                                            <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Gender</label>
+                                            <label className={`block text-xs font-bold mb-1.5 uppercase tracking-wide ${!isFieldEnabled('gender') ? 'text-gray-400' : 'text-gray-700'}`}>Gender <span className="text-red-500">*</span></label>
                                             <div className="flex items-center gap-6 mt-3">
-                                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Female" onChange={handleChange} checked={formData.gender === 'Female'} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Female</span></label>
-                                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Male" onChange={handleChange} checked={formData.gender === 'Male'} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Male</span></label>
-                                                <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="Other" onChange={handleChange} checked={formData.gender === 'Other'} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Other</span></label>
+                                                <label className={`flex items-center gap-2 ${!isFieldEnabled('gender') ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}><input type="radio" name="gender" value="Female" onChange={handleChange} checked={formData.gender === 'Female'} disabled={!isFieldEnabled('gender')} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Female</span></label>
+                                                <label className={`flex items-center gap-2 ${!isFieldEnabled('gender') ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}><input type="radio" name="gender" value="Male" onChange={handleChange} checked={formData.gender === 'Male'} disabled={!isFieldEnabled('gender')} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Male</span></label>
+                                                <label className={`flex items-center gap-2 ${!isFieldEnabled('gender') ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}><input type="radio" name="gender" value="Other" onChange={handleChange} checked={formData.gender === 'Other'} disabled={!isFieldEnabled('gender')} className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" /> <span className="text-sm text-gray-700">Other</span></label>
                                             </div>
-                                            {errors.gender && <p className="text-red-500 text-xs mt-1 font-medium">{errors.gender}</p>}
+                                            {getFieldError('gender') && <p className="text-red-500 text-xs mt-1 font-medium">{getFieldError('gender')}</p>}
                                         </div>
 
                                         <FormInput
@@ -3159,19 +3283,19 @@ const MemberRegistration = () => {
                                                 }
                                                 // Strict validation on blur or separate check
                                             }}
-                                            onBlur={(e) => handleDuplicateCheck('mobileNumber', e.target.value)}
+                                            onBlur={handleBlur}
                                             placeholder="Enter 10-digit mobile number"
                                             required
-                                            error={errors.mobileNumber}
+                                            disabled={!isFieldEnabled('mobileNumber')}
+                                            error={getFieldError('mobileNumber')}
                                         />
                                         <FormSelect
                                             label="Blood Group"
                                             name="bloodGroup"
                                             value={formData.bloodGroup}
                                             onChange={handleChange}
-                                            options={["A+", "A-", "AB+", "AB-", "B+", "B-", "O+", "O-", "Oh (Bombay Blood Group)"]}
-                                        />
-                                        <FormInput label="Alternate Mobile Number" name="alternateMobile" value={formData.alternateMobile} onChange={handleChange} placeholder="Enter alternate mobile number" />
+                                            options={["A+", "A-", "AB+", "AB-", "B+", "B-", "O+", "O-", "Oh (Bombay Blood Group)"]} error={getFieldError('bloodGroup')} />
+                                        <FormInput label="Alternate Mobile Number" name="alternateMobile" value={formData.alternateMobile} onChange={handleChange} placeholder="Enter alternate mobile number" error={getFieldError('alternateMobile')} />
 
                                         {/* Email Verification Section */}
                                         <div className="col-span-1 md:col-span-3">
@@ -3182,15 +3306,21 @@ const MemberRegistration = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 {/* Email Input + Send Code Button */}
                                                 <div className="col-span-1 md:col-span-2 flex gap-2">
-                                                    <input
-                                                        type="email"
-                                                        name="email"
-                                                        value={formData.email}
-                                                        onChange={handleChange}
-                                                        disabled={emailVerification.isVerified}
-                                                        className={`flex-1 bg-white border ${errors.email ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'} rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-400 ${emailVerification.isVerified ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                                        placeholder="Enter email address"
-                                                    />
+                                                    <div className={`flex-1 flex items-center bg-white border ${getFieldError('email') ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'} rounded-lg overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all ${emailVerification.isVerified ? 'bg-gray-100' : ''}`}>
+                                                        <input
+                                                            type="text"
+                                                            name="email_username"
+                                                            value={formData.email ? formData.email.split('@')[0] : ''}
+                                                            onChange={handleEmailUsernameChange}
+                                                            onBlur={handleEmailBlur}
+                                                            disabled={emailVerification.isVerified}
+                                                            className={`flex-1 bg-transparent border-none px-4 py-2.5 text-sm text-gray-900 focus:outline-none placeholder-gray-400 ${emailVerification.isVerified ? 'cursor-not-allowed text-gray-500' : ''}`}
+                                                            placeholder="Enter email user name"
+                                                        />
+                                                        <span className="px-3 py-2.5 bg-gray-50 text-gray-500 text-sm font-medium border-l border-gray-200 select-none">
+                                                            @gmail.com
+                                                        </span>
+                                                    </div>
                                                     <button
                                                         type="button"
                                                         onClick={handleSendVerificationCode}
@@ -3238,14 +3368,14 @@ const MemberRegistration = () => {
                                             {/* Success/Error Messages */}
                                             {emailVerification.success && (
                                                 <p className="text-green-600 text-xs mt-2 font-medium flex items-center gap-1">
-                                                    <span className="text-green-600">✓</span> {emailVerification.success}
+                                                    <span className="text-green-600">?</span> {emailVerification.success}
                                                 </p>
                                             )}
                                             {emailVerification.error && (
                                                 <p className="text-red-500 text-xs mt-2 font-medium">{emailVerification.error}</p>
                                             )}
-                                            {errors.email && (
-                                                <p className="text-red-500 text-xs mt-2 font-medium">{errors.email}</p>
+                                            {getFieldError('email') && (
+                                                <p className="text-red-500 text-xs mt-2 font-medium">{getFieldError('email')}</p>
                                             )}
 
                                             {/* Resend Code Link */}
@@ -3268,7 +3398,7 @@ const MemberRegistration = () => {
                                             )}
                                         </div>
 
-                                        <FormInput label="Aadhar Number" name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleChange} onBlur={(e) => { handleBlur && handleBlur(e); handleDuplicateCheck('aadhaarNumber', e.target.value); }} placeholder="Enter 12-digit Aadhar number" required error={errors.aadhaarNumber} />
+
 
                                         {/* Member Photo removed from here as requested, moved to bottom */}
                                     </div>
@@ -3282,215 +3412,27 @@ const MemberRegistration = () => {
                                     isOpen={openSections[2]}
                                     onToggle={() => toggleSection(2)}
                                 >
-                                    {/* Permanent Address Header (Now First) */}
+                                    {/* Present Address Info (Now First) */}
                                     <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm mb-6">
                                         <div className="mb-4 pb-2 border-b border-gray-200">
-                                            <h4 className="text-lg font-bold text-gray-800">Permanent Address</h4>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            <FormInput
-                                                label="State"
-                                                name="permState"
-                                                value="Telangana"
-                                                disabled={true}
-                                                placeholder="Telangana"
-                                            />
-                                            <FormSelect
-                                                label="District"
-                                                name="permDistrict"
-                                                value={formData.permDistrict}
-                                                onChange={handlePermDistrictChange}
-                                                options={districts.map(d => ({ value: d._id, label: d.name }))}
-                                                required
-                                                disabled={isFieldLocked('permDistrict')}
-                                                error={errors.permDistrict}
-                                            />
-                                            {/* Area Type Selection */}
-                                            <div className="col-span-1 md:col-span-3">
-                                                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Area Type</label>
-                                                <div className="flex items-center gap-6 mt-1">
-                                                    <label className="flex items-center gap-2 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="permAreaType"
-                                                            value="Rural"
-                                                            checked={formData.permAreaType === 'Rural'}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, permAreaType: e.target.value, permMandal: '', permVillage: '', permMunicipality: '', permWardNumber: '' }))}
-                                                            className="w-4 h-4 text-blue-600"
-                                                            disabled={isFieldLocked('permAreaType')}
-                                                        />
-                                                        <span className="text-sm text-gray-700">Rural (Mandal/Village)</span>
-                                                    </label>
-                                                    <label className="flex items-center gap-2 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="permAreaType"
-                                                            value="Urban"
-                                                            checked={formData.permAreaType === 'Urban'}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, permAreaType: e.target.value, permMandal: '', permVillage: '', permMunicipality: '', permWardNumber: '' }))}
-                                                            className="w-4 h-4 text-blue-600"
-                                                            disabled={isFieldLocked('permAreaType')}
-                                                        />
-                                                        <span className="text-sm text-gray-700">Urban (Municipality/Ward)</span>
-                                                    </label>
-                                                </div>
-                                            </div>
-
-                                            <FormSelect
-                                                label="Constituency"
-                                                name="permConstituency"
-                                                value={formData.permConstituency}
-                                                onChange={handlePermConstituencyChange}
-                                                options={permConstituencies.map(c => ({ value: c._id, label: c.name }))}
-                                                required
-                                                disabled={!formData.permDistrict || isFieldLocked('permConstituency')}
-                                                error={errors.permConstituency}
-                                            />
-
-                                            {formData.permAreaType === 'Urban' ? (
-                                                <>
-                                                    <FormSelect
-                                                        label="Municipality"
-                                                        name="permMunicipality"
-                                                        value={formData.permMunicipality}
-                                                        onChange={handlePermMunicipalityChange}
-                                                        options={permMunicipalities.map(m => ({ value: m._id, label: m.name }))}
-                                                        required
-                                                        disabled={!formData.permConstituency || isFieldLocked('permMunicipality')}
-                                                        error={errors.permMunicipality}
-                                                    />
-                                                    <FormSelect
-                                                        label="Ward Number"
-                                                        name="permWardNumber"
-                                                        value={formData.permWardNumber}
-                                                        onChange={handleChange}
-                                                        options={permWards.map(w => ({ value: w.name, label: w.name }))} // Wards usually just names/numbers, storing IDs might be overkill if just for display, but let's store Name for now to match schema or ID? Schema says String. Let's store Name to be safe if ID not referenced elsewhere? Handlers stored ID. Let's store ID if consistent. 
-                                                    // Actually handler Update: setFormData(prev => ({ ...prev, permWardNumber: '' })). Handler doesn't set it. handleChange sets it.
-                                                    // handleChange uses value from event.
-                                                    // If I use FormSelect, value is ID.
-                                                    // If backend expects String (name) ??
-                                                    // Location Schema has type String for enum.
-                                                    // Member Schema address.wardNumber type String?
-                                                    // Let's check Member Schema if possible. 
-                                                    // Assuming safe to store ID or Name. 
-                                                    // The locations have _id. The frontend handlers I wrote for others store ID.
-                                                    // Let's store ID also for consistency, but if old members have strings?
-                                                    // It's a new feature.
-                                                    // BUT wait, handleChange logic:
-                                                    // const { name, value } = e.target; setFormData...
-                                                    // So it stores whatever value is in option.
-                                                    // Let's use ID as value.
-                                                    />
-                                                    {/* Re-writing strictly */}
-                                                    <FormSelect
-                                                        label="Ward Number"
-                                                        name="permWardNumber"
-                                                        value={formData.permWardNumber}
-                                                        onChange={handleChange}
-                                                        options={permWards.map(w => ({ value: w._id, label: w.name }))}
-                                                        placeholder="Select Ward"
-                                                        required
-                                                        disabled={!formData.permMunicipality || isFieldLocked('permWardNumber')}
-                                                        error={errors.permWardNumber}
-                                                    />
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <FormSelect
-                                                        label="Mandal"
-                                                        name="permMandal"
-                                                        value={formData.permMandal}
-                                                        onChange={handlePermMandalChange}
-                                                        options={permMandals.map(m => ({ value: m._id, label: m.name }))}
-                                                        required
-                                                        disabled={!formData.permConstituency || isFieldLocked('permMandal')}
-                                                        error={errors.permMandal}
-                                                    />
-                                                    <FormSelect
-                                                        label="Village/Town"
-                                                        name="permVillage"
-                                                        value={formData.permVillage}
-                                                        onChange={handlePermVillageChange}
-                                                        options={permVillages.map(v => ({ value: v._id, label: v.name }))}
-                                                        required
-                                                        disabled={!formData.permMandal || isFieldLocked('permVillage')}
-                                                        error={errors.permVillage}
-                                                    />
-                                                </>
-                                            )}
-
-                                            <FormInput
-                                                label="House No."
-                                                name="permHouseNo"
-                                                value={formData.permHouseNo}
-                                                onChange={handleChange}
-                                                placeholder="e.g. 1-123"
-                                                required
-                                                disabled={isFieldLocked('permHouseNo')}
-                                                error={errors.permHouseNo}
-                                            />
-                                            <FormInput
-                                                label="Street Name / Colony"
-                                                name="permStreet"
-                                                value={formData.permStreet}
-                                                onChange={handleChange}
-                                                placeholder="e.g. Main Road, Ambedkar Colony"
-                                                disabled={isFieldLocked('permStreet')}
-                                            />
-                                            <FormInput
-                                                label="Landmark"
-                                                name="permLandmark"
-                                                value={formData.permLandmark}
-                                                onChange={handleChange}
-                                                placeholder="e.g. Near Water Tank"
-                                                disabled={isFieldLocked('permLandmark')}
-                                            />
-
-                                            <FormInput
-                                                label="Pincode"
-                                                name="permPincode"
-                                                value={formData.permPincode}
-                                                onChange={handleChange}
-                                                placeholder="Enter pincode"
-                                                required
-                                                disabled={isFieldLocked('permPincode')}
-                                                error={errors.permPincode}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Present Address Info (Now Second) */}
-                                    <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
-                                        <div className="flex items-center justify-start gap-4 mb-4 pb-2 border-b border-gray-200">
                                             <h4 className="text-lg font-bold text-gray-800">Present Address</h4>
-                                            <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50 transition shadow-sm">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={sameAsPermanent}
-                                                    onChange={handleSameAsPermanentChange}
-                                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-400"
-                                                />
-                                                <span className="text-xs font-bold text-blue-800">SAME AS PERMANENT ADDRESS</span>
-                                            </label>
                                         </div>
+
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                             <FormInput
                                                 label="State"
                                                 name="presentState"
                                                 value="Telangana"
                                                 disabled={true}
-                                                placeholder="Telangana"
-                                            />
+                                                placeholder="Telangana" error={getFieldError('presentState')} />
                                             <FormSelect
                                                 label="District"
                                                 name="presentDistrict"
                                                 value={formData.presentDistrict}
                                                 onChange={handleDistrictChange}
                                                 options={districts.map(d => ({ value: d._id, label: d.name }))}
-                                                required={!sameAsPermanent}
-                                                disabled={sameAsPermanent}
-                                                error={!sameAsPermanent ? errors.presentDistrict : null}
+                                                required
+                                                error={getFieldError('presentDistrict')}
                                             />
                                             {/* Area Type Selection */}
                                             <div className="col-span-1 md:col-span-3">
@@ -3502,9 +3444,8 @@ const MemberRegistration = () => {
                                                             name="presentAreaType"
                                                             value="Rural"
                                                             checked={formData.presentAreaType === 'Rural'}
-                                                            onChange={(e) => !sameAsPermanent && setFormData(prev => ({ ...prev, presentAreaType: e.target.value, presentMandal: '', presentVillage: '', presentMunicipality: '', presentWardNumber: '' }))}
+                                                            onChange={(e) => setFormData(prev => ({ ...prev, presentAreaType: e.target.value, presentMandal: '', presentVillage: '', presentMunicipality: '', presentWardNumber: '' }))}
                                                             className="w-4 h-4 text-blue-600"
-                                                            disabled={sameAsPermanent}
                                                         />
                                                         <span className="text-sm text-gray-700">Rural (Mandal/Village)</span>
                                                     </label>
@@ -3514,9 +3455,8 @@ const MemberRegistration = () => {
                                                             name="presentAreaType"
                                                             value="Urban"
                                                             checked={formData.presentAreaType === 'Urban'}
-                                                            onChange={(e) => !sameAsPermanent && setFormData(prev => ({ ...prev, presentAreaType: e.target.value, presentMandal: '', presentVillage: '', presentMunicipality: '', presentWardNumber: '' }))}
+                                                            onChange={(e) => setFormData(prev => ({ ...prev, presentAreaType: e.target.value, presentMandal: '', presentVillage: '', presentMunicipality: '', presentWardNumber: '' }))}
                                                             className="w-4 h-4 text-blue-600"
-                                                            disabled={sameAsPermanent}
                                                         />
                                                         <span className="text-sm text-gray-700">Urban (Municipality/Ward)</span>
                                                     </label>
@@ -3529,9 +3469,9 @@ const MemberRegistration = () => {
                                                 value={formData.presentConstituency}
                                                 onChange={handlePresentConstituencyChange}
                                                 options={presentConstituencies.map(c => ({ value: c._id, label: c.name }))}
-                                                required={!sameAsPermanent}
-                                                disabled={sameAsPermanent || !formData.presentDistrict}
-                                                error={!sameAsPermanent ? errors.presentConstituency : null}
+                                                required
+                                                disabled={!formData.presentDistrict}
+                                                error={getFieldError('presentConstituency')}
                                             />
 
                                             {formData.presentAreaType === 'Urban' ? (
@@ -3542,9 +3482,9 @@ const MemberRegistration = () => {
                                                         value={formData.presentMunicipality}
                                                         onChange={handlePresentMunicipalityChange}
                                                         options={municipalities.map(m => ({ value: m._id, label: m.name }))}
-                                                        required={!sameAsPermanent}
-                                                        disabled={sameAsPermanent || !formData.presentConstituency}
-                                                        error={!sameAsPermanent ? errors.presentMunicipality : null}
+                                                        required
+                                                        disabled={!formData.presentConstituency}
+                                                        error={getFieldError('presentMunicipality')}
                                                     />
                                                     <FormSelect
                                                         label="Ward Number"
@@ -3553,9 +3493,9 @@ const MemberRegistration = () => {
                                                         onChange={handleChange}
                                                         options={presentWards.map(w => ({ value: w._id, label: w.name }))}
                                                         placeholder="Select Ward"
-                                                        required={!sameAsPermanent}
-                                                        disabled={sameAsPermanent || !formData.presentMunicipality}
-                                                        error={!sameAsPermanent ? errors.presentWardNumber : null}
+                                                        required
+                                                        disabled={!formData.presentMunicipality}
+                                                        error={getFieldError('presentWardNumber')}
                                                     />
                                                 </>
                                             ) : (
@@ -3566,19 +3506,19 @@ const MemberRegistration = () => {
                                                         value={formData.presentMandal}
                                                         onChange={handleMandalChange}
                                                         options={mandals.map(m => ({ value: m._id, label: m.name }))}
-                                                        required={!sameAsPermanent}
-                                                        disabled={sameAsPermanent || !formData.presentConstituency}
-                                                        error={!sameAsPermanent ? errors.presentMandal : null}
+                                                        required
+                                                        disabled={!formData.presentConstituency}
+                                                        error={getFieldError('presentMandal')}
                                                     />
                                                     <FormSelect
                                                         label="Village/Town"
                                                         name="presentVillage"
                                                         value={formData.presentVillage}
                                                         onChange={handleVillageChange}
-                                                        options={villages.map(v => ({ value: v._id, label: v.name }))}
-                                                        required={!sameAsPermanent}
-                                                        disabled={sameAsPermanent || !formData.presentMandal}
-                                                        error={!sameAsPermanent ? errors.presentVillage : null}
+                                                        options={villages.filter(v => v.name.toLowerCase() !== 'huzurnagr' && v.name.toLowerCase() !== 'huzurnagar').map(v => ({ value: v._id, label: v.name }))}
+                                                        required
+                                                        disabled={!formData.presentMandal}
+                                                        error={getFieldError('presentVillage')}
                                                     />
                                                 </>
                                             )}
@@ -3589,26 +3529,21 @@ const MemberRegistration = () => {
                                                 value={formData.presentHouseNo}
                                                 onChange={handleChange}
                                                 placeholder="e.g. 1-123"
-                                                required={!sameAsPermanent}
-                                                disabled={sameAsPermanent}
-                                                error={!sameAsPermanent ? errors.presentHouseNo : null}
+                                                required
+                                                error={getFieldError('presentHouseNo')}
                                             />
                                             <FormInput
                                                 label="Street Name / Colony"
                                                 name="presentStreet"
                                                 value={formData.presentStreet}
                                                 onChange={handleChange}
-                                                placeholder="e.g. Main Road, Ambedkar Colony"
-                                                disabled={sameAsPermanent}
-                                            />
+                                                placeholder="e.g. Main Road, Ambedkar Colony" error={getFieldError('presentStreet')} />
                                             <FormInput
                                                 label="Landmark"
                                                 name="presentLandmark"
                                                 value={formData.presentLandmark}
                                                 onChange={handleChange}
-                                                placeholder="e.g. Near Water Tank"
-                                                disabled={sameAsPermanent}
-                                            />
+                                                placeholder="e.g. Near Water Tank" error={getFieldError('presentLandmark')} />
 
                                             <FormInput
                                                 label="Pincode"
@@ -3616,9 +3551,8 @@ const MemberRegistration = () => {
                                                 value={formData.presentPincode}
                                                 onChange={handleChange}
                                                 placeholder="Enter pincode"
-                                                required={!sameAsPermanent}
-                                                disabled={sameAsPermanent}
-                                                error={!sameAsPermanent ? errors.presentPincode : null}
+                                                required
+                                                error={getFieldError('presentPincode')}
                                             />
 
                                             <div className="col-span-1 md:col-span-2">
@@ -3630,10 +3564,164 @@ const MemberRegistration = () => {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Permanent Address Info (Now Second) */}
+                                    <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
+                                        <div className="flex items-center justify-start gap-4 mb-4 pb-2 border-b border-gray-200">
+                                            <h4 className="text-lg font-bold text-gray-800">Permanent Address</h4>
+                                            <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50 transition shadow-sm">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={sameAsPresent}
+                                                    onChange={handleSameAsPresentChange}
+                                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-400"
+                                                />
+                                                <span className="text-xs font-bold text-blue-800">SAME AS PRESENT ADDRESS</span>
+                                            </label>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <FormInput
+                                                label="State"
+                                                name="permState"
+                                                value="Telangana"
+                                                disabled={true}
+                                                placeholder="Telangana" error={getFieldError('permState')} />
+                                            <FormSelect
+                                                label="District"
+                                                name="permDistrict"
+                                                value={formData.permDistrict}
+                                                onChange={handlePermDistrictChange}
+                                                options={districts.map(d => ({ value: d._id, label: d.name }))}
+                                                required={!sameAsPresent}
+                                                disabled={sameAsPresent || isFieldLocked('permDistrict')}
+                                                error={!sameAsPresent ? getFieldError('permDistrict') : null}
+                                            />
+                                            {/* Area Type Selection */}
+                                            <div className="col-span-1 md:col-span-3">
+                                                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Area Type</label>
+                                                <div className="flex items-center gap-6 mt-1">
+                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="permAreaType"
+                                                            value="Rural"
+                                                            checked={formData.permAreaType === 'Rural'}
+                                                            onChange={(e) => !sameAsPresent && setFormData(prev => ({ ...prev, permAreaType: e.target.value, permMandal: '', permVillage: '', permMunicipality: '', permWardNumber: '' }))}
+                                                            className="w-4 h-4 text-blue-600"
+                                                            disabled={sameAsPresent || isFieldLocked('permAreaType')}
+                                                        />
+                                                        <span className="text-sm text-gray-700">Rural (Mandal/Village)</span>
+                                                    </label>
+                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="permAreaType"
+                                                            value="Urban"
+                                                            checked={formData.permAreaType === 'Urban'}
+                                                            onChange={(e) => !sameAsPresent && setFormData(prev => ({ ...prev, permAreaType: e.target.value, permMandal: '', permVillage: '', permMunicipality: '', permWardNumber: '' }))}
+                                                            className="w-4 h-4 text-blue-600"
+                                                            disabled={sameAsPresent || isFieldLocked('permAreaType')}
+                                                        />
+                                                        <span className="text-sm text-gray-700">Urban (Municipality/Ward)</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <FormSelect
+                                                label="Constituency"
+                                                name="permConstituency"
+                                                value={formData.permConstituency}
+                                                onChange={handlePermConstituencyChange}
+                                                options={permConstituencies.map(c => ({ value: c._id, label: c.name }))}
+                                                required={!sameAsPresent}
+                                                disabled={sameAsPresent || !formData.permDistrict || isFieldLocked('permConstituency')}
+                                                error={!sameAsPresent ? getFieldError('permConstituency') : null}
+                                            />
+
+                                            {formData.permAreaType === 'Urban' ? (
+                                                <>
+                                                    <FormSelect
+                                                        label="Municipality"
+                                                        name="permMunicipality"
+                                                        value={formData.permMunicipality}
+                                                        onChange={handlePermMunicipalityChange}
+                                                        options={permMunicipalities.map(m => ({ value: m._id, label: m.name }))}
+                                                        required={!sameAsPresent}
+                                                        disabled={sameAsPresent || !formData.permConstituency || isFieldLocked('permMunicipality')}
+                                                        error={!sameAsPresent ? getFieldError('permMunicipality') : null}
+                                                    />
+                                                    <FormSelect
+                                                        label="Ward Number"
+                                                        name="permWardNumber"
+                                                        value={formData.permWardNumber}
+                                                        onChange={handleChange}
+                                                        options={permWards.map(w => ({ value: w._id, label: w.name }))}
+                                                        placeholder="Select Ward"
+                                                        required={!sameAsPresent}
+                                                        disabled={sameAsPresent || !formData.permMunicipality || isFieldLocked('permWardNumber')}
+                                                        error={!sameAsPresent ? getFieldError('permWardNumber') : null}
+                                                    />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <FormSelect
+                                                        label="Mandal"
+                                                        name="permMandal"
+                                                        value={formData.permMandal}
+                                                        onChange={handlePermMandalChange}
+                                                        options={permMandals.map(m => ({ value: m._id, label: m.name }))}
+                                                        required={!sameAsPresent}
+                                                        disabled={sameAsPresent || !formData.permConstituency || isFieldLocked('permMandal')}
+                                                        error={!sameAsPresent ? getFieldError('permMandal') : null}
+                                                    />
+                                                    <FormSelect
+                                                        label="Village/Town"
+                                                        name="permVillage"
+                                                        value={formData.permVillage}
+                                                        onChange={handlePermVillageChange}
+                                                        options={permVillages.filter(v => v.name.toLowerCase() !== 'huzurnagr' && v.name.toLowerCase() !== 'huzurnagar').map(v => ({ value: v._id, label: v.name }))}
+                                                        required={!sameAsPresent}
+                                                        disabled={sameAsPresent || !formData.permMandal || isFieldLocked('permVillage')}
+                                                        error={!sameAsPresent ? getFieldError('permVillage') : null}
+                                                    />
+                                                </>
+                                            )}
+
+                                            <FormInput
+                                                label="House No."
+                                                name="permHouseNo"
+                                                value={formData.permHouseNo}
+                                                onChange={handleChange}
+                                                placeholder="e.g. 1-123"
+                                                required={!sameAsPresent}
+                                                disabled={sameAsPresent || isFieldLocked('permHouseNo')} error={getFieldError('permHouseNo')} />
+                                            <FormInput
+                                                label="Street Name / Colony"
+                                                name="permStreet"
+                                                value={formData.permStreet}
+                                                onChange={handleChange}
+                                                placeholder="e.g. Main Road, Ambedkar Colony"
+                                                disabled={sameAsPresent || isFieldLocked('permStreet')} error={getFieldError('permStreet')} />
+                                            <FormInput
+                                                label="Landmark"
+                                                name="permLandmark"
+                                                value={formData.permLandmark}
+                                                onChange={handleChange}
+                                                placeholder="e.g. Near Water Tank"
+                                                disabled={sameAsPresent || isFieldLocked('permLandmark')} error={getFieldError('permLandmark')} />
+
+                                            <FormInput
+                                                label="Pincode"
+                                                name="permPincode"
+                                                value={formData.permPincode}
+                                                onChange={handleChange}
+                                                placeholder="Enter pincode"
+                                                required={!sameAsPresent}
+                                                disabled={sameAsPresent || isFieldLocked('permPincode')} error={getFieldError('permPincode')} />
+                                        </div>
+                                    </div>
                                 </CollapsibleSection>
-
-
-
 
                                 {/* Caste & Community */}
                                 <CollapsibleSection
@@ -3645,10 +3733,10 @@ const MemberRegistration = () => {
                                     onToggle={() => toggleSection(4)}
                                 >
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <FormSelect label="Member's Caste" name="caste" value={formData.caste} onChange={handleChange} options={["MALA"]} required error={errors.caste} />
-                                        <FormSelect label="Member's Sub-Caste" name="subCaste" value={formData.subCaste} onChange={handleChange} options={subCastes} placeholder="Select sub-caste" />
+                                        <FormSelect label="Member's Caste" name="caste" value={formData.caste} onChange={handleChange} options={["MALA"]} required error={getFieldError('caste')} />
+                                        <FormSelect label="Member's Sub-Caste" name="subCaste" value={formData.subCaste} onChange={handleChange} options={subCastes} placeholder="Select sub-caste" error={getFieldError('subCaste')} />
 
-                                        <FormInput label="Community Certificate Number" name="communityCertNumber" value={formData.communityCertNumber} onChange={handleChange} onBlur={(e) => handleDuplicateCheck('communityCert', e.target.value)} placeholder="Enter certificate number" error={errors.communityCertNumber} />
+                                        <FormInput label="Community Certificate Number" name="communityCertNumber" value={formData.communityCertNumber} onChange={handleChange} onBlur={(e) => handleDuplicateCheck('communityCert', e.target.value)} placeholder="Enter certificate number" error={getFieldError('communityCertNumber')} />
                                         <FileUpload label="Community Certificate Upload" name="communityCert" onChange={handleFileChange} onRemove={handleRemoveFile} fileName={files.communityCert?.name} fileUrl={files.communityCert?.url} />
                                     </div>
                                 </CollapsibleSection>
@@ -3669,7 +3757,7 @@ const MemberRegistration = () => {
                                             onChange={handleChange}
                                             options={["Divorced", "Married", "Unmarried", "Widowed"]}
                                             required
-                                            error={errors.maritalStatus}
+                                            error={getFieldError('maritalStatus')}
                                         />
 
                                         {formData.maritalStatus === 'Married' && (
@@ -3730,8 +3818,7 @@ const MemberRegistration = () => {
                                                             onChange={handleChange}
                                                             options={formData.partnerCaste ? (casteSubCastes[formData.partnerCaste] || []) : []}
                                                             placeholder="Select sub-caste"
-                                                            disabled={!formData.partnerCaste}
-                                                        />
+                                                            disabled={!formData.partnerCaste} error={getFieldError('partnerSubCaste')} />
                                                     </>
                                                 )}
                                             </>
@@ -3755,7 +3842,7 @@ const MemberRegistration = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <FormInput label="Voter ID Number (EPIC Number)" name="epicNumber" value={formData.epicNumber} onChange={handleChange} onBlur={(e) => { handleBlur && handleBlur(e); handleDuplicateCheck('voterId', e.target.value); }} placeholder="Enter EPIC number" />
 
-                                            <FormInput label="Polling Booth Number" name="pollingBooth" value={formData.pollingBooth} onChange={handleChange} placeholder="Enter booth number" />
+                                            <FormInput label="Polling Booth Number" name="pollingBooth" value={formData.pollingBooth} onChange={handleChange} placeholder="Enter booth number" error={getFieldError('pollingBooth')} />
                                             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <FileUpload label="Upload Voter ID Front" name="voterIdFront" onChange={handleFileChange} onRemove={handleRemoveFile} fileName={files.voterIdFront?.name} fileUrl={files.voterIdFront?.url} />
                                                 <FileUpload label="Upload Voter ID Back" name="voterIdBack" onChange={handleFileChange} onRemove={handleRemoveFile} fileName={files.voterIdBack?.name} fileUrl={files.voterIdBack?.url} />
@@ -3775,7 +3862,7 @@ const MemberRegistration = () => {
                                     onToggle={() => toggleSection(7)}
                                 >
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                        <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${errors.photo ? 'border-red-500 bg-red-50' : (files.photo ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100')}`}>
+                                        <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${getFieldError('photo') ? 'border-red-500 bg-red-50' : (files.photo ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100')}`}>
                                             <div className="absolute right-2 top-2 z-20 flex gap-1">
                                                 {files.photo?.url && (
                                                     <a
@@ -3804,96 +3891,21 @@ const MemberRegistration = () => {
                                                 )}
                                             </div>
                                             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
-                                                <FaFileImage className={errors.photo ? 'text-red-500' : (files.photo ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500')} />
+                                                <FaFileImage className={getFieldError('photo') ? 'text-red-500' : (files.photo ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500')} />
                                             </div>
                                             <h4 className="text-sm font-bold text-gray-700">
                                                 {files.photo ? files.photo.name : <>Member Photo <span className="text-red-500">*</span></>}
                                             </h4>
-                                            <p className={`text-xs mt-1 ${errors.photo ? 'text-red-500' : 'text-gray-400'}`}>
-                                                {errors.photo ? errors.photo : (files.photo ? 'Click to change' : 'Click to upload photo')}
+                                            <p className={`text-xs mt-1 ${getFieldError('photo') ? 'text-red-500' : 'text-gray-400'}`}>
+                                                {getFieldError('photo') ? getFieldError('photo') : (files.photo ? 'Click to change' : 'Click to upload photo')}
                                             </p>
-                                            <button type="button" className={`mt-3 text-xs font-bold hover:underline ${errors.photo ? 'text-red-600' : 'text-blue-600'}`}>Choose File</button>
+                                            <button type="button" className={`mt-3 text-xs font-bold hover:underline ${getFieldError('photo') ? 'text-red-600' : 'text-blue-600'}`}>Choose File</button>
                                             <input type="file" name="photo" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer z-10" />
                                         </div>
-                                        <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${errors.aadhaarFront ? 'border-red-500 bg-red-50' : (files.aadhaarFront ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100')}`}>
-                                            <div className="absolute right-2 top-2 z-20 flex gap-1">
-                                                {files.aadhaarFront?.url && (
-                                                    <a
-                                                        href={files.aadhaarFront.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        title="View Document"
-                                                    >
-                                                        <FaEye size={14} />
-                                                    </a>
-                                                )}
-                                                {files.aadhaarFront && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleRemoveFile('aadhaarFront');
-                                                        }}
-                                                        className="flex items-center justify-center w-8 h-8 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition"
-                                                        title="Remove Aadhaar Front"
-                                                    >
-                                                        <FaEraser size={14} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
-                                                <FaIdCard className={errors.aadhaarFront ? 'text-red-500' : (files.aadhaarFront ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500')} />
-                                            </div>
-                                            <h4 className="text-sm font-bold text-gray-700">
-                                                {files.aadhaarFront ? files.aadhaarFront.name : <>Aadhar Card Front</>}
-                                            </h4>
-                                            <p className={`text-xs mt-1 ${errors.aadhaarFront ? 'text-red-500' : 'text-gray-400'}`}>
-                                                {errors.aadhaarFront ? errors.aadhaarFront : (files.aadhaarFront ? 'Click to change' : 'Upload front side')}
-                                            </p>
-                                            <button type="button" className="mt-3 text-blue-600 text-xs font-bold hover:underline">Choose File</button>
-                                            <input type="file" name="aadhaarFront" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer z-10" />
-                                        </div>
-                                        <div className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition cursor-pointer text-center relative group ${files.aadhaarBack ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
-                                            <div className="absolute right-2 top-2 z-20 flex gap-1">
-                                                {files.aadhaarBack?.url && (
-                                                    <a
-                                                        href={files.aadhaarBack.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        title="View Document"
-                                                    >
-                                                        <FaEye size={14} />
-                                                    </a>
-                                                )}
-                                                {files.aadhaarBack && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleRemoveFile('aadhaarBack');
-                                                        }}
-                                                        className="flex items-center justify-center w-8 h-8 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition"
-                                                        title="Remove Aadhaar Back"
-                                                    >
-                                                        <FaEraser size={14} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
-                                                <FaIdCard className={files.aadhaarBack ? 'text-blue-500' : 'text-gray-400 group-hover:text-blue-500'} />
-                                            </div>
-                                            <h4 className="text-sm font-bold text-gray-700">{files.aadhaarBack ? files.aadhaarBack.name : "Aadhar Card Back"}</h4>
-                                            <p className="text-xs text-gray-400 mt-1">{files.aadhaarBack ? 'Click to change' : 'Upload back side'}</p>
-                                            <button type="button" className="mt-3 text-blue-600 text-xs font-bold hover:underline">Choose File</button>
-                                            <input type="file" name="aadhaarBack" onChange={handleFileChange} className="opacity-0 absolute inset-0 cursor-pointer z-10" />
-                                        </div>
+
                                         <div className="col-span-1 md:col-span-3 text-center">
                                             <p className="text-xs text-amber-600 font-bold bg-amber-50 inline-block px-3 py-1 rounded-full border border-amber-100">
-                                                âš ï¸ Alert: Max file size for all uploads is 5 MB
+                                                ⚠️ Alert: Max file size for all uploads is 5 MB
                                             </p>
                                         </div>
                                     </div>
@@ -3919,7 +3931,7 @@ const MemberRegistration = () => {
                                                 { label: "> 8 lacks", value: "More than 8 Lakhs" }
                                             ]}
                                         />
-                                        <FormInput label="Number of Family Members" name="memberCount" value={formData.memberCount} onChange={handleChange} placeholder="Enter number" type="number" required error={errors.memberCount} />
+                                        <FormInput label="Number of Family Members" name="memberCount" value={formData.memberCount} onChange={handleChange} placeholder="Enter number" type="number" required error={getFieldError('memberCount')} />
                                     </div>
 
                                     {/* Add Family Member Button */}
@@ -4010,12 +4022,7 @@ const MemberRegistration = () => {
                                                                             <span className="font-semibold">{fm.educationLevel}</span>
                                                                         </p>
                                                                     )}
-                                                                    {fm.aadhaarNumber && (
-                                                                        <p className="text-xs text-gray-600 flex items-center gap-2">
-                                                                            <span className="opacity-70">Aadhaar:</span>
-                                                                            <span className="font-family-mono">{fm.aadhaarNumber}</span>
-                                                                        </p>
-                                                                    )}
+
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -4068,8 +4075,8 @@ const MemberRegistration = () => {
                                     {formData.hasRationCard && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <FormInput label="Ration Card Number" name="rationCardNumber" value={formData.rationCardNumber} onChange={handleChange} onBlur={(e) => { handleBlur && handleBlur(e); handleDuplicateCheck('rationCard', e.target.value); }} placeholder="Enter ration card number" />
-                                            <FormInput label="Ration Card Holder Name" name="rationCardHolderName" value={formData.rationCardHolderName} onChange={handleChange} placeholder="Enter card holder name" />
-                                            <FormSelect label="Ration Card Type" name="rationCardTypeFamily" value={formData.rationCardTypeFamily} onChange={handleChange} options={["Annapurna Scheme", "Antyodaya Anna Yojana", "Food Security Card"]} />
+                                            <FormInput label="Ration Card Holder Name" name="rationCardHolderName" value={formData.rationCardHolderName} onChange={handleChange} placeholder="Enter card holder name" error={getFieldError('rationCardHolderName')} />
+                                            <FormSelect label="Ration Card Type" name="rationCardTypeFamily" value={formData.rationCardTypeFamily} onChange={handleChange} options={["Annapurna Scheme", "Antyodaya Anna Yojana", "Food Security Card"]} error={getFieldError('rationCardTypeFamily')} />
                                             <div className="md:col-span-2">
                                                 <FileUpload label="Upload Ration Card" name="rationCardFile" onChange={handleFileChange} onRemove={handleRemoveFile} fileName={files.rationCardFile?.name} fileUrl={files.rationCardFile?.url} />
                                                 <p className="text-[10px] text-gray-500 mt-1">Max file size: 5 MB</p>
@@ -4094,8 +4101,8 @@ const MemberRegistration = () => {
                                                 <span className="font-bold text-gray-800">Declaration:</span> I hereby declare that the details furnished above are true and correct to the best of my knowledge and belief. I undertake to inform you of any changes therein, immediately. In case any of the above information is found to be false or untrue or misleading or misrepresenting, I am aware that I may be held liable for it. I agree to the <Link to="/terms-and-conditions" target="_blank" className="text-blue-600 font-bold hover:underline">Terms & Conditions</Link>.
                                             </div>
                                         </label>
-                                        {errors.legalConsent && (
-                                            <p className="text-red-500 text-xs mt-2 font-bold ml-8">{errors.legalConsent}</p>
+                                        {getFieldError('legalConsent') && (
+                                            <p className="text-red-500 text-xs mt-2 font-bold ml-8">{getFieldError('legalConsent')}</p>
                                         )}
                                     </div>
                                 )}
@@ -4136,6 +4143,7 @@ const MemberRegistration = () => {
                 {isViewMode && (
                     <div className="flex-1 overflow-y-auto bg-slate-50 pb-12">
                         <div className="max-w-4xl mx-auto pt-8 px-4">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-6 no-print">Preview Registration Details</h2>
                             <div className="flex justify-between items-center mb-6 no-print">
                                 <button onClick={handleBack} className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 flex items-center gap-2 shadow-sm transition">
                                     <FaArrowLeft /> Back
@@ -4227,15 +4235,14 @@ const MemberRegistration = () => {
             {
                 showSuccessModal && createdMemberData && (
                     <div className="fixed inset-0 bg-black bg-opacity-60 z-[60] flex items-center justify-center p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-2 bg-green-500"></div>
-
-                            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <FaCheckSquare className="text-green-600 text-4xl" />
-                            </div>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-green-500"></div>
+                        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <FaCheckSquare className="text-green-600 text-4xl" />
+                        </div>
 
                             <h2 className="text-2xl font-bold text-gray-800 mb-2">Registration Successful!</h2>
-                            <p className="text-gray-500 mb-6">Member has been successfully registered to the system.</p>
+                            <p className="text-gray-500 mb-6">Family have been successfully registered to the system.</p>
 
                             <div className="bg-gray-50 rounded-xl p-4 mb-8 border border-gray-100">
                                 <p className="text-xs text-gray-500 uppercase tracking-wide font-bold mb-1">Generated Member ID</p>
@@ -4407,25 +4414,23 @@ const MemberRegistration = () => {
                                         ? ["Brother", "Father", "Mother", "Sister"]
                                         : ["Daughter", "Son", "Spouse"]
                                     }
-                                    required
-                                />
+                                    required error={errors.relation} />
                                 <FormSelect
                                     label="Marital Status"
                                     name="maritalStatus"
                                     value={familyMemberForm.maritalStatus}
                                     onChange={handleFamilyChange}
                                     options={["Divorced", "Married", "Unmarried", "Widowed"]}
-                                    required
-                                />
-                                <FormInput label="Surname" name="surname" value={familyMemberForm.surname} onChange={handleFamilyChange} placeholder="Surname" required />
-                                <FormInput label="Name" name="name" value={familyMemberForm.name} onChange={handleFamilyChange} placeholder="Name" required />
-                                <FormInput label="S/o, W/o, D/o" name="fatherName" value={familyMemberForm.fatherName} onChange={handleFamilyChange} placeholder="Enter S/o, W/o, D/o Name" required />
-                                <FormInput label="Date of Birth (DD-MM-YYYY)" name="dob" value={familyMemberForm.dob} onChange={(e) => handleDateChange(e, setFamilyMemberForm, 'dob')} placeholder="DD-MM-YYYY" maxLength={10} required />
-                                <FormInput label="Age" name="age" value={familyMemberForm.age} onChange={handleFamilyChange} placeholder="Age" type="number" />
-                                <FormSelect label="Gender" name="gender" value={familyMemberForm.gender} onChange={handleFamilyChange} options={["Female", "Male", "Other"]} required />
+                                    required error={errors.maritalStatus} />
+                                <FormInput label="Surname" name="surname" value={familyMemberForm.surname} onChange={handleFamilyChange} placeholder="Surname" required error={errors.surname} />
+                                <FormInput label="Name" name="name" value={familyMemberForm.name} onChange={handleFamilyChange} placeholder="Name" required error={errors.name} />
+                                <FormInput label="S/o, W/o, D/o" name="fatherName" value={familyMemberForm.fatherName} onChange={handleFamilyChange} placeholder="Enter S/o, W/o, D/o Name" required error={errors.fatherName} />
+                                <FormInput label="Date of Birth (DD-MM-YYYY)" name="dob" value={familyMemberForm.dob} onChange={(e) => handleDateChange(e, setFamilyMemberForm, 'dob')} onBlur={handleBlur} placeholder="DD-MM-YYYY" maxLength={10} required error={getFieldError('dob')} />
+                                <FormInput label="Age" name="age" value={familyMemberForm.age} onChange={handleFamilyChange} placeholder="Age" type="number" error={errors.age} />
+                                <FormSelect label="Gender" name="gender" value={familyMemberForm.gender} onChange={handleFamilyChange} options={["Female", "Male", "Other"]} required error={errors.gender} />
                                 {(parseInt(familyMemberForm.age) >= 5 || !familyMemberForm.age) && (
                                     <>
-                                        <FormSelect label="Occupation" name="occupation" value={familyMemberForm.occupation} onChange={handleFamilyChange} options={memberOccupations} required />
+                                        <FormSelect label="Occupation" name="occupation" value={familyMemberForm.occupation} onChange={handleFamilyChange} options={memberOccupations} required error={errors.occupation} />
 
                                         {familyMemberForm.occupation === 'Private Employee' && (
                                             <>
@@ -4438,24 +4443,21 @@ const MemberRegistration = () => {
                                                         "Banking / Finance", "Education", "Healthcare", "IT / Software",
                                                         "Manufacturing", "Other", "Retail", "Services"
                                                     ]}
-                                                    required
-                                                />
+                                                    required error={errors.jobSector} />
                                                 <FormInput
                                                     label="Organization / Company"
                                                     name="jobOrganization"
                                                     value={familyMemberForm.jobOrganization}
                                                     onChange={handleFamilyChange}
                                                     placeholder="Enter company name"
-                                                    required
-                                                />
+                                                    required error={getFieldError('jobOrganization')} />
                                                 <FormInput
                                                     label="Designation"
                                                     name="jobDesignation"
                                                     value={familyMemberForm.jobDesignation}
                                                     onChange={handleFamilyChange}
                                                     placeholder="Enter designation"
-                                                    required
-                                                />
+                                                    required error={errors.jobDesignation} />
                                             </>
                                         )}
 
@@ -4466,32 +4468,28 @@ const MemberRegistration = () => {
                                                     name="jobCategory"
                                                     value={familyMemberForm.jobCategory}
                                                     onChange={handleFamilyChange}
-                                                    options={Object.keys(GOVT_JOB_CATEGORIES)}
-                                                />
+                                                    options={Object.keys(GOVT_JOB_CATEGORIES)} error={errors.jobCategory} />
                                                 <FormSelect
                                                     label="Job Sub-Category"
                                                     name="jobSubCategory"
                                                     value={familyMemberForm.jobSubCategory}
                                                     onChange={handleFamilyChange}
                                                     options={familyMemberForm.jobCategory ? GOVT_JOB_CATEGORIES[familyMemberForm.jobCategory] : []}
-                                                    disabled={!familyMemberForm.jobCategory}
-                                                />
+                                                    disabled={!familyMemberForm.jobCategory} error={getFieldError('jobSubCategory')} />
                                                 <FormSelect
                                                     label="Department / Organization"
                                                     name="jobOrganization"
                                                     value={familyMemberForm.jobOrganization}
                                                     onChange={handleFamilyChange}
                                                     options={GOVT_DEPARTMENTS}
-                                                    required
-                                                />
+                                                    required error={getFieldError('jobOrganization')} />
                                                 <FormInput
                                                     label="Designation"
                                                     name="jobDesignation"
                                                     value={familyMemberForm.jobDesignation}
                                                     onChange={handleFamilyChange}
                                                     placeholder="Enter designation"
-                                                    required
-                                                />
+                                                    required error={errors.jobDesignation} />
                                             </>
                                         )}
 
@@ -4502,8 +4500,7 @@ const MemberRegistration = () => {
                                                 value={familyMemberForm.jobDesignation}
                                                 onChange={handleFamilyChange}
                                                 placeholder="Enter designation"
-                                                required
-                                            />
+                                                required error={errors.jobDesignation} />
                                         )}
 
                                         {familyMemberForm.occupation === 'Other' && (
@@ -4513,8 +4510,7 @@ const MemberRegistration = () => {
                                                 value={familyMemberForm.jobDesignation}
                                                 onChange={handleFamilyChange}
                                                 placeholder="Enter occupation details"
-                                                required
-                                            />
+                                                required error={errors.jobDesignation} />
                                         )}
 
                                         {familyMemberForm.occupation === 'Student' && (
@@ -4524,30 +4520,28 @@ const MemberRegistration = () => {
                                                 value={familyMemberForm.educationLevel}
                                                 onChange={handleFamilyChange}
                                                 options={["Degree", "Engineering & Technology", "High School", "Intermediate", "PG", "Polytechnic / Diploma", "Primary School", "Research / Doctoral Studies (PhD)", "Vocational / ITI"]}
-                                                required
-                                            />
+                                                required error={errors.educationLevel} />
                                         )}
                                     </>
                                 )}
 
-                                <FormInput label="Mobile Number" name="mobileNumber" value={familyMemberForm.mobileNumber} onChange={handleFamilyChange} placeholder="Mobile" required />
-                                <FormInput label="Aadhaar Number" name="aadhaarNumber" value={familyMemberForm.aadhaarNumber} onChange={handleFamilyChange} placeholder="Aadhaar" required />
+                                <FormInput label="Mobile Number" name="mobileNumber" value={familyMemberForm.mobileNumber} onChange={handleFamilyChange} placeholder="Mobile" required error={errors.mobileNumber} />
+
 
                                 {/* Voter ID - Only if 18 or older */}
                                 {(!familyMemberForm.age || parseInt(familyMemberForm.age) >= 18) && (
                                     <>
                                         <div className="md:col-span-2 mt-4"><h3 className="font-bold text-blue-600 border-b pb-1 mb-2">Voter ID Details</h3></div>
-                                        <FormInput label="EPIC Number" name="epicNumber" value={familyMemberForm.epicNumber} onChange={handleFamilyChange} placeholder="EPIC No" />
+                                        <FormInput label="EPIC Number" name="epicNumber" value={familyMemberForm.epicNumber} onChange={handleFamilyChange} placeholder="EPIC No" error={errors.epicNumber} />
 
-                                        <FormInput label="Polling Booth" name="pollingBooth" value={familyMemberForm.pollingBooth} onChange={handleFamilyChange} placeholder="Booth No" />
+                                        <FormInput label="Polling Booth" name="pollingBooth" value={familyMemberForm.pollingBooth} onChange={handleFamilyChange} placeholder="Booth No" error={getFieldError('pollingBooth')} />
                                     </>
                                 )}
 
                                 {/* Documents */}
                                 <div className="md:col-span-2 mt-4"><h3 className="font-bold text-blue-600 border-b pb-1 mb-2">Document Uploads</h3></div>
                                 <FileUpload label="Member Photo" name="photo" onChange={handleFamilyFileChange} onRemove={handleRemoveFamilyFile} fileName={familyMemberFiles.photo?.name} required />
-                                <FileUpload label="Aadhaar Front" name="aadhaarFront" onChange={handleFamilyFileChange} onRemove={handleRemoveFamilyFile} fileName={familyMemberFiles.aadhaarFront?.name} />
-                                <FileUpload label="Aadhaar Back" name="aadhaarBack" onChange={handleFamilyFileChange} onRemove={handleRemoveFamilyFile} fileName={familyMemberFiles.aadhaarBack?.name} />
+
 
                                 {(!familyMemberForm.age || parseInt(familyMemberForm.age) >= 18) && (
                                     <>
@@ -4590,3 +4584,4 @@ const PrintPortal = ({ children }) => {
 };
 
 export default MemberRegistration;
+
