@@ -16,6 +16,14 @@ const registerInstitution = asyncHandler(async (req, res) => {
         throw new Error('Please include all required fields');
     }
 
+    // --- AUTO GENERATE STANDARDIZED PASSWORD ---
+    const bcrypt = require('bcryptjs');
+    const cleanMobile = mobileNumber.toString().replace(/\D/g, '').slice(-10);
+    const standardizedPassword = `Mews@${cleanMobile}`;
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(standardizedPassword, salt);
+    console.log(`[Institution REG] Generated standardized password for: ${cleanMobile}`);
+
     const institution = await Institution.create({
         type,
         name,
@@ -25,6 +33,7 @@ const registerInstitution = asyncHandler(async (req, res) => {
         fullAddress,
         googleMapsLink,
         mewsDiscountPercentage,
+        passwordHash, // Added passwordHash to creation
         servicesOffered: servicesOffered ? servicesOffered : [] // frontend sends array
     });
 

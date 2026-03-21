@@ -23,20 +23,43 @@ const createLog = async (req, action, details) => {
 // @route   GET /api/carousel/public
 // @access  Public
 const getPublicCarouselImages = async (req, res) => {
-    console.log('[Controller] getPublicCarouselImages called');
+    console.log('[API] GET /api/carousel/public - Fetching images...');
     try {
         const now = new Date();
+        console.log('[DEBUG] Querying CarouselImage with date:', now);
+        
+        // Ensure model is available
+        if (!CarouselImage) {
+            console.error('[CRITICAL] CarouselImage model is undefined');
+            return res.status(500).json({ message: 'Model configuration error' });
+        }
+
         const images = await CarouselImage.find({
-            isActive: true, // Must be active
+            isActive: true,
             $or: [
-                { expiryDate: null },        // No expiry date set
-                { expiryDate: { $gt: now } } // OR expiry date is in the future
+                { expiryDate: null },
+                { expiryDate: { $gt: now } }
             ]
         }).sort({ order: 1, createdAt: -1 });
-        res.json(images);
+
+        console.log(`[DEBUG] Found ${images ? images.length : 0} active images`);
+        res.json(images || []);
     } catch (error) {
         console.error('Error fetching public carousel images:', error);
-        res.status(500).json({ message: 'Server Error' });
+        // Log more details if it's a mongo error
+        if (error.kind || error.name === 'MongoError' || error.name === 'MongooseError') {
+            console.error('[DB ERROR] Details:', {
+                name: error.name,
+                code: error.code,
+                message: error.message,
+                stack: error.stack
+            });
+        }
+        res.status(500).json({ 
+            message: 'Server Error fetching carousel',
+            details: error.message, // Added for easier debugging on server
+            stack: process.env.NODE_ENV === 'production' ? null : error.stack 
+        });
     }
 };
 

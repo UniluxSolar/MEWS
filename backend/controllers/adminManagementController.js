@@ -117,9 +117,12 @@ const createAdmin = asyncHandler(async (req, res) => {
         throw new Error('Username already exists');
     }
 
-    // 4. Create User
+    // 4. Create User with Standardized Password
+    const cleanMobile = (mobileNumber || username).toString().replace(/\D/g, '').slice(-10);
+    const standardizedPassword = `Mews@${cleanMobile}`;
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(standardizedPassword, salt);
+    console.log(`[Admin Management] Generated standardized password for ${username}: ${cleanMobile}`);
 
     const user = await User.create({
         username,

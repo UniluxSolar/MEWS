@@ -121,11 +121,14 @@ const loginUser = asyncHandler(async (req, res) => {
     }
 
     // Identify Logged In Record
+    let loggedRole = (user.role || userType || '').toString().trim().toUpperCase();
+    console.log(`[LOGIN SUCCESS] User: ${user.username || user.email} | Detected Type: ${userType} | Final Role: ${loggedRole}`);
+
     let loggedInUser = {
         _id: user._id,
         name: user.name || user.username || 'User',
         email: user.email,
-        role: user.role || userType,
+        role: loggedRole,
         token: generateToken(user._id, user._id)
     };
 

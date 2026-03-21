@@ -285,14 +285,17 @@ const registerMember = asyncHandler(async (req, res) => {
         legalConsent: data.legalConsent === 'true'
     };
 
-    // --- AUTO GENERATE PASSWORD ---
+    // --- AUTO GENERATE STANDARDIZED PASSWORD ---
     const bcrypt = require('bcryptjs');
     if (memberData.mobileNumber) {
-        const rawMobile = memberData.mobileNumber.toString().trim().replace(/\D/g, '').slice(-10);
-        const rawPassword = `Mews@${rawMobile}`;
+        // Normalize to last 10 digits
+        const cleanMobile = memberData.mobileNumber.toString().trim().replace(/\D/g, '').slice(-10);
+        const standardizedPassword = `Mews@${cleanMobile}`;
         const salt = await bcrypt.genSalt(10);
-        memberData.passwordHash = await bcrypt.hash(rawPassword, salt);
-        console.log(`[REG] Password generated for mobile: ${rawMobile}`);
+        memberData.passwordHash = await bcrypt.hash(standardizedPassword, salt);
+        console.log(`[REG] Standardized password generated for member: ${cleanMobile}`);
+    } else {
+        console.warn(`[REG] Warning: Missing mobile number for member enrollment. Skipping password generation.`);
     }
 
     // Process Family Members

@@ -59,8 +59,21 @@ const AdminLoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
 
     const handleLoginSuccess = (data) => {
-        const adminRoles = ['SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'MUNICIPALITY_ADMIN'];
-        if (!adminRoles.includes(data.role)) {
+        // Normalize role for comparison
+        const userRole = (data.role || '').trim().toUpperCase();
+        console.log('[Auth] Received Role:', userRole);
+
+        const adminRoles = [
+            'SUPER_ADMIN', 
+            'STATE_ADMIN', 
+            'DISTRICT_ADMIN', 
+            'MANDAL_ADMIN', 
+            'VILLAGE_ADMIN', 
+            'MUNICIPALITY_ADMIN',
+            'ADMIN' // Fallback for production accounts returning generic ADMIN role
+        ];
+        
+        if (!adminRoles.includes(userRole)) {
             setFeedback({ type: 'error', text: 'Access Denied: Not an Admin Account' });
             return;
         }
