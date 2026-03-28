@@ -1,0 +1,345 @@
+﻿Connected to MongoDB.
+
+--- USERS / ADMINS (10) ---
+≡ƒæñ Username: 8500626600
+   Email: N/A
+   Role: SUPER_ADMIN
+   Password Hash: $2a$10$ol9r6er8fL7obSwIs7yoNuOL6zfF6ZFB.vzAHQK0xjK9ssH2x.Hzu
+-----------------------------------
+≡ƒæñ Username: 8977760488
+   Email: N/A
+   Role: STATE_ADMIN
+   Password Hash: $2a$10$ol9r6er8fL7obSwIs7yoNuOL6zfF6ZFB.vzAHQK0xjK9ssH2x.Hzu
+-----------------------------------
+≡ƒæñ Username: 7981585142
+   Email: N/A
+   Role: DISTRICT_ADMIN
+   Password Hash: $2a$10$ol9r6er8fL7obSwIs7yoNuOL6zfF6ZFB.vzAHQK0xjK9ssH2x.Hzu
+-----------------------------------
+≡ƒæñ Username: 9121817188
+   Email: N/A
+   Role: MUNICIPALITY_ADMIN
+   Password Hash: $2a$10$ol9r6er8fL7obSwIs7yoNuOL6zfF6ZFB.vzAHQK0xjK9ssH2x.Hzu
+-----------------------------------
+≡ƒæñ Username: 6303109394
+   Email: uniluxsolar@gmail.com
+   Role: STATE_ADMIN
+   Password Hash: $2a$10$PS1uiYWY/qqQvLxfUHHxdekGmf6K41AgWbuH6XQJKgrmee1hoiUAS
+-----------------------------------
+≡ƒæñ Username: 9676360630
+   Email: 9676360630@mews.local
+   Role: VILLAGE_ADMIN
+   Password Hash: $2a$10$MM0UeuEf8.RAAO/XhpKb2uf/d6kH9R.8/t/9RckH83f9JVbiKW5we
+-----------------------------------
+≡ƒæñ Username: 9676021721
+   Email: 9676021721@mews.local
+   Role: DISTRICT_ADMIN
+   Password Hash: $2a$10$fhn5nWFv2yh1KbjWNJ.7r..I5CGkSS8EeCo5tZrmXXnXaEu3c2QNu
+-----------------------------------
+≡ƒæñ Username: 6325987412
+   Email: 6325987412@mews.local
+   Role: VILLAGE_ADMIN
+   Password Hash: $2a$10$tNS6Zny3OV6QpD94kIdnveowhLZOvDFDrfo0NlZ1mzyucPPK1kKfW
+-----------------------------------
+≡ƒæñ Username: 9632589658
+   Email: 9632589658@mews.local
+   Role: MANDAL_ADMIN
+   Password Hash: $2a$10$9Sq/WaqYXDYrpSuNqnxd5egiOXYmP9BHnQ2oGdJZeqTJjqNo8QR1q
+-----------------------------------
+≡ƒæñ Username: 9632586325
+   Email: 9632586325@mews.local
+   Role: DISTRICT_ADMIN
+   Password Hash: $2a$10$ZJ3M4jFRUtBbgQjgdz1reuBH.znMpd39ewn33pxBlNFyDL4VyZTw.
+-----------------------------------
+
+--- MEMBERS (40) ---
+≡ƒæñ ID: MEWS-2026-24-00-000001
+   Name: kpp kp
+   Mobile: 9676021721
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-00-000002
+   Name: erew kp
+   Mobile: 9676360630
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-STATE-V01
+   Name: Venky TS_State_Admin
+   Mobile: 6303109394
+   Email: uniluxsolar@gmail.com
+   Role: STATE_ADMIN
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-01-000005
+   Name: fghfg cgg
+   Mobile: 7878875678
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-29-000001
+   Name: Pavan Mallikanti
+   Mobile: 9398412240
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-20-000030
+   Name: KRISHNA Kolipaka
+   Mobile: 9676021721
+   Email: krishnaprasad8429@gmail.com
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-20-000031
+   Name: Ramana Kolipaka
+   Mobile: 9676360630
+   Email: N/A
+   Role: VILLAGE_ADMIN
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-01-000006
+   Name: Unilux Solar Kolipaka
+   Mobile: 9676021721
+   Email: krishnaprasad8429@gmail.com
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-01-000007
+   Name: Unilux Solar Medi
+   Mobile: 8500626600
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-01-000010
+   Name: adfdf dfdfsd
+   Mobile: 9676265132
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-01-000011
+   Name: fgdfgsd dfdfsd
+   Mobile: 9676021721
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-29-000002
+   Name: Durga Redapangu
+   Mobile: 9368754698
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-29-000004
+   Name: Nani Mallikanti
+   Mobile: 6932586984
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-29-000003
+   Name: Ram Mallikanti
+   Mobile: 9853265874
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-29-000005
+   Name: priya mamidi
+   Mobile: 6398524156
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-09-000001
+   Name: Sreenu Medi
+   Mobile: 9856231475
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-16-000001
+   Name: Deepthi Manne
+   Mobile: 9623586412
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-11-000001
+   Name: Raghu Medi
+   Mobile: 9632586325
+   Email: N/A
+   Role: DISTRICT_ADMIN
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-11-000002
+   Name: Sujatha Medi
+   Mobile: 6326589412
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-00-000004
+   Name: Sanjay Bandi
+   Mobile: 6985325698
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-00-000005
+   Name: Rani Bandi
+   Mobile: 9658612535
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-20-000032
+   Name: saija Bandi
+   Mobile: 9632589658
+   Email: N/A
+   Role: MANDAL_ADMIN
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-29-000008
+   Name: Rani Sheelam
+   Mobile: 6325987412
+   Email: N/A
+   Role: VILLAGE_ADMIN
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-02-000001
+   Name: Uday Medi
+   Mobile: 9635862545
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-05-000001
+   Name: Yamini Gaddam 
+   Mobile: 9857468548
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-05-000002
+   Name: Naresh Gaddam 
+   Mobile: 6359842136
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-06-000001
+   Name: surya Bandi
+   Mobile: 9856874523
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-09-000003
+   Name: anu yyi
+   Mobile: 9856321475
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-00-000006
+   Name: tyyh fgtry
+   Mobile: 9856823569
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-15-000001
+   Name: yhjk uiol
+   Mobile: 6935826488
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-12-000001
+   Name: VGF GJN
+   Mobile: 9856478512
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-13-000001
+   Name: fdg ghg
+   Mobile: 9854532865
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-12-000002
+   Name: dgg tty
+   Mobile: 6325689654
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-08-000001
+   Name: simharaj heryrt
+   Mobile: 6985214365
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-00-000008
+   Name: roja hfbfb
+   Mobile: 6985325684
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-00-000007
+   Name: fhh hfbfb
+   Mobile: 9856874582
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-00-000009
+   Name: yyty gygyhn
+   Mobile: 6352585664
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-00-000010
+   Name: ctgf tfvtgv
+   Mobile: 9652365268
+   Email: N/A
+   Role: MEMBER
+   Password Hash: N/A
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-12-000005
+   Name: wew etert
+   Mobile: 9874563219
+   Email: N/A
+   Role: MEMBER
+   Password Hash: $2a$10$sPJQKuHKpOW9C5DzApisqeWQGOQ2hc/CQnj/VbDRFde9uzMvkN3Oi
+-----------------------------------
+≡ƒæñ ID: MEWS-2026-24-11-000003
+   Name: sff gbrfg
+   Mobile: 9874563215
+   Email: N/A
+   Role: MEMBER
+   Password Hash: $2a$10$msJiMuSWg20LYWzisv5SAeLLipq7OtMkiHUYZ4matF3/MuTWrZLdS
+-----------------------------------
+
+--- INSTITUTIONS (1) ---
+≡ƒÅó Name: Sri Sai Degree College
+   Type: college
+   Email: N/A
+   Mobile: 9245458215
+   Password Hash: N/A
+-----------------------------------
+
+Done.
