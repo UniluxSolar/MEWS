@@ -459,22 +459,26 @@ const MemberRegistration = () => {
     // Helper: only show error for a field the user has already interacted with
     const getFieldError = (fieldName) => touched[fieldName] ? errors[fieldName] : undefined;
 
-    // Sequential field locking: a field is enabled only when all preceding required fields are filled
+    // Strict row-wise sequential data entry sequence (all 10 fields)
     const BASIC_FIELD_SEQUENCE = [
         { name: 'surname', isFilled: () => !!formData.surname?.trim() },
         { name: 'name', isFilled: () => !!formData.name?.trim() },
         { name: 'fatherName', isFilled: () => !!formData.fatherName?.trim() },
-        { name: 'gender', isFilled: () => !!formData.gender },
+        { name: 'dob', isFilled: () => !validateDOB(formData.dob) && !!formData.dob },
+        { name: 'age', isFilled: () => !!formData.age }, // Added to support Tab focus
         { name: 'occupation', isFilled: () => !!formData.occupation },
+        { name: 'gender', isFilled: () => !!formData.gender },
         { name: 'mobileNumber', isFilled: () => formData.mobileNumber?.length === 10 },
+        { name: 'bloodGroup', isFilled: () => !!formData.bloodGroup || touched.bloodGroup }, // Optional: filled or skipped
+        { name: 'alternateMobile', isFilled: () => (!!formData.alternateMobile && formData.alternateMobile.length === 10) || touched.alternateMobile }, // Optional
+        { name: 'email', isFilled: () => !!formData.email || touched.email } // Optional
     ];
+
     const isFieldEnabled = (fieldName) => {
         const idx = BASIC_FIELD_SEQUENCE.findIndex(f => f.name === fieldName);
-        if (idx <= 0) return true; // first field or not in sequence = always enabled
-        for (let i = 0; i < idx; i++) {
-            if (!BASIC_FIELD_SEQUENCE[i].isFilled()) return false;
-        }
-        return true;
+        if (idx <= 0) return true; // first field is always enabled
+        // Previous field must be "filled" according to our definition
+        return BASIC_FIELD_SEQUENCE[idx - 1].isFilled();
     };
 
     // Family Member State
@@ -3052,6 +3056,7 @@ const MemberRegistration = () => {
                                             onBlur={handleBlur}
                                             placeholder="Enter surname"
                                             required
+                                            disabled={!isFieldEnabled('surname')}
                                             error={getFieldError('surname')}
                                         />
                                         <FormInput
@@ -3085,13 +3090,16 @@ const MemberRegistration = () => {
                                             onBlur={handleBlur}
                                             placeholder="DD-MM-YYYY"
                                             maxLength={10}
+                                            disabled={!isFieldEnabled('dob')}
                                             error={getFieldError('dob')}
                                         />
                                         <FormInput
                                             label="Age"
+                                            name="age"
                                             value={formData.age}
                                             placeholder="Auto-calculated"
-                                            disabled={true}
+                                            readOnly
+                                            disabled={!isFieldEnabled('age')}
                                         />
 
                                         {(parseInt(formData.age) >= 5 || !formData.age) && (
@@ -3294,8 +3302,18 @@ const MemberRegistration = () => {
                                             name="bloodGroup"
                                             value={formData.bloodGroup}
                                             onChange={handleChange}
+                                            onBlur={handleBlur}
+                                            disabled={!isFieldEnabled('bloodGroup')}
                                             options={["A+", "A-", "AB+", "AB-", "B+", "B-", "O+", "O-", "Oh (Bombay Blood Group)"]} error={getFieldError('bloodGroup')} />
-                                        <FormInput label="Alternate Mobile Number" name="alternateMobile" value={formData.alternateMobile} onChange={handleChange} placeholder="Enter alternate mobile number" error={getFieldError('alternateMobile')} />
+                                        <FormInput
+                                            label="Alternate Mobile Number"
+                                            name="alternateMobile"
+                                            value={formData.alternateMobile}
+                                            onChange={handleChange}
+                                            onBlur={handleBlur}
+                                            disabled={!isFieldEnabled('alternateMobile')}
+                                            placeholder="Enter alternate mobile number"
+                                            error={getFieldError('alternateMobile')} />
 
                                         {/* Email Verification Section */}
                                         <div className="col-span-1 md:col-span-3">
@@ -3306,15 +3324,18 @@ const MemberRegistration = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 {/* Email Input + Send Code Button */}
                                                 <div className="col-span-1 md:col-span-2 flex gap-2">
-                                                    <div className={`flex-1 flex items-center bg-white border ${getFieldError('email') ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'} rounded-lg overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all ${emailVerification.isVerified ? 'bg-gray-100' : ''}`}>
+                                                    <div className={`flex-1 flex items-center bg-white border ${getFieldError('email') ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'} rounded-lg overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all ${emailVerification.isVerified || !isFieldEnabled('email') ? 'bg-gray-100' : ''}`}>
                                                         <input
                                                             type="text"
                                                             name="email_username"
                                                             value={formData.email ? formData.email.split('@')[0] : ''}
                                                             onChange={handleEmailUsernameChange}
-                                                            onBlur={handleEmailBlur}
-                                                            disabled={emailVerification.isVerified}
-                                                            className={`flex-1 bg-transparent border-none px-4 py-2.5 text-sm text-gray-900 focus:outline-none placeholder-gray-400 ${emailVerification.isVerified ? 'cursor-not-allowed text-gray-500' : ''}`}
+                                                            onBlur={(e) => {
+                                                                handleEmailBlur(e);
+                                                                handleBlur(e); // Added to trigger sequence update
+                                                            }}
+                                                            disabled={emailVerification.isVerified || !isFieldEnabled('email')}
+                                                            className={`flex-1 bg-transparent border-none px-4 py-2.5 text-sm text-gray-900 focus:outline-none placeholder-gray-400 ${emailVerification.isVerified || !isFieldEnabled('email') ? 'cursor-not-allowed text-gray-500' : ''}`}
                                                             placeholder="Enter email user name"
                                                         />
                                                         <span className="px-3 py-2.5 bg-gray-50 text-gray-500 text-sm font-medium border-l border-gray-200 select-none">
@@ -3324,8 +3345,8 @@ const MemberRegistration = () => {
                                                     <button
                                                         type="button"
                                                         onClick={handleSendVerificationCode}
-                                                        disabled={emailVerification.loading || emailVerification.isVerified || !formData.email}
-                                                        className={`px-4 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${emailVerification.isVerified
+                                                        disabled={emailVerification.loading || emailVerification.isVerified || !formData.email || !isFieldEnabled('email')}
+                                                        className={`px-4 py-2.5 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${emailVerification.isVerified || !isFieldEnabled('email')
                                                             ? 'bg-green-100 text-green-700 cursor-not-allowed'
                                                             : emailVerification.loading || !formData.email
                                                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
