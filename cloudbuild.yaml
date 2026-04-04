@@ -1,3 +1,4 @@
+steps:
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/mews-app', '.']
@@ -16,7 +17,7 @@
       - '--image'
       - 'gcr.io/$PROJECT_ID/mews-app'
       - '--region'
-      - 'us-central1'
+      - 'asia-south1'
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
