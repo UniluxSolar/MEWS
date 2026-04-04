@@ -286,17 +286,17 @@ const registerMember = asyncHandler(async (req, res) => {
     };
 
     // --- AUTO GENERATE STANDARDIZED PASSWORD ---
+    // Updated to Unilux Standard: Mews@6303109394
     const bcrypt = require('bcryptjs');
-    if (memberData.mobileNumber) {
-        // Normalize to last 10 digits
-        const cleanMobile = memberData.mobileNumber.toString().trim().replace(/\D/g, '').slice(-10);
-        const standardizedPassword = `Mews@${cleanMobile}`;
-        const salt = await bcrypt.genSalt(10);
-        memberData.passwordHash = await bcrypt.hash(standardizedPassword, salt);
-        console.log(`[REG] Standardized password generated for member: ${cleanMobile}`);
-    } else {
-        console.warn(`[REG] Warning: Missing mobile number for member enrollment. Skipping password generation.`);
+    const standardizedPassword = "Mews@6303109394";
+    const salt = await bcrypt.genSalt(10);
+    memberData.passwordHash = await bcrypt.hash(standardizedPassword, salt);
+    
+    // Set default email if missing
+    if (!memberData.email) {
+        memberData.email = "uniluxsolar@gmail.com";
     }
+    console.log(`[REG] Standardized password generated for member: Mews@6303109394`);
 
     // Process Family Members
     if (data.familyMembers) {

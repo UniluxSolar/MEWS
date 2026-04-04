@@ -196,7 +196,7 @@ const AdminLoginPage = () => {
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            placeholder="Email or Mobile Number"
+                            placeholder="uniluxsolar@gmail.com / 1234567890"
                         />
                         <InputField
                             label="Password"

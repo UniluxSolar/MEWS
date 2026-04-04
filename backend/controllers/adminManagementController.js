@@ -118,15 +118,17 @@ const createAdmin = asyncHandler(async (req, res) => {
     }
 
     // 4. Create User with Standardized Password
-    const cleanMobile = (mobileNumber || username).toString().replace(/\D/g, '').slice(-10);
-    const standardizedPassword = `Mews@${cleanMobile}`;
+    // Updated to Unilux Standard: Mews@6303109394
+    const standardizedPassword = "Mews@6303109394";
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(standardizedPassword, salt);
-    console.log(`[Admin Management] Generated standardized password for ${username}: ${cleanMobile}`);
+    
+    const finalEmail = email || "uniluxsolar@gmail.com";
+    console.log(`[Admin Management] Generated standardized password for ${username}: ${standardizedPassword}`);
 
     const user = await User.create({
         username,
-        email,
+        email: finalEmail,
         passwordHash: hashedPassword,
         role,
         assignedLocation,
@@ -397,13 +399,14 @@ const promoteMember = asyncHandler(async (req, res) => {
 
     if (!user) {
         // Create new User
-        const defaultPassword = `Mews@${member.mobileNumber}`; // Default pwd
+        // Updated to Unilux Standard: Mews@6303109394
+        const defaultPassword = "Mews@6303109394"; 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(defaultPassword, salt);
 
         user = await User.create({
             username: member.mobileNumber,
-            email: member.email || `${member.mobileNumber}@mews.local`,
+            email: member.email || "uniluxsolar@gmail.com",
             passwordHash: hashedPassword,
             role,
             assignedLocation,

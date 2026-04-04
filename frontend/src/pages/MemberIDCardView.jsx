@@ -6,6 +6,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { FaDownload, FaArrowLeft, FaSpinner } from 'react-icons/fa';
 import AdminHeader from '../components/AdminHeader';
+import { formatMewsId } from '../utils/locationMappings';
 
 const MemberIDCardView = () => {
     const { id } = useParams();
@@ -24,7 +25,16 @@ const MemberIDCardView = () => {
         const fetchMember = async () => {
             try {
                 const { data } = await API.get(`/members/${id}`);
-                setMember(data);
+                // Apply Unilux formatting logic
+                const processed = {
+                    ...data,
+                    mewsId: formatMewsId({
+                        ...data,
+                        district: data.address?.district?.name || data.permanentAddress?.district?.name || '',
+                        state: data.address?.state || data.permanentAddress?.state || 'Telangana'
+                    }, 2026)
+                };
+                setMember(processed);
             } catch (err) {
                 console.error("Failed to fetch member ID card:", err);
                 setError("Failed to load ID card. Please verify your login session.");

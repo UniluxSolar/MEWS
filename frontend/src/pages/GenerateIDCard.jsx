@@ -11,6 +11,7 @@ import jsPDF from 'jspdf';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import MemberIDCardTemplate from '../components/MemberIDCardTemplate';
+import { formatMewsId } from '../utils/locationMappings';
 
 const GenerateIDCard = () => {
     const location = useLocation();
@@ -81,7 +82,11 @@ const GenerateIDCard = () => {
                         ...member, // Keep original fields
                         name: member.name || rawData.name || rawData.firstName || '',
                         surname: member.surname || rawData.surname || rawData.lastName || '',
-                        mewsId: member.mewsId, // Simply pass what we have
+                        mewsId: formatMewsId({ 
+                            ...member, 
+                            district: dName, 
+                            state: 'Telangana' 
+                        }, 2026), // Apply format only during generation
                         id: member.id || member._id, // Pass Mongo ID as backup for keying/debugging
 
                         // Calculated fields for Template
