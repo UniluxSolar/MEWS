@@ -65,24 +65,26 @@ const InstitutionLoginPage = () => {
             return;
         }
 
-        localStorage.setItem('adminInfo', JSON.stringify(data));
-        localStorage.setItem('memberInfo', JSON.stringify(data));
+        sessionStorage.setItem('adminInfo', JSON.stringify(data));
+        sessionStorage.setItem('memberInfo', JSON.stringify(data));
 
-        // ... rest of logic
         const userToSave = {
             _id: data._id,
-            name: data.name,
-            email: data.email,
-            role: data.role,
-            memberType: data.memberType
+            name: data.institutionName || data.name,
+            role: 'INSTITUTION',
+            memberType: 'INSTITUTION'
         };
-        localStorage.setItem('savedUser', JSON.stringify(userToSave));
+        sessionStorage.setItem('savedUser', JSON.stringify(userToSave));
 
         navigate('/dashboard', { replace: true });
     };
 
     const handleLogin = async (e) => {
         if (e) e.preventDefault();
+        if (!username || !password || password === 'Mews@') {
+            setFeedback({ type: 'error', text: 'Please enter both credentials' });
+            return;
+        }
         setLoading(true);
         setFeedback(null);
         try {
@@ -111,6 +113,10 @@ const InstitutionLoginPage = () => {
 
     const handleResetPassword = async (e) => {
         if (e) e.preventDefault();
+        if (!resetCode || !newPassword || newPassword === 'Mews@') {
+            setFeedback({ type: 'error', text: 'Please fill all fields' });
+            return;
+        }
         setLoading(true);
         try {
             const { data } = await API.post('/auth/reset-password', { loginInput: username, resetCode, newPassword });
@@ -164,8 +170,18 @@ const InstitutionLoginPage = () => {
                             icon={FaLock}
                             type={showPassword ? "text" : "password"}
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
+                            onFocus={(e) => {
+                                if (!password) setPassword('Mews@');
+                            }}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val.startsWith('Mews@')) {
+                                    setPassword(val);
+                                } else if (val.length < 5) {
+                                    setPassword('Mews@');
+                                }
+                            }}
+                            placeholder="Mews@123..."
                             suffixIcon={showPassword ? FaEyeSlash : FaEye}
                             onSuffixClick={() => setShowPassword(!showPassword)}
                         />
@@ -238,8 +254,18 @@ const InstitutionLoginPage = () => {
                             icon={FaLock}
                             type={showPassword ? "text" : "password"}
                             value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="Enter new password"
+                            onFocus={() => {
+                                if (!newPassword) setNewPassword('Mews@');
+                            }}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val.startsWith('Mews@')) {
+                                    setNewPassword(val);
+                                } else if (val.length < 5) {
+                                    setNewPassword('Mews@');
+                                }
+                            }}
+                            placeholder="Mews@YourPassword"
                             suffixIcon={showPassword ? FaEyeSlash : FaEye}
                             onSuffixClick={() => setShowPassword(!showPassword)}
                         />

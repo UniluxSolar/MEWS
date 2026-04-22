@@ -17,7 +17,6 @@ import AdminHeader from '../components/AdminHeader';
 import StatCard from '../components/common/StatCard';
 import ActionCard from '../components/common/ActionCard';
 import DashboardHeader from '../components/common/DashboardHeader';
-import LiveUpdatesTicker from '../components/LiveUpdatesTicker';
 
 // Map Imports
 import { MapContainer, TileLayer, Marker, Popup, LayersControl } from 'react-leaflet';
@@ -236,8 +235,7 @@ const MunicipalityDashboard = () => {
                 <AdminSidebar activePage="dashboard" />
 
                 {/* Main Content */}
-                <main id="admin-dashboard-content" className="flex-1 overflow-y-auto">
-                    <LiveUpdatesTicker />
+                <main id="admin-dashboard-content" className="flex-1 overflow-y-auto bg-slate-50">
                     {/* Welcome Header with Gradient */}
                     <div id="location-card-scroll-target">
                         <DashboardHeader

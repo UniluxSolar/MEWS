@@ -5,7 +5,8 @@ const { protect } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
 
 router.route('/')
-    .post(protect, upload.array('attachments', 10), createAnnouncement)
     .get(protect, getAnnouncements);
+
+router.post('/create', protect, upload.array('attachments', 10), createAnnouncement);
 
 module.exports = router;

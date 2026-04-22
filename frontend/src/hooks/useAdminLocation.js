@@ -16,7 +16,7 @@ const useAdminLocation = () => {
     const [userRole, setUserRole] = useState('');
 
     useEffect(() => {
-        const info = localStorage.getItem('adminInfo');
+        const info = sessionStorage.getItem('adminInfo');
         if (info) {
             const parsed = JSON.parse(info);
             const role = parsed.role || '';

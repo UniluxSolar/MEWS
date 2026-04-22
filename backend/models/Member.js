@@ -29,10 +29,12 @@ const MemberSchema = new mongoose.Schema({
 
     // B. Address Details
     address: {
+        areaType: { type: String, enum: ['RURAL', 'URBAN'], default: 'RURAL' },
         district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         municipality: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+        ward: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         wardNumber: String,
         constituency: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         houseNumber: String,
@@ -43,6 +45,7 @@ const MemberSchema = new mongoose.Schema({
     },
 
     permanentAddress: {
+        areaType: { type: String, enum: ['RURAL', 'URBAN'], default: 'RURAL' },
         district: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         mandal: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
         village: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
@@ -201,7 +204,7 @@ const MemberSchema = new mongoose.Schema({
     // M. Role & Permissions (Unified Access)
     role: {
         type: String,
-        enum: ['SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MUNICIPALITY_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'MEMBER'],
+        enum: ['SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MUNICIPALITY_ADMIN', 'MANDAL_ADMIN', 'WARD_ADMIN', 'VILLAGE_ADMIN', 'MEMBER'],
         default: 'MEMBER'
     },
     assignedLocation: {

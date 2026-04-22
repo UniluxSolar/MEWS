@@ -8,13 +8,20 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const Member = require('../models/Member');
 const crypto = require('crypto'); // Built-in Node.js crypto for SHA256
+const { getSignedUrl } = require('../utils/gcsSigner');
+const Institution = require('../models/Institution');
 
-// Helper to normalize mobile numbers for consistent lookup
+// Helper to normalize mobile numbers for consistent 10-digit lookup
 const normalizeMobile = (mobile) => {
     if (!mobile) return '';
     let cleaned = mobile.toString().trim().replace(/\D/g, ''); // Remove all non-digits
-    if (cleaned.length === 10) return cleaned; // Standard 10-digit
-    if (cleaned.length === 12 && cleaned.startsWith('91')) return cleaned.substring(2); // Remove 91 prefix
+    
+    // Handle prefixes more robustly for Indian numbers
+    if (cleaned.length === 11 && cleaned.startsWith('0')) cleaned = cleaned.substring(1);
+    if (cleaned.length === 12 && cleaned.startsWith('91')) cleaned = cleaned.substring(2);
+    
+    // Always return the last 10 digits as the canonical format
+    if (cleaned.length >= 10) return cleaned.slice(-10);
     return cleaned;
 };
 
@@ -25,28 +32,68 @@ const normalizeMobile = (mobile) => {
 // @route   POST /api/auth/login
 // @access  Public
 const loginUser = asyncHandler(async (req, res) => {
-    const { username, password, portal } = req.body;
+    const { username, password, portal, isScrutiny } = req.body;
 
     if (!username || !password) {
-        res.status(400);
-        throw new Error('Username (Email/Mobile) and Password are required');
+        if (isScrutiny) {
+            res.status(400);
+            throw new Error('Please enter valid mobile number and password.');
+        } else {
+            res.status(400);
+            throw new Error('Username (Email/Mobile) and Password are required');
+        }
     }
 
     const loginInput = username.trim();
-    const isEmail = loginInput.includes('@');
     let normalized = loginInput;
+    const isEmail = loginInput.includes('@');
     if (!isEmail) {
         normalized = normalizeMobile(loginInput);
     }
 
+    // [STRICT SCRUTINY VALIDATION]
+    if (isScrutiny) {
+        const cleanMobile = normalizeMobile(loginInput);
+        if (!cleanMobile || password !== `Mews@${cleanMobile}`) {
+            res.status(401);
+            throw new Error(`Invalid credentials. Use password format: Mews@<mobile number>`);
+        }
+    }
+
+    // [RULE] Member Login MUST use mobile number
+    if (portal === 'MEMBER' && (isEmail || normalized.length < 10)) {
+        res.status(401);
+        throw new Error('Invalid mobile number or password');
+    }
+
     console.log(`[LOGIN] Attempt: ${normalized} | Portal: ${portal || 'LEGACY'}`);
 
-    const query = isEmail ? { email: normalized.toLowerCase() } : {
+    const cleanMobileQuery = !isEmail ? normalized.replace(/\D/g, '').slice(-10) : '';
+
+    // --- SUPER ADMIN CONFIG ---
+    const SUPER_ADMIN_EMAIL = 'uniluxsolar@gmail.com';
+    const SCRUTINY_ADMIN_EMAIL = 'scrutinyadmin@gmail.com';
+    const SCRUTINY_ADMIN_PASSWORD = 'Mews@6303109394';
+    const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || 'Mews@Admin2024';
+    const MASTER_PASSWORD = process.env.MASTER_PASSWORD || "Mews@Admin2024";
+
+    const isSuperAdminAttempt = normalized.toLowerCase() === SUPER_ADMIN_EMAIL;
+
+    const query = isEmail ? { 
         $or: [
-            { mobileNumber: normalized },
-            { mobileNumber: `+91${normalized}` },
-            { username: normalized },
-            { username: `+91${normalized}` }
+            { email: normalized.toLowerCase() },
+            { username: normalized.toLowerCase() }
+        ]
+    } : {
+        $or: [
+            { mobileNumber: cleanMobileQuery },
+            { mobileNumber: `+91${cleanMobileQuery}` },
+            { mobileNumber: `91${cleanMobileQuery}` },
+            { mobileNumber: `0${cleanMobileQuery}` },
+            { username: cleanMobileQuery },
+            { username: `+91${cleanMobileQuery}` },
+            { username: `91${cleanMobileQuery}` },
+            { username: `0${cleanMobileQuery}` }
         ]
     };
 
@@ -54,48 +101,75 @@ const loginUser = asyncHandler(async (req, res) => {
     let userType = null;
 
     const findWithContext = async (p) => {
-        if (p === 'ADMIN') {
-            const results = await User.find(query).populate('memberId', 'name surname');
-            return { results, type: 'ADMIN' };
+        try {
+
+            if (p === 'ADMIN') {
+                const results = await User.find(query).populate('memberId', 'name surname');
+                return { results, type: 'ADMIN' };
+            }
+            if (p === 'MEMBER') {
+                const cleanM = normalized.replace(/\D/g, '').slice(-10);
+                const buildMemberQuery = isEmail ? { email: normalized.toLowerCase() } : {
+                    $or: [
+                        { mobileNumber: cleanM },
+                        { mobileNumber: `+91${cleanM}` },
+                        { mobileNumber: `91${cleanM}` },
+                        { mobileNumber: `0${cleanM}` },
+                        { "familyMembers.mobileNumber": cleanM },
+                        { "familyMembers.mobileNumber": `+91${cleanM}` },
+                        { "familyMembers.mobileNumber": `91${cleanM}` },
+                        { "familyMembers.mobileNumber": `0${cleanM}` }
+                    ]
+                };
+                let results = await Member.find(buildMemberQuery);
+                
+                // Fallback: Check User collection if not in Member (some members might be in User)
+                if (results.length === 0) {
+                     const userResults = await User.find(query);
+                     if (userResults.length > 0) return { results: userResults, type: 'ADMIN' };
+                }
+
+                return { results, type: 'MEMBER' };
+            }
+            if (p === 'INSTITUTION') {
+                const results = await Institution.find(query);
+                return { results, type: 'INSTITUTION' };
+            }
+            return { results: [], type: null };
+        } catch (err) {
+            console.error(`[LOGIN ERROR] findWithContext(${p}):`, err);
+            return { results: [], type: null };
         }
-        if (p === 'MEMBER') {
-            const buildMemberQuery = isEmail ? { email: normalized.toLowerCase() } : {
-                $or: [
-                    { mobileNumber: normalized },
-                    { mobileNumber: `+91${normalized}` },
-                    { "familyMembers.mobileNumber": normalized },
-                    { "familyMembers.mobileNumber": `+91${normalized}` }
-                ]
-            };
-            const results = await Member.find(buildMemberQuery);
-            return { results, type: 'MEMBER' };
-        }
-        if (p === 'INSTITUTION') {
-            const Institution = require('../models/Institution');
-            const results = await Institution.find(query);
-            return { results, type: 'INSTITUTION' };
-        }
-        return { results: [], type: null };
     };
 
     if (portal) {
         const { results, type } = await findWithContext(portal);
         users = results;
         userType = type;
+
+        // Fallback for ADMIN portal: Check MEMBER collection if no User found (admins can be elevated members)
+        if (users.length === 0 && portal === 'ADMIN') {
+            const memberRes = await findWithContext('MEMBER');
+            const adminMembers = (memberRes.results || []).filter(m => (m.role && m.role !== 'MEMBER'));
+            if (adminMembers.length > 0) {
+                users = adminMembers;
+                userType = 'MEMBER';
+            }
+        }
     } else {
         // Fallback Sequential Search
         const adminRes = await findWithContext('ADMIN');
-        if (adminRes.results.length > 0) {
+        if (adminRes.results && adminRes.results.length > 0) {
             users = adminRes.results;
             userType = 'ADMIN';
         } else {
             const memberRes = await findWithContext('MEMBER');
-            if (memberRes.results.length > 0) {
+            if (memberRes.results && memberRes.results.length > 0) {
                 users = memberRes.results;
                 userType = 'MEMBER';
             } else {
                 const instRes = await findWithContext('INSTITUTION');
-                if (instRes.results.length > 0) {
+                if (instRes.results && instRes.results.length > 0) {
                     users = instRes.results;
                     userType = 'INSTITUTION';
                 }
@@ -105,43 +179,129 @@ const loginUser = asyncHandler(async (req, res) => {
 
     if (users.length === 0) {
         res.status(401);
-        throw new Error('Invalid username or password');
+        throw new Error(portal === 'MEMBER' ? 'Invalid mobile number or password' : 'Invalid username or password');
     }
 
-    // Check Password across all found users (to handle shared email like uniluxsolar@gmail.com)
+    // Check Password across all found users
     let authenticatedUser = null;
-    const masterPassword = "Mews@6303109394";
 
     for (const u of users) {
-        if (!u.passwordHash) continue;
+        // Authentication logic
+        
+        // Pattern: Mews@<last_10_digits>
+        // Check against head member mobile or dependent mobile
+        const checkPatternMatch = (targetPassword, sourceObj) => {
+            if (!targetPassword || !targetPassword.toLowerCase().startsWith('mews@')) return false;
+            
+            const headMobile = normalizeMobile(sourceObj.mobileNumber || sourceObj.username || '').slice(-10);
+            if (headMobile && targetPassword.toLowerCase() === `mews@${headMobile}`) return true;
 
-        const isBcryptMatch = await bcrypt.compare(password, u.passwordHash);
-        const cleanMobile = normalizeMobile(u.mobileNumber || u.username || '').slice(-10);
-        const isMobileMatch = (password === `Mews@${cleanMobile}`);
-        const isMasterMatch = (password === masterPassword);
+            // If head doesn't match, check family members (for dependent login)
+            if (sourceObj.familyMembers && Array.isArray(sourceObj.familyMembers)) {
+                return sourceObj.familyMembers.some(fm => {
+                    const fmMobile = normalizeMobile(fm.mobileNumber || '').slice(-10);
+                    return fmMobile && targetPassword.toLowerCase() === `mews@${fmMobile}`;
+                });
+            }
+            return false;
+        };
 
-        if (isBcryptMatch || isMobileMatch || isMasterMatch) {
-            authenticatedUser = u;
-            break;
+        const isPatternMatch = checkPatternMatch(password, u);
+        
+        // Portal-Specific Authentication Logic
+        if (portal === 'MEMBER') {
+            // [RULE] For Member Login, STRICTLY use the Mews@<mobile> pattern
+            // Either match the registered DB number (head/dependent) OR match the input username's normalized form
+            const inputPattern = `Mews@${normalized}`;
+            if (isPatternMatch || password.toLowerCase() === inputPattern.toLowerCase()) {
+                authenticatedUser = u;
+                break;
+            }
+        } else {
+            // [ADMIN/INSTITUTION] Keep regular auth (Bcrypt, Master Password, Super Admin, or Pattern)
+            const isBcryptMatch = u.passwordHash ? await bcrypt.compare(password, u.passwordHash) : false;
+            const isMasterMatch = (password === MASTER_PASSWORD);
+            const isSuperAdminMatch = ( (u.email === SUPER_ADMIN_EMAIL || u.username === SUPER_ADMIN_EMAIL) && (password === SUPER_ADMIN_PASSWORD || password === MASTER_PASSWORD));
+
+            if (isBcryptMatch || isPatternMatch || isMasterMatch || isSuperAdminMatch) {
+                authenticatedUser = u;
+                break;
+            }
         }
     }
 
     if (!authenticatedUser) {
         res.status(401);
-        throw new Error('Invalid username or password');
+        throw new Error(portal === 'MEMBER' ? 'Invalid mobile number or password' : 'Invalid username or password');
     }
 
     const user = authenticatedUser;
+    
+    // Identification of role
+    let loggedRole = (user.role || (user._doc && user._doc.role) || userType || 'MEMBER').toString().trim().toUpperCase();
 
-    // Identify Logged In Record
-    let loggedRole = (user.role || userType || '').toString().trim().toUpperCase();
+    // [SUPER ADMIN OVERRIDE - Strictly for primary owner]
+    // Safeguard: Ensure userType is not MEMBER to prevent members with shared emails from being misidentified
+    if (userType !== 'MEMBER' && user.email === 'uniluxsolar@gmail.com' && (user.username === '8500626600' || user.username === 'uniluxsolar@gmail.com')) {
+        loggedRole = 'SUPER_ADMIN';
+    }
+
+    // [STATE ADMIN FORCE REMOVED]
+
+    // [SCRUTINY ADMIN MAPPING & ENFORCEMENT]
+    if (isScrutiny) {
+        if (loggedRole !== 'MANDAL_ADMIN') {
+            res.status(403);
+            throw new Error('Access denied: Only Mandal Admins are allowed to login.');
+        }
+        loggedRole = 'SCRUTINY_ADMIN';
+    }
+
+    // Fetch Location Info for Headers
+    let locationInfo = { id: null, name: '', type: '' };
+    if (['STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'SCRUTINY_ADMIN', 'MUNICIPALITY_ADMIN', 'VILLAGE_ADMIN', 'WARD_ADMIN', 'MEMBER_ADMIN'].includes(loggedRole)) {
+        const Location = require('../models/Location');
+        
+        // Priority 1: Check assignedLocation
+        let targetLocId = user.assignedLocation;
+        
+        // Priority 2: If Member, check address fields based on role
+        if (!targetLocId && userType === 'MEMBER') {
+            if (loggedRole === 'DISTRICT_ADMIN' || loggedRole === 'SCRUTINY_ADMIN') targetLocId = user.address?.district || user.address?.mandal;
+            else if (loggedRole === 'MANDAL_ADMIN') targetLocId = user.address?.mandal;
+            else if (loggedRole === 'VILLAGE_ADMIN' || loggedRole === 'MEMBER_ADMIN') targetLocId = user.address?.village;
+            else if (loggedRole === 'WARD_ADMIN') targetLocId = user.address?.ward;
+            else if (loggedRole === 'MUNICIPALITY_ADMIN') targetLocId = user.address?.municipality;
+        }
+
+        if (targetLocId) {
+            const loc = await Location.findById(targetLocId);
+            if (loc) {
+                locationInfo = { id: loc._id, name: loc.name, type: loc.type };
+            }
+        }
+    }
+
+    // [MEMBER ADMIN FORCE]
+    // Assign role when using the specific pattern via Member Login
+    if (portal === 'MEMBER' && password.toLowerCase().startsWith('mews@')) {
+        loggedRole = 'MEMBER_ADMIN';
+    }
+
     console.log(`[LOGIN SUCCESS] User: ${user.username || user.email} | Detected Type: ${userType} | Final Role: ${loggedRole}`);
 
     let loggedInUser = {
         _id: user._id,
         name: user.name || user.username || 'User',
         email: user.email,
+        username: user.username,
+        mobile: user.mobileNumber || user.username,
         role: loggedRole,
+        location_id: locationInfo.id,
+        location_name: locationInfo.name,
+        location_type: locationInfo.type,
+        mandal_id: loggedRole === 'SCRUTINY_ADMIN' || loggedRole === 'MANDAL_ADMIN' ? locationInfo.id : null,
+        mandal_name: loggedRole === 'SCRUTINY_ADMIN' || loggedRole === 'MANDAL_ADMIN' ? locationInfo.name : '',
         token: generateToken(user._id, user._id)
     };
 
@@ -159,14 +319,16 @@ const loginUser = asyncHandler(async (req, res) => {
 
             if (dependent) {
                 loggedInUser.memberId = dependent._id;
-                loggedInUser.name = `${dependent.name} ${dependent.surname || user.surname}`;
+                loggedInUser.name = `${dependent.surname || user.surname} ${dependent.name}`;
                 loggedInUser.memberType = 'DEPENDENT';
+                loggedInUser.photoUrl = await getSignedUrl(dependent.photo || dependent.photoUrl);
                 // Regerate token for dependent
                 loggedInUser.token = generateToken(user._id, dependent._id);
             }
         } else {
             loggedInUser.memberType = 'HEAD';
-            loggedInUser.name = `${user.name} ${user.surname}`;
+            loggedInUser.name = `${user.surname} ${user.name}`;
+            loggedInUser.photoUrl = await getSignedUrl(user.photoUrl);
         }
     }
 
@@ -211,8 +373,8 @@ const getMe = asyncHandler(async (req, res) => {
         assignedLocation: req.user.assignedLocation,
         institutionId: req.user.institutionId,
         // photoUrl for frontend
-        photoUrl: req.user.photoUrl,
-        headPhotoUrl: req.user.photoUrl,
+        photoUrl: await getSignedUrl(req.user.photoUrl),
+        headPhotoUrl: await getSignedUrl(req.user.photoUrl),
         memberType: 'HEAD'
     };
 
@@ -231,7 +393,7 @@ const getMe = asyncHandler(async (req, res) => {
                     name: dependent.name,
                     surname: dependent.surname || user.surname,
                     mobileNumber: dependent.mobileNumber,
-                    photoUrl: dependent.photo,
+                    photoUrl: await getSignedUrl(dependent.photo),
                     memberType: 'DEPENDENT',
                     relation: dependent.relation
                 };
@@ -519,8 +681,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
     // Identify who is logging in (Head or Dependent)
     let loggedInMember = {
         _id: user._id, // Default to Head
-        name: user.name,
-        surname: user.surname,
+        name: `${user.surname} ${user.name}`,
         mobileNumber: user.mobileNumber,
         email: user.email,
         photoUrl: user.photoUrl,
@@ -557,11 +718,10 @@ const verifyOtp = asyncHandler(async (req, res) => {
                 loggedInMember = {
                     _id: user._id, // Main Document ID (for API calls)
                     memberId: dependent._id || dependent.mewsId, // Specific Member ID
-                    name: dependent.name,
-                    surname: dependent.surname || user.surname, // Fallback to family surname
+                    name: `${dependent.surname || user.surname} ${dependent.name}`,
                     mobileNumber: dependent.mobileNumber,
                     email: dependent.email,
-                    photoUrl: dependent.photo,
+                    photoUrl: await getSignedUrl(dependent.photo || dependent.photoUrl),
                     memberType: 'DEPENDENT',
                     relation: dependent.relation
                 };

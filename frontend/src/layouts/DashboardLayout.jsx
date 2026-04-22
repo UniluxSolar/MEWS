@@ -7,17 +7,33 @@ import {
     FaSearch, FaBell, FaUserCircle, FaChevronDown, FaSignOutAlt
 } from 'react-icons/fa';
 import CarouselModal from '../components/common/CarouselModal';
+import LiveUpdatesTicker from '../components/LiveUpdatesTicker';
+import AdminHeader from '../components/AdminHeader';
 
-const SidebarItem = ({ to, icon: Icon, label, active, collapsed }) => (
+const SidebarItem = ({ to, icon: Icon, label, active, collapsed, badge }) => (
     <Link
         to={to}
         className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors mb-1
         ${active ? 'bg-white/10 text-white font-bold border-l-4 border-secondary' : 'text-gray-400 hover:bg-white/5 hover:text-gray-100'}
         ${collapsed ? 'justify-center' : ''}`}
     >
-        <Icon size={18} className={active ? 'text-secondary' : ''} />
-        {!collapsed && <span>{label}</span>}
-        {active && !collapsed && <span className="ml-auto w-2 h-2 bg-secondary rounded-full"></span>}
+        <div className="relative">
+            <Icon size={18} className={active ? 'text-secondary' : ''} />
+            {collapsed && badge > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-2 h-2 bg-red-500 rounded-full border border-primary"></span>
+            )}
+        </div>
+        {!collapsed && (
+            <>
+                <span className="flex-1">{label}</span>
+                {badge > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        {badge > 9 ? '9+' : badge}
+                    </span>
+                )}
+            </>
+        )}
+        {active && !collapsed && !badge && <span className="ml-auto w-2 h-2 bg-secondary rounded-full"></span>}
     </Link>
 );
 
@@ -66,11 +82,41 @@ const DashboardLayout = () => {
                 const { data } = await axios.get('/auth/me');
                 setUserInfo(data);
 
-                // Keep localStorage in sync if needed
-                const stored = JSON.parse(localStorage.getItem('adminInfo'));
-                if (stored && data.photoUrl && stored.photoUrl !== data.photoUrl) {
-                    stored.photoUrl = data.photoUrl;
-                    localStorage.setItem('adminInfo', JSON.stringify(stored));
+                // Keep sessionStorage in sync correctly for all login types
+                const adminInfo = JSON.parse(sessionStorage.getItem('adminInfo'));
+                const memberInfo = JSON.parse(sessionStorage.getItem('memberInfo'));
+                const savedUser = JSON.parse(sessionStorage.getItem('savedUser'));
+
+                const syncInfo = (info) => {
+                    let changed = false;
+                    if (info && data.photoUrl && info.photoUrl !== data.photoUrl) {
+                        info.photoUrl = data.photoUrl;
+                        changed = true;
+                    }
+                    // Add Name sync
+                    if (info && data.name && info.name !== data.name) {
+                        info.name = data.name;
+                        changed = true;
+                    }
+                    return changed ? info : null;
+                };
+
+                const updatedAdmin = syncInfo(adminInfo);
+                if (updatedAdmin) {
+                    sessionStorage.setItem('adminInfo', JSON.stringify(updatedAdmin));
+                    window.dispatchEvent(new Event('login-success'));
+                }
+
+                const updatedMember = syncInfo(memberInfo);
+                if (updatedMember) {
+                    sessionStorage.setItem('memberInfo', JSON.stringify(updatedMember));
+                    window.dispatchEvent(new Event('login-success'));
+                }
+
+                const updatedSaved = syncInfo(savedUser);
+                if (updatedSaved) {
+                    sessionStorage.setItem('savedUser', JSON.stringify(updatedSaved));
+                    window.dispatchEvent(new Event('login-success'));
                 }
             } catch (error) {
                 console.warn('Failed to fetch user info', error);
@@ -84,7 +130,8 @@ const DashboardLayout = () => {
         const fetchUnreadCount = async () => {
             try {
                 const { data } = await axios.get('/notifications');
-                const unread = data.filter(n => !n.isRead).length;
+                const notifications = Array.isArray(data) ? data : [];
+                const unread = notifications.filter(n => !n.isRead).length;
                 setNotificationCount(unread);
             } catch (error) {
                 console.warn('Failed to fetch notifications count', error);
@@ -101,11 +148,12 @@ const DashboardLayout = () => {
     const handleLogout = async () => {
         try {
             await axios.post('/auth/logout');
-            localStorage.removeItem('adminInfo');
-            navigate('/login');
         } catch (error) {
             console.error('Logout failed:', error);
-            localStorage.removeItem('adminInfo');
+        } finally {
+            sessionStorage.removeItem('adminInfo');
+            sessionStorage.removeItem('memberInfo');
+            sessionStorage.removeItem('savedUser');
             navigate('/login');
         }
     };
@@ -145,9 +193,14 @@ const DashboardLayout = () => {
             else if (segment === 'donations') breadcrumbs.push({ label: 'My Donations', path: '/dashboard/donations' });
             else if (segment === 'health') breadcrumbs.push({ label: 'Health Assistance', path: '/dashboard/health' });
             else if (segment === 'legal') breadcrumbs.push({ label: 'Legal Aid', path: '/dashboard/legal' });
-            else if (segment === 'helpdesk') breadcrumbs.push({ label: 'Need Help?', path: '/dashboard/helpdesk' });
+            else if (segment === 'helpdesk') breadcrumbs.push({ label: 'Tickets & Feedback', path: '/dashboard/helpdesk' });
             else if (segment === 'support') breadcrumbs.push({ label: 'Help & Support', path: '/dashboard/support' });
-            else if (segment === 'profile') breadcrumbs.push({ label: 'My Profile', path: '/dashboard/profile' });
+            else if (segment === 'profile') {
+                breadcrumbs.push({ label: 'My Profile', path: '/dashboard/profile' });
+                if (location.search.includes('view=notifications')) {
+                    breadcrumbs.push({ label: 'Notifications', path: '' });
+                }
+            }
         }
 
         return breadcrumbs;
@@ -159,21 +212,26 @@ const DashboardLayout = () => {
         if (!url) return "/assets/images/user-profile.png";
         if (url.startsWith('data:') || url.startsWith('blob:')) return url;
 
+        // Ensure we handle Windows backslashes
+        const normalizedUrl = url.replace(/\\/g, '/');
+        
         const baseUrl = BASE_URL;
 
         // Use Proxy for GCS/Remote URLs to ensure they load (CORS/Private)
-        if (url.startsWith('http')) {
-            return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(url)}`;
+        if (normalizedUrl.startsWith('http')) {
+            return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(normalizedUrl)}`;
         }
 
         // If relative path from backend (e.g., 'uploads/...')
-        const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+        const cleanUrl = normalizedUrl.startsWith('/') ? normalizedUrl : `/${normalizedUrl}`;
         return `${baseUrl}${cleanUrl}`;
     };
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
-            <CarouselModal storageKey="hasSeenDashboardCarousel" />
+        <div className="flex flex-col h-screen bg-gray-50 overflow-hidden font-sans">
+            <AdminHeader onToggleSidebar={toggleSidebar} />
+            <div className="flex flex-1 overflow-hidden relative">
+                <CarouselModal storageKey="hasSeenDashboardCarousel" />
             {/* Mobile Overlay Backdrop */}
             {isMobile && mobileOpen && (
                 <div
@@ -205,7 +263,8 @@ const DashboardLayout = () => {
                     <SidebarItem to="/dashboard/donations" icon={FaHandHoldingUsd} label="My Donations" active={isActive('donations')} collapsed={!isMobile && collapsed} />
                     <SidebarItem to="/dashboard/services" icon={FaThLarge} label="MEWS Services" active={isActive('services')} collapsed={!isMobile && collapsed} />
                     <SidebarItem to="/dashboard/jobs" icon={FaBriefcase} label="Jobs & Events" active={isActive('jobs')} collapsed={!isMobile && collapsed} />
-                    <SidebarItem to="/dashboard/helpdesk" icon={FaHeadset} label="Need Help?" active={isActive('helpdesk')} collapsed={!isMobile && collapsed} />
+                    <SidebarItem to="/dashboard/profile?view=notifications" icon={FaBell} label="Notifications" active={isActive('profile') && location.search.includes('notifications')} collapsed={!isMobile && collapsed} badge={notificationCount} />
+                    <SidebarItem to="/dashboard/helpdesk" icon={FaHeadset} label="Tickets & Feedback" active={isActive('helpdesk')} collapsed={!isMobile && collapsed} />
 
                     <div className="my-4 border-t border-gray-700 mx-2"></div>
                     <SidebarItem to="/dashboard/support" icon={FaQuestionCircle} label="Help & Support" active={isActive('support')} collapsed={!isMobile && collapsed} />
@@ -227,106 +286,34 @@ const DashboardLayout = () => {
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col h-full overflow-hidden w-full relative">
-                {/* Top Header */}
-                <header className="h-16 bg-primary border-b border-gray-700 shadow-sm flex items-center justify-between px-4 md:px-6 flex-shrink-0 z-10 text-white">
-                    <div className="flex items-center gap-4">
-                        <button onClick={toggleSidebar} className="text-gray-400 hover:text-white transition p-1">
-                            <FaBars size={20} />
-                        </button>
-
-                        {/* Dynamic Breadcrumbs - Hide on small mobile, show on md+ */}
-                        <div className="hidden md:flex items-center text-sm text-gray-300">
-                            {breadcrumbs.map((crumb, index) => {
-                                const isLast = index === breadcrumbs.length - 1;
-                                return (
-                                    <React.Fragment key={index}>
-                                        {index > 0 && <span className="mx-2">›</span>}
-                                        {isLast || !crumb.path ? (
-                                            <span className={`${isLast ? 'text-secondary font-bold' : 'text-gray-300 font-semibold'}`}>
-                                                {crumb.label}
-                                            </span>
-                                        ) : (
-                                            <Link to={crumb.path} className="text-gray-300 hover:text-white font-semibold transition-colors hover:underline">
-                                                {crumb.label}
-                                            </Link>
-                                        )}
-                                    </React.Fragment>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div className="flex-1 max-w-xl mx-4 md:mx-8 hidden md:block">
-                        <div className="relative">
-                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                                <FaSearch />
-                            </span>
-                            <input
-                                type="text"
-                                placeholder="Search applications..."
-                                className="w-full bg-[#151f38] border border-gray-600 text-sm rounded-md py-2 pl-10 pr-4 text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-secondary focus:border-secondary"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 md:gap-6">
-                        <Link to="/dashboard/notifications" className="relative text-gray-300 hover:text-white">
-                            <FaBell size={18} />
-                            {notificationCount > 0 && (
-                                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-primary">
-                                    {notificationCount > 9 ? '9+' : notificationCount}
-                                </span>
-                            )}
-                        </Link>
-
-                        <div className="relative">
-                            <button
-                                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                                className="flex items-center gap-2 cursor-pointer border-l border-gray-600 pl-4 md:pl-6 group focus:outline-none"
-                            >
-                                <img
-                                    src={getImageUrl(userInfo?.headPhotoUrl || userInfo?.photoUrl || JSON.parse(localStorage.getItem('adminInfo'))?.headPhotoUrl || JSON.parse(localStorage.getItem('adminInfo'))?.photoUrl)}
-                                    alt="Profile"
-                                    className="w-8 h-8 rounded-full border border-gray-500 group-hover:border-white transition object-cover"
-                                />
-                                <FaChevronDown size={12} className={`text-gray-400 group-hover:text-white transition ${userMenuOpen ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            {/* User Dropdown Menu */}
-                            {userMenuOpen && (
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 z-50 animate-fadeIn border border-gray-100">
-                                    <div className="px-4 py-3 border-b border-gray-100 mb-1">
-                                        <p className="text-sm font-bold text-gray-800 truncate">{userInfo?.name || JSON.parse(localStorage.getItem('adminInfo'))?.name || 'User'}</p>
-                                        <p className="text-xs text-gray-500 truncate">{userInfo?.email || 'Member'}</p>
-                                    </div>
-                                    <Link
-                                        to="/dashboard/profile"
-                                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary font-medium"
-                                        onClick={() => setUserMenuOpen(false)}
-                                    >
-                                        <FaUserCircle className="inline mr-2" /> My Profile
-                                    </Link>
-                                    <button
-                                        onClick={() => {
-                                            setUserMenuOpen(false);
-                                            handleLogout();
-                                        }}
-                                        className="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium"
-                                    >
-                                        <FaSignOutAlt className="inline mr-2" /> Logout
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </header>
-
                 {/* Page Content */}
                 <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 relative">
+                    {/* Dynamic Breadcrumbs - Moved here from header */}
+                    <div className="flex items-center text-sm text-gray-500 mb-6 bg-white p-3 rounded-lg border border-gray-100 shadow-sm animate-fadeIn">
+                        {breadcrumbs.map((crumb, index) => {
+                            const isLast = index === breadcrumbs.length - 1;
+                            return (
+                                <React.Fragment key={index}>
+                                    {index > 0 && <span className="mx-2 text-gray-300">/</span>}
+                                    {isLast || !crumb.path ? (
+                                        <span className={`${isLast ? 'text-primary font-bold' : 'text-gray-500 font-semibold'}`}>
+                                            {crumb.label}
+                                        </span>
+                                    ) : (
+                                        <Link to={crumb.path} className="text-gray-500 hover:text-primary font-semibold transition-colors">
+                                            {crumb.label}
+                                        </Link>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+                    </div>
                     <Outlet />
                 </main>
+
             </div>
         </div>
+    </div>
     );
 };
 

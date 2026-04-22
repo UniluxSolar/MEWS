@@ -13,16 +13,12 @@ const getLocations = asyncHandler(async (req, res) => {
     }
 
     if (parent) {
-        query.parent = parent;
-    } else if (type !== 'STATE' && type) {
-        // If type is requested but no parent, typically we might want top-level or return error.
-        // For 'STATE', parent is null, so it's fine.
-        // For 'DISTRICT', we usually want districts of a specific state. 
-        // If parent is not provided for sub-levels, we might return all (or limit).
+        query.parent = parent.includes(',') ? { $in: parent.split(',') } : parent;
     }
 
     if (req.query.ancestor) {
-        query['ancestors.locationId'] = req.query.ancestor;
+        const ancestorVal = req.query.ancestor;
+        query['ancestors.locationId'] = ancestorVal.includes(',') ? { $in: ancestorVal.split(',') } : ancestorVal;
     }
 
     // Special case: If nothing provided, maybe return States

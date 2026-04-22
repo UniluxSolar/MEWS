@@ -18,26 +18,41 @@ const protect = async (req, res, next) => {
             // Verify token
             const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
 
-            // 1. Check User (Admin) Collection
-            let user = await User.findById(decoded.id).select('-passwordHash');
+            // 1. Check Collections (Database)
+            const mongoose = require('mongoose');
+            let user;
 
-            // 2. If not found in User, check Member (Member Login)
-            if (!user) {
-                const Member = require('../models/Member');
-                user = await Member.findById(decoded.id);
-                // Role handling for Member...
-                if (user) {
-                    user.role = user.role || 'MEMBER';
+            if (mongoose.Types.ObjectId.isValid(decoded.id)) {
+                // Check User (Admin) Collection
+                user = await User.findById(decoded.id).select('-passwordHash');
+
+                // 2. If not found in User, check Member (Member Login)
+                if (!user) {
+                    const Member = require('../models/Member');
+                    user = await Member.findById(decoded.id);
+                    if (user) {
+                        user.role = (user.role || 'MEMBER').toString().trim().toUpperCase();
+                    }
+                }
+
+                // 3. If not found in Member, check Institution (Institution Login)
+                if (!user) {
+                    const Institution = require('../models/Institution');
+                    user = await Institution.findById(decoded.id);
+                    if (user) {
+                        user.role = 'INSTITUTION'; 
+                    }
                 }
             }
 
-            // 3. If not found in Member, check Institution (Institution Login)
-            if (!user) {
-                const Institution = require('../models/Institution');
-                user = await Institution.findById(decoded.id);
-                if (user) {
-                    user.role = 'INSTITUTION'; // Ensure role is set
-                }
+            // 4. If not found, check for Synthetic Scrutiny Admin
+            if (!user && decoded.id === '507f191e810c19729de860ea') {
+                user = {
+                    _id: '507f191e810c19729de860ea',
+                    username: 'ScrutinyAdmin',
+                    email: 'scrutinyadmin@gmail.com',
+                    role: 'SCRUTINY_ADMIN'
+                };
             }
 
             if (!user) {
@@ -58,8 +73,9 @@ const protect = async (req, res, next) => {
 
 const authorize = (...roles) => {
     return (req, res, next) => {
-        if (!roles.includes(req.user.role)) {
-            return res.status(403).json({ message: `User role ${req.user.role} is not authorized to access this route` });
+        const userRole = (req.user.role || '').toString().trim().toUpperCase();
+        if (!roles.includes(userRole)) {
+            return res.status(403).json({ message: `User role ${userRole} is not authorized to access this route` });
         }
         next();
     };

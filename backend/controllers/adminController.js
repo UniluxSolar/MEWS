@@ -11,20 +11,44 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     let locationName = 'All Locations';
     let villagesData = [];
 
-    let institutionQuery = {};
-
-    // If user has an assigned location OR if a specific locationId is requested (Drill Down)
+    // Determine starting location scope
     let targetLocationId = req.user.assignedLocation;
+
+    // [SUPER ADMIN BYPASS] Super Admin sees everything unless a specific location is requested via query
+    if (req.user.role === 'SUPER_ADMIN' && !req.query.locationId) {
+        targetLocationId = null;
+    }
 
     // DRILL DOWN OVERRIDE
     if (req.query.locationId) {
-        // TODO: Validate if user is allowed to view this location (Hierarchy check)
-        // For now, assuming UI only shows valid links for authorized users.
         targetLocationId = req.query.locationId;
         console.log(`[DASHBOARD] Drill Down requested for LocationID: ${targetLocationId}`);
     }
 
-    if (targetLocationId) {
+    // [GLOBAL VIEW LOGIC]
+    // If no targetLocationId (Super Admin) or if targetLocationId refers to the entire State/Global scope
+    if (!targetLocationId) {
+        // Fetch all districts globally
+        const districts = await Location.find({ type: 'DISTRICT' });
+        const districtsData = await Promise.all(districts.map(async (d) => {
+            const mCount = await Member.countDocuments({ 'address.district': d._id });
+            const instCount = await Institution.countDocuments({ fullAddress: { $regex: d.name, $options: 'i' } });
+            const pCount = await Member.countDocuments({ 'address.district': d._id, verificationStatus: 'PENDING' });
+            return {
+                id: d._id.toString(),
+                name: d.name,
+                members: mCount,
+                pending: pCount,
+                institutions: instCount,
+                sos: 0,
+                status: 'Active'
+            };
+        }));
+        req.districtsData = districtsData;
+        memberQuery = {}; // Global members
+        institutionQuery = {}; // Global institutions
+        locationName = 'Global Overview';
+    } else {
         const location = await Location.findById(targetLocationId);
         if (location) {
             locationName = location.name;
@@ -37,6 +61,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
             if (location.type === 'MUNICIPALITY') contextRole = 'MUNICIPALITY_ADMIN';
             if (location.type === 'MANDAL') contextRole = 'MANDAL_ADMIN';
             if (location.type === 'VILLAGE') contextRole = 'VILLAGE_ADMIN';
+            if (location.type === 'WARD') contextRole = 'WARD_ADMIN';
 
             // Common regex filter for unstructured address fields (Institution/SOS)
             const locationRegex = { $regex: location.name, $options: 'i' };
@@ -55,6 +80,17 @@ const getDashboardStats = asyncHandler(async (req, res) => {
                 memberQuery = { 'address.village': { $in: locIds } };
 
                 // Use Regex for Institution (fullAddress is String)
+                institutionQuery = { fullAddress: locationRegex };
+
+            } else if (contextRole === 'WARD_ADMIN') {
+                const escapedName = location.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const relatedLocations = await Location.find({
+                    name: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
+                    type: 'WARD'
+                });
+                const locIds = relatedLocations.map(l => l._id);
+
+                memberQuery = { 'address.ward': { $in: locIds } };
                 institutionQuery = { fullAddress: locationRegex };
 
             } else if (contextRole === 'MUNICIPALITY_ADMIN') {
@@ -400,6 +436,11 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
     // Standardized Role-Based Filtering (Matches memberController.js)
     let targetLocationId = req.user.assignedLocation;
 
+    // [SUPER ADMIN BYPASS]
+    if (req.user.role === 'SUPER_ADMIN') {
+        targetLocationId = null;
+    }
+
     // DRILL DOWN OVERRIDE
     if (req.query.locationId) {
         targetLocationId = req.query.locationId;
@@ -415,6 +456,7 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
             if (locationDoc.type === 'DISTRICT') contextRole = 'DISTRICT_ADMIN';
             if (locationDoc.type === 'MANDAL') contextRole = 'MANDAL_ADMIN';
             if (locationDoc.type === 'VILLAGE') contextRole = 'VILLAGE_ADMIN';
+            if (locationDoc.type === 'WARD') contextRole = 'WARD_ADMIN';
 
             if (contextRole === 'VILLAGE_ADMIN') {
                 // STRICT: Use ID match for members to prevent CastError
@@ -426,6 +468,14 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
                 });
                 const locIds = relatedLocations.map(l => l._id);
                 memberQuery = { 'address.village': { $in: locIds } };
+            } else if (contextRole === 'WARD_ADMIN') {
+                const escapedName = locationDoc.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const relatedLocations = await Location.find({
+                    name: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
+                    type: 'WARD'
+                });
+                const locIds = relatedLocations.map(l => l._id);
+                memberQuery = { 'address.ward': { $in: locIds } };
             } else if (contextRole === 'MANDAL_ADMIN') {
                 // Robust Fix: Handle duplicate Location IDs by Name
                 const escapedName = locationDoc.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -466,6 +516,11 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
     }
 
     console.log(`[ANALYTICS] Role: ${req.user.role}, Query:`, JSON.stringify(memberQuery));
+
+    // Fix for Global Analytics (Super Admin)
+    if (req.user.role === 'SUPER_ADMIN' && !req.query.locationId) {
+        memberQuery = {};
+    }
 
     // 1. Member Stats
     const totalMembers = await Member.countDocuments(memberQuery);
@@ -643,7 +698,17 @@ const getVillageSettings = asyncHandler(async (req, res) => {
     console.log("Assigned Location:", req.user.assignedLocation);
 
     if (!req.user.assignedLocation) {
-        console.log("WARNING: User has no assigned location. Returning empty settings.");
+        console.log("WARNING: User has no assigned location. Checking for Super Admin role.");
+        if (req.user.role === 'SUPER_ADMIN') {
+            return res.json({
+                villageName: 'Global',
+                mandal: 'Global',
+                municipalityName: 'Global',
+                district: 'Global',
+                stateName: 'Telangana', // Default State
+                email: req.user.email
+            });
+        }
         return res.json({
             villageName: '',
             mandal: '',
@@ -671,6 +736,7 @@ const getVillageSettings = asyncHandler(async (req, res) => {
             if (l.type === 'MANDAL') mandal = l;
             if (l.type === 'MUNICIPALITY') municipality = l;
             if (l.type === 'VILLAGE') village = l;
+            if (l.type === 'WARD') village = l; // For Ward admins, use 'village' variable to maintain compatibility with UI
         };
 
         // Map the current location
@@ -695,6 +761,7 @@ const getVillageSettings = asyncHandler(async (req, res) => {
         villageName: hierarchy.village ? hierarchy.village.name : '',
         mandal: hierarchy.mandal ? hierarchy.mandal.name : '',
         municipalityName: hierarchy.municipality ? hierarchy.municipality.name : '', // Add Municipality Name
+        wardNumber: hierarchy.village && hierarchy.village.type === 'WARD' ? (hierarchy.village.pincode || '') : '', // Use pinCode field as a proxy for wardNumber if specific wardNumber field not in Location model (check later)
         district: hierarchy.district ? hierarchy.district.name : '',
         stateName: hierarchy.state ? hierarchy.state.name : '',
         email: req.user.email

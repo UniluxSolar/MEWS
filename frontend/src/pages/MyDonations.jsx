@@ -90,25 +90,7 @@ const MyDonations = () => {
 
                 if (donationsRes.data) {
                     const data = donationsRes.data;
-                    // Map backend data to frontend structure
-                    const formattedData = data.map(d => ({
-                        date: new Date(d.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, ' '),
-                        // Note: The row expects "15 Jan, 2025". toLocaleDateString might give "15 Jan 2025". 
-                        // Let's force a comma or update the row. Updating row is better, but for now let's try to match.
-                        // Helper to match "15 Jan, 2025"
-                        // actually the row splits by comma. So we NEED a comma.
-                        amount: d.amount ? d.amount.toLocaleString() : '0',
-                        purpose: d.purpose || 'General Donation',
-                        type: d.type,
-                        transactionId: d.transactionId,
-                        status: d.status
-                    })).map(d => ({
-                        ...d,
-                        date: new Date(d.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ (?=[0-9]{4})/, ', ')
-                        // Reuse the d object but fix date properly if needed. 
-                        // Actually easier to just format it manually in the map above.
-                    }));
-
+                    
                     // Simplified manual formatting to ensure comma
                     const finalData = data.map(d => {
                         const dateObj = new Date(d.createdAt);

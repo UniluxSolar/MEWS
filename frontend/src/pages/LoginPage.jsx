@@ -61,24 +61,21 @@ const LoginPage = () => {
     const handleLoginSuccess = (data) => {
         const role = data.role || 'MEMBER'; // Default fallback
 
-        // Clear old sessions first
-        localStorage.removeItem('adminInfo');
-        localStorage.removeItem('memberInfo');
-        localStorage.removeItem('savedUser');
+        sessionStorage.removeItem('adminInfo');
+        sessionStorage.removeItem('memberInfo');
+        sessionStorage.removeItem('savedUser');
 
-        // Store member info
-        if (role === 'MEMBER' || role === 'INSTITUTION' || role === 'HEAD' || role === 'DEPENDENT') {
-            localStorage.setItem('memberInfo', JSON.stringify(data));
+        if (data.token) {
+            sessionStorage.setItem('memberInfo', JSON.stringify(data));
         }
 
         const userToSave = {
-            _id: data._id,
-            name: data.name,
-            email: data.email,
-            role: role,
+            _id: data.member?._id || data._id,
+            name: data.member?.name || data.name,
+            role: data.role || 'MEMBER',
             memberType: data.memberType
         };
-        localStorage.setItem('savedUser', JSON.stringify(userToSave));
+        sessionStorage.setItem('savedUser', JSON.stringify(userToSave));
 
         console.log('[LOGIN] Member Access Granted:', role);
         // Redirect members directly to their profile view
@@ -87,7 +84,7 @@ const LoginPage = () => {
 
     const handleLogin = async (e) => {
         if (e) e.preventDefault();
-        if (!username || !password) {
+        if (!username || !password || password === 'Mews@') {
             setFeedback({ type: 'error', text: 'Please enter both credentials' });
             return;
         }
@@ -126,7 +123,7 @@ const LoginPage = () => {
 
     const handleResetPassword = async (e) => {
         if (e) e.preventDefault();
-        if (!resetCode || !newPassword) {
+        if (!resetCode || !newPassword || newPassword === 'Mews@') {
             setFeedback({ type: 'error', text: 'Please fill all fields' });
             return;
         }
@@ -184,8 +181,18 @@ const LoginPage = () => {
                             icon={FaLock}
                             type={showPassword ? "text" : "password"}
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
+                            onFocus={(e) => {
+                                if (!password) setPassword('Mews@');
+                            }}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val.startsWith('Mews@')) {
+                                    setPassword(val);
+                                } else if (val.length < 5) {
+                                    setPassword('Mews@');
+                                }
+                            }}
+                            placeholder="Mews@123..."
                             suffixIcon={showPassword ? FaEyeSlash : FaEye}
                             onSuffixClick={() => setShowPassword(!showPassword)}
                         />
@@ -258,8 +265,18 @@ const LoginPage = () => {
                             icon={FaLock}
                             type={showPassword ? "text" : "password"}
                             value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="Enter your new password"
+                            onFocus={() => {
+                                if (!newPassword) setNewPassword('Mews@');
+                            }}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val.startsWith('Mews@')) {
+                                    setNewPassword(val);
+                                } else if (val.length < 5) {
+                                    setNewPassword('Mews@');
+                                }
+                            }}
+                            placeholder="Mews@YourPassword"
                             suffixIcon={showPassword ? FaEyeSlash : FaEye}
                             onSuffixClick={() => setShowPassword(!showPassword)}
                         />

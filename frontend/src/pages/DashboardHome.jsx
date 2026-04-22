@@ -51,7 +51,7 @@ const DashboardHome = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
+                const adminInfo = JSON.parse(sessionStorage.getItem('adminInfo'));
                 // adminInfo allows us to greet the user immediately, but auth is handled via cookie
                 if (adminInfo) {
                     setUserName(adminInfo.name || 'User');

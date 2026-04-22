@@ -2,7 +2,7 @@ import React from 'react';
 import { FaBullhorn, FaHeart } from 'react-icons/fa';
 
 const LiveUpdatesTicker = () => {
-    const adminInfo = localStorage.getItem('adminInfo') ? JSON.parse(localStorage.getItem('adminInfo')) : null;
+    const adminInfo = sessionStorage.getItem('adminInfo') ? JSON.parse(sessionStorage.getItem('adminInfo')) : null;
     const locationName = adminInfo?.locationName || 'MEWS';
     const role = adminInfo?.role || 'ADMIN';
 

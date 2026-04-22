@@ -16,7 +16,7 @@ const announcementSchema = mongoose.Schema({
     },
     targetType: {
         type: String,
-        enum: ['villages', 'mandals', 'districts', 'members', 'state', 'occupation'],
+        enum: ['villages', 'mandals', 'districts', 'constituencies', 'members', 'state', 'occupation'],
         required: true
     },
     targetDescription: {
@@ -42,6 +42,16 @@ const announcementSchema = mongoose.Schema({
     },
     scheduledFor: {
         type: Date
+    },
+    areaType: {
+        type: String,
+        enum: ['rural', 'urban', 'both'],
+        default: 'both'
+    },
+    recipientType: {
+        type: String,
+        enum: ['admins', 'members', 'both'],
+        default: 'members'
     },
     attachments: [{
         type: String // Storage path or URL

@@ -9,63 +9,7 @@ import {
 } from 'react-icons/fa';
 
 // Mock Data
-const MOCK_REQUESTS = [
-    {
-        id: 'FR-2024-001',
-        applicant: 'Raju Goud',
-        village: 'Gundlapally',
-        category: 'Education',
-        amount: 25000,
-        purpose: 'College Fees for B.Tech 1st Year',
-        date: '2024-12-20',
-        status: 'Pending',
-        avatar: 'R'
-    },
-    {
-        id: 'FR-2024-002',
-        applicant: 'Laxmi Palle',
-        village: 'Kothapeta',
-        category: 'Medical',
-        amount: 50000,
-        purpose: 'Emergency Surgery Support',
-        date: '2024-12-18',
-        status: 'Approved',
-        avatar: 'L'
-    },
-    {
-        id: 'FR-2024-003',
-        applicant: 'Mahesh Kumar',
-        village: 'Gundlapally',
-        category: 'Small Business',
-        amount: 10000,
-        purpose: 'Vegetable Cart Setup',
-        date: '2024-12-15',
-        status: 'Rejected',
-        avatar: 'M'
-    },
-    {
-        id: 'FR-2024-004',
-        applicant: 'Srinivals',
-        village: 'Chandampet',
-        category: 'Education',
-        amount: 15000,
-        purpose: 'School Books & Uniforms',
-        date: '2024-12-22',
-        status: 'Pending',
-        avatar: 'S'
-    },
-    {
-        id: 'FR-2024-005',
-        applicant: 'Kavitha R',
-        village: 'Kothapeta',
-        category: 'Medical',
-        amount: 5000,
-        purpose: 'Medicine Costs',
-        date: '2024-12-23',
-        status: 'Pending',
-        avatar: 'K'
-    }
-];
+const MOCK_REQUESTS = [];
 
 const FundingRequests = () => {
     const [activeTab, setActiveTab] = useState('All');
@@ -261,8 +205,12 @@ const FundingRequests = () => {
                                         ))}
                                     </tbody>
                                 </table>
-                                {filteredRequests.length === 0 && (
-                                    <div className="p-12 text-center text-slate-400">
+                                {MOCK_REQUESTS.length === 0 ? (
+                                    <div className="p-12 text-center text-slate-400 italic">
+                                        No fund requests available.
+                                    </div>
+                                ) : filteredRequests.length === 0 && (
+                                    <div className="p-12 text-center text-slate-400 italic">
                                         No requests found matching your filters.
                                     </div>
                                 )}

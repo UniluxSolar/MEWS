@@ -11,7 +11,6 @@ import AdminHeader from '../components/AdminHeader';
 import StatCard from '../components/common/StatCard';
 import ActionCard from '../components/common/ActionCard';
 import DashboardHeader from '../components/common/DashboardHeader';
-import LiveUpdatesTicker from '../components/LiveUpdatesTicker';
 import {
     PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
     BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList
@@ -96,7 +95,7 @@ const StateDashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
+                const adminInfo = JSON.parse(sessionStorage.getItem('adminInfo'));
                 setUserName(adminInfo?.name || 'State Admin');
 
                 // Parallel Fetching
@@ -195,7 +194,6 @@ const StateDashboard = () => {
                 <AdminSidebar activePage="dashboard" />
 
                 <main id="admin-dashboard-content" className="flex-1 overflow-y-auto bg-slate-50">
-                    <LiveUpdatesTicker />
                     <div id="location-card-scroll-target">
                         <DashboardHeader
                             title={`State Overview`}

@@ -27,7 +27,7 @@ router.route('/')
 router.get('/', protect, getMembers);
 router.get('/:id', protect, getMemberById);
 router.put('/:id/status', protect, authorize('SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN'), updateMemberStatus);
-router.put('/:id', protect, authorize('SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN'), upload.fields([
+router.put('/:id', protect, upload.fields([
     { name: 'photo', maxCount: 1 },
 
     { name: 'communityCert', maxCount: 1 },

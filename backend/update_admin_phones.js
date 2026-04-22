@@ -13,7 +13,6 @@ const updateAdminPhones = async () => {
         console.log('Connected to MongoDB');
 
         const updates = [
-            { username: 'telangana_state_admin', newPhone: '6303109394' },
             { username: 'nalgonda_district_admin', newPhone: '7981585142' },
             { username: '6303109394', newPhone: '1231231231' }
         ];

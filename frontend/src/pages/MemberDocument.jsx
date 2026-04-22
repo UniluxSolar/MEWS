@@ -234,7 +234,13 @@ const MemberDocument = ({ data, lookups }) => {
                             <table className="w-full">
                                 <tbody>
                                     <InfoRow label="Address Line" value={`${data.address?.houseNumber}, ${data.address?.street}`} />
-                                    <InfoRow label="Village / Mandal" value={`${resolve(data.address?.village, 'village')}, ${resolve(data.address?.mandal, 'mandal')}`} />
+                                    <InfoRow 
+                                        label={data.areaType === 'URBAN' ? "Ward / Municipality" : "Village / Mandal"} 
+                                        value={data.areaType === 'URBAN' 
+                                            ? `${data.wardNumber || data.address?.wardNumber || '-'}, ${data.municipalityName || resolve(data.address?.municipality, 'municipality') || '-'}`
+                                            : `${resolve(data.address?.village, 'village')}, ${resolve(data.address?.mandal, 'mandal')}`
+                                        } 
+                                    />
                                     <InfoRow label="District / State" value={`${resolve(data.address?.district, 'district')}, ${data.address?.state || 'Telangana'}`} />
                                     <InfoRow label="Constituency / Pin" value={`${resolve(data.address?.constituency, 'constituency')} - ${data.address?.pinCode}`} />
                                     <InfoRow label="Residence Type" value={data.address?.residencyType} />
@@ -250,7 +256,13 @@ const MemberDocument = ({ data, lookups }) => {
                             <table className="w-full">
                                 <tbody>
                                     <InfoRow label="Address Line" value={`${data.address?.permHouseNumber || data.address?.houseNumber}, ${data.address?.permStreet || data.address?.street}`} />
-                                    <InfoRow label="Village / Mandal" value={`${resolve(data.permanentAddress?.village, 'village')}, ${resolve(data.permanentAddress?.mandal, 'mandal')}`} />
+                                    <InfoRow 
+                                        label={data.areaType === 'URBAN' || data.permanentAddress?.areaType === 'URBAN' ? "Ward / Municipality" : "Village / Mandal"} 
+                                        value={data.areaType === 'URBAN' || data.permanentAddress?.areaType === 'URBAN'
+                                            ? `${data.permanentAddress?.wardNumber || data.wardNumber || '-'}, ${resolve(data.permanentAddress?.municipality, 'municipality') || data.municipalityName || '-'}`
+                                            : `${resolve(data.permanentAddress?.village, 'village')}, ${resolve(data.permanentAddress?.mandal, 'mandal')}`
+                                        } 
+                                    />
                                     <InfoRow label="District / State" value={`${resolve(data.permanentAddress?.district, 'district')}, ${data.permanentAddress?.state || 'Telangana'}`} />
                                     <InfoRow label="Constituency / Pin" value={`${resolve(data.permanentAddress?.constituency, 'constituency')} - ${data.permanentAddress?.pinCode}`} />
                                 </tbody>

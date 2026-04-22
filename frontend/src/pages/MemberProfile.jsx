@@ -47,9 +47,13 @@ const MemberProfile = () => {
                     mobile: data.mobileNumber,
                     email: data.email,
                     job: data.occupation, // Keep for header
-                    photo: data.photoUrl ? (data.photoUrl.startsWith('http') ? data.photoUrl : `${import.meta.env.VITE_API_BASE_URL || ''}/${data.photoUrl.replace(/\\/g, '/')}`) : member1,
-                    address: `${data.address?.houseNumber}, ${data.address?.street}${data.address?.landmark ? ', Near ' + data.address.landmark : ''}, ${typeof data.address?.village === 'object' ? data.address?.village?.name : data.address?.village}, ${typeof data.address?.mandal === 'object' ? data.address?.mandal?.name : data.address?.mandal} (M), ${typeof data.address?.district === 'object' ? data.address?.district?.name : data.address?.district} (Dist), ${data.address?.constituency || ''} (Const) - ${data.address?.pincode}`,
-                    permAddress: `${data.permanentAddress?.houseNumber}, ${data.permanentAddress?.street}${data.permanentAddress?.landmark ? ', Near ' + data.permanentAddress.landmark : ''}, ${typeof data.permanentAddress?.village === 'object' ? data.permanentAddress?.village?.name : data.permanentAddress?.village}, ${typeof data.permanentAddress?.mandal === 'object' ? data.permanentAddress?.mandal?.name : data.permanentAddress?.mandal} (M), ${typeof data.permanentAddress?.district === 'object' ? data.permanentAddress?.district?.name : data.permanentAddress?.district} (Dist), ${data.permanentAddress?.constituency || ''} (Const) - ${data.permanentAddress?.pincode}`,
+                    photo: data.photoUrl ? (data.photoUrl.startsWith('http') ? data.photoUrl : `${import.meta.env.VITE_API_BASE_URL || ''}/${data.photoUrl.replace(/\\/g, '/').replace(/^\//, '')}`) : member1,
+                    address: data.areaType === 'URBAN'
+                        ? `${data.address?.houseNumber}, ${data.address?.street}${data.address?.landmark ? ', Near ' + data.address.landmark : ''}, ${data.wardNumber || data.address?.wardNumber || '-'} (W), ${data.municipalityName || (typeof data.address?.municipality === 'object' ? data.address?.municipality?.name : data.address?.municipality) || '-'} (Mun), ${typeof data.address?.district === 'object' ? data.address?.district?.name : data.address?.district} (Dist), ${data.constituencyName || data.address?.constituency || ''} (Const) - ${data.address?.pincode}`
+                        : `${data.address?.houseNumber}, ${data.address?.street}${data.address?.landmark ? ', Near ' + data.address.landmark : ''}, ${typeof data.address?.village === 'object' ? data.address?.village?.name : data.address?.village} (V), ${typeof data.address?.mandal === 'object' ? data.address?.mandal?.name : data.address?.mandal} (M), ${typeof data.address?.district === 'object' ? data.address?.district?.name : data.address?.district} (Dist), ${data.constituencyName || data.address?.constituency || ''} (Const) - ${data.address?.pincode}`,
+                    permAddress: data.areaType === 'URBAN' || data.permanentAddress?.areaType === 'URBAN'
+                        ? `${data.permanentAddress?.houseNumber || data.address?.houseNumber}, ${data.permanentAddress?.street || data.address?.street}${data.permanentAddress?.landmark ? ', Near ' + data.permanentAddress.landmark : ''}, ${data.permanentAddress?.wardNumber || data.wardNumber || '-'} (W), ${typeof data.permanentAddress?.municipality === 'object' ? data.permanentAddress?.municipality?.name : data.permanentAddress?.municipality || data.municipalityName || '-'} (Mun), ${typeof data.permanentAddress?.district === 'object' ? data.permanentAddress?.district?.name : data.permanentAddress?.district || data.address?.district} (Dist), ${data.permanentAddress?.constituency || data.constituencyName || ''} (Const) - ${data.permanentAddress?.pincode || data.address?.pincode}`
+                        : `${data.permanentAddress?.houseNumber}, ${data.permanentAddress?.street}${data.permanentAddress?.landmark ? ', Near ' + data.permanentAddress.landmark : ''}, ${typeof data.permanentAddress?.village === 'object' ? data.permanentAddress?.village?.name : data.permanentAddress?.village} (V), ${typeof data.permanentAddress?.mandal === 'object' ? data.permanentAddress?.mandal?.name : data.permanentAddress?.mandal} (M), ${typeof data.permanentAddress?.district === 'object' ? data.permanentAddress?.district?.name : data.permanentAddress?.district} (Dist), ${data.permanentAddress?.constituency || ''} (Const) - ${data.permanentAddress?.pincode}`,
 
                     // Fields missing before
                     educationLevel: data.educationLevel,
@@ -108,7 +112,15 @@ const MemberProfile = () => {
                         <div className="lg:col-span-1">
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col items-center text-center">
                                 <div className="w-32 h-32 rounded-full p-1 border-2 border-blue-100 mb-4 bg-gray-50">
-                                    <img src={member.photo} alt={member.name} className="w-full h-full rounded-full object-cover" />
+                                    <img 
+                                        src={member.photo} 
+                                        alt={member.name} 
+                                        className="w-full h-full rounded-full object-cover"
+                                        onError={(e) => {
+                                            e.target.onerror = null; // Prevent infinite loop
+                                            e.target.src = member1;
+                                        }}
+                                    />
                                 </div>
                                 <h2 className="text-xl font-bold text-gray-900">{member.name} {member.surname}</h2>
                                 <p className="text-sm text-gray-500 mb-1">{member.job}</p>

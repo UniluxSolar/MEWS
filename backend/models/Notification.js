@@ -30,7 +30,35 @@ const notificationSchema = mongoose.Schema({
     relatedModel: {
         type: String,
         enum: ['Job', 'Member', 'Institution', 'Announcement', 'FundRequest']
-    }
+    },
+    attachments: [{
+        type: String
+    }],
+    targetAudience: {
+        type: String
+    },
+    mandal_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Location'
+    },
+    village_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Location'
+    },
+    municipality_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Location'
+    },
+    ward_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Location'
+    },
+    attachmentUrls: [{ type: String }],
+    targetType: { type: String },
+    targetIds: [{ type: mongoose.Schema.Types.Mixed }],
+    areaType: { type: String },
+    status: { type: String, enum: ['SENT', 'SCHEDULED'], default: 'SENT' },
+    notificationType: { type: String, enum: ['USER_REQUEST', 'ANNOUNCEMENT', 'SYSTEM'], default: 'SYSTEM' }
 }, {
     timestamps: true
 });

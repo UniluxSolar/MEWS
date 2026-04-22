@@ -140,6 +140,10 @@ const MemberIDCard = ({ member }) => {
                                         alt="Member"
                                         className="w-full h-full object-cover"
                                         crossOrigin="anonymous"
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.parentElement.innerHTML = `<span class="text-3xl font-bold text-gray-300">${(member.name || '?').charAt(0)}</span>`;
+                                        }}
                                     />
                                 ) : (
                                     <span className="text-3xl font-bold text-gray-300">{(member.name || '?').charAt(0)}</span>

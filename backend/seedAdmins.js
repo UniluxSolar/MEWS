@@ -115,7 +115,7 @@ const seedUsers = async () => {
             {
                 username: 'SuperAdmin',
                 email: 'super@mews.com',
-                password: 'admin123',
+                password: 'Mews@8500626600',
                 role: 'SUPER_ADMIN',
                 locationName: null
             }

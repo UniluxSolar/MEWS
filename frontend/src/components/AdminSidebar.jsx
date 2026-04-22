@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     FaThLarge, FaUsers, FaBuilding, FaUserPlus,
-    FaHandHoldingUsd, FaSignOutAlt, FaChartLine, FaCog, FaQuestionCircle, FaBullhorn, FaUserShield, FaImages
+    FaHandHoldingUsd, FaSignOutAlt, FaChartLine, FaCog, FaQuestionCircle, FaBullhorn, FaUserShield, FaImages, FaBell,
+    FaShieldAlt
 } from 'react-icons/fa';
 
 const SidebarItem = ({ icon: Icon, label, active, to }) => (
@@ -21,30 +22,76 @@ const AdminSidebar = ({ activePage }) => {
     const [isMobileOpen, setIsMobileOpen] = useState(false);
 
     useEffect(() => {
-        const info = localStorage.getItem('adminInfo');
-        if (info) {
-            const { role, name } = JSON.parse(info);
-            setAdminName(name || 'Admin');
-            setUserRole(role);
+        const loadUserInfo = () => {
+            const adminInfoStr = sessionStorage.getItem('adminInfo');
+            const memberInfoStr = sessionStorage.getItem('memberInfo');
+            const infoStr = adminInfoStr || memberInfoStr;
 
-            // Dashboard Label
-            if (role === 'VILLAGE_ADMIN') setRoleLabel('Village Dashboard');
-            else if (role === 'MANDAL_ADMIN') setRoleLabel('Mandal Dashboard');
-            else if (role === 'DISTRICT_ADMIN') setRoleLabel('District Dashboard');
-            else if (role === 'STATE_ADMIN') setRoleLabel('State Dashboard');
-            else setRoleLabel('Admin Dashboard');
+            if (infoStr) {
+                const parsed = JSON.parse(infoStr);
+                const role = (parsed.role || '').toUpperCase().replace(/-/g, '_');
+                const email = (parsed.email || '').toLowerCase();
+                const username = (parsed.username || '').toString();
+                const mobile = (parsed.mobile || '').toString();
 
-            // Settings Label
-            if (role === 'VILLAGE_ADMIN') setSettingsLabel('Village Settings');
-            else if (role === 'MANDAL_ADMIN') setSettingsLabel('Mandal Settings');
-            else if (role === 'DISTRICT_ADMIN') setSettingsLabel('District Settings');
-            else if (role === 'STATE_ADMIN') setSettingsLabel('State Settings');
-            else setSettingsLabel('Admin Settings');
-        }
+                // Robust role identification
+                const isMemberAdmin = (role === 'MEMBER_ADMIN');
+                const isDistrictAdmin = (role === 'DISTRICT_ADMIN');
+                const isMandalAdmin = (role === 'MANDAL_ADMIN');
+                const isVillageAdmin = (role === 'VILLAGE_ADMIN');
+                const isMunicipalityAdmin = (role === 'MUNICIPALITY_ADMIN');
+                const isWardAdmin = (role === 'WARD_ADMIN');
+                const isScrutiny = (role === 'SCRUTINY_ADMIN');
+                const isState = (role === 'STATE_ADMIN');
+                const isSuper = (role === 'SUPER_ADMIN' || ((username === '8500626600' || mobile === '8500626600' || email === 'uniluxsolar@gmail.com') && !isMemberAdmin && !isDistrictAdmin && !isMandalAdmin && !isVillageAdmin && !isMunicipalityAdmin && !isWardAdmin && !isScrutiny)) && !isState;
+
+                if (role === 'MEMBER_ADMIN') {
+                    const fullName = parsed.surname ? `${parsed.surname} ${parsed.name}` : (parsed.name || 'Member');
+                    setAdminName(fullName);
+                } else if (isSuper) {
+                    setAdminName('8500626600');
+                } else if (isState) {
+                    setAdminName(mobile || username || 'Admin');
+                } else {
+                    const fullName = parsed.surname ? `${parsed.surname} ${parsed.name}` : (parsed.name || 'Admin');
+                    setAdminName(fullName);
+                }
+                
+                setUserRole(isSuper ? 'SUPER_ADMIN' : role);
+
+                // Dashboard Label
+                if (role === 'VILLAGE_ADMIN') setRoleLabel('Village Dashboard');
+                else if (role === 'WARD_ADMIN') setRoleLabel('Ward Dashboard');
+                else if (role === 'MANDAL_ADMIN') setRoleLabel('Mandal Dashboard');
+                else if (role === 'DISTRICT_ADMIN') setRoleLabel('District Dashboard');
+                else if (role === 'STATE_ADMIN') setRoleLabel('State Dashboard');
+                else if (role === 'SUPER_ADMIN') setRoleLabel('Admin Dashboard');
+                else if (role === 'SCRUTINY_ADMIN') setRoleLabel('Scrutiny Portal');
+                else setRoleLabel('Admin Dashboard');
+
+                // Settings Label
+                if (role === 'VILLAGE_ADMIN') setSettingsLabel('Village Settings');
+                else if (role === 'WARD_ADMIN') setSettingsLabel('Ward Settings');
+                else if (role === 'MANDAL_ADMIN') setSettingsLabel('Mandal Settings');
+                else if (role === 'DISTRICT_ADMIN') setSettingsLabel('District Settings');
+                else if (role === 'STATE_ADMIN') setSettingsLabel('State Settings');
+                else setSettingsLabel('Admin Settings');
+            }
+        };
+
+        loadUserInfo();
+        window.addEventListener('storage', loadUserInfo);
+        window.addEventListener('login-success', loadUserInfo);
+        return () => {
+            window.removeEventListener('storage', loadUserInfo);
+            window.removeEventListener('login-success', loadUserInfo);
+        };
     }, []);
 
     const handleLogout = () => {
-        localStorage.removeItem('adminInfo');
+        sessionStorage.removeItem('adminInfo');
+        sessionStorage.removeItem('memberInfo');
+        sessionStorage.removeItem('savedUser');
         navigate('/admin/login');
     };
 
@@ -95,26 +142,46 @@ const AdminSidebar = ({ activePage }) => {
                         </button>
                     </div>
 
-                    {/* Registration Actions (Top Priority) */}
-                    <SidebarItem to="/admin/members/new" icon={FaUserPlus} label="Add Member" active={activePage === 'register-member'} />
-                    <SidebarItem to="/admin/institutions/new" icon={FaBuilding} label="Add Institution" active={activePage === 'register-institution'} />
+                    {userRole !== 'SCRUTINY_ADMIN' && (
+                        <>
+                            <SidebarItem to="/admin/members/new" icon={FaUserPlus} label="Add Member" active={activePage === 'register-member'} />
+                            <SidebarItem to="/admin/institutions/new" icon={FaBuilding} label="Add Institution" active={activePage === 'register-institution'} />
 
-                    <SidebarItem to="/admin/dashboard" icon={FaThLarge} label={roleLabel} active={activePage === 'dashboard'} />
-                    {userRole !== 'VILLAGE_ADMIN' && (
-                        <SidebarItem to="/admin/management" icon={FaUserShield} label="Manage Admins" active={activePage === 'admin-management'} />
+                            <SidebarItem to={userRole === 'SUPER_ADMIN' ? '/super-admin/dashboard' : '/admin/dashboard'} icon={FaThLarge} label={roleLabel} active={activePage === 'dashboard'} />
+                            {(userRole !== 'VILLAGE_ADMIN' && userRole !== 'WARD_ADMIN') && (
+                                <SidebarItem to="/admin/management" icon={FaUserShield} label="Manage Admins" active={activePage === 'admin-management'} />
+                            )}
+                            <SidebarItem to="/admin/members" icon={FaUsers} label="Member Management" active={activePage === 'members'} />
+                            <SidebarItem to="/admin/institutions" icon={FaBuilding} label="Institution Management" active={activePage === 'institutions'} />
+
+                            <SidebarItem to="/admin/funding" icon={FaHandHoldingUsd} label="Funding Requests" active={activePage === 'funding'} />
+
+                            <SidebarItem to="/admin/activity-log" icon={FaChartLine} label="Activity Logs" active={activePage === 'activity'} />
+                            <SidebarItem to="/admin/settings" icon={FaCog} label={settingsLabel} active={activePage === 'settings'} />
+                            <SidebarItem to="/admin/help" icon={FaQuestionCircle} label="Help & Support" active={activePage === 'help'} />
+                        </>
                     )}
-                    <SidebarItem to="/admin/members" icon={FaUsers} label="Member Management" active={activePage === 'members'} />
-                    <SidebarItem to="/admin/institutions" icon={FaBuilding} label="Institution Management" active={activePage === 'institutions'} />
 
-                    <SidebarItem to="/admin/funding" icon={FaHandHoldingUsd} label="Funding Requests" active={activePage === 'funding'} />
+                    {(userRole === 'MEMBER_ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'STATE_ADMIN' || userRole === 'DISTRICT_ADMIN' || userRole === 'MANDAL_ADMIN' || userRole === 'VILLAGE_ADMIN' || userRole === 'MUNICIPALITY_ADMIN' || userRole === 'WARD_ADMIN' || userRole === 'SCRUTINY_ADMIN') && (
+                        <>
+                            <SidebarItem to="/admin/notifications" icon={FaBell} label="Notifications" active={activePage === 'notifications'} />
+                        </>
+                    )}
 
-                    <SidebarItem to="/admin/activity-log" icon={FaChartLine} label="Activity Logs" active={activePage === 'activity'} />
-                    <SidebarItem to="/admin/settings" icon={FaCog} label={settingsLabel} active={activePage === 'settings'} />
-                    <SidebarItem to="/admin/help" icon={FaQuestionCircle} label="Help & Support" active={activePage === 'help'} />
-                    <SidebarItem to="/admin/announcements" icon={FaBullhorn} label="Announcements" active={activePage === 'announcements'} />
+                    {userRole === 'SCRUTINY_ADMIN' && (
+                        <SidebarItem to="/admin/authorization" icon={FaShieldAlt} label="Authorization" active={activePage === 'authorization'} />
+                    )}
+
+                    {(userRole === 'SUPER_ADMIN' || userRole === 'STATE_ADMIN' || userRole === 'DISTRICT_ADMIN' || userRole === 'MANDAL_ADMIN' || userRole === 'VILLAGE_ADMIN' || userRole === 'MUNICIPALITY_ADMIN' || userRole === 'WARD_ADMIN') && (
+                        <>
+                            <SidebarItem to="/admin/announcements" icon={FaBullhorn} label="Announcements" active={activePage === 'announcements'} />
+                        </>
+                    )}
 
                     {userRole === 'SUPER_ADMIN' && (
-                        <SidebarItem to="/admin/carousel" icon={FaImages} label="Carousel Manager" active={activePage === 'carousel'} />
+                        <>
+                            <SidebarItem to="/admin/carousel" icon={FaImages} label="Carousel Manager" active={activePage === 'carousel'} />
+                        </>
                     )}
 
                     {/* Testing Section */}

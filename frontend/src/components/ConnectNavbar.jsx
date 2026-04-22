@@ -34,6 +34,9 @@ const ConnectNavbar = () => {
                             <Link to="/institution/login" className="px-3 py-1.5 border border-white rounded font-bold hover:bg-white hover:text-[#1e2a4a] transition text-white">
                                 Institution Login
                             </Link>
+                            <Link to="/admin/login?type=scrutiny" className="px-3 py-1.5 border border-white rounded font-bold hover:bg-white hover:text-[#1e2a4a] transition text-white">
+                                Scrutiny Admin
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -61,6 +64,9 @@ const ConnectNavbar = () => {
                         </Link>
                         <Link to="/institution/login" className="text-center px-4 py-3 border border-white text-white font-bold rounded-lg hover:bg-white/10 transition">
                             Institution Login
+                        </Link>
+                        <Link to="/admin/login?type=scrutiny" className="text-center px-4 py-3 border border-white text-white font-bold rounded-lg hover:bg-white/10 transition">
+                            Scrutiny Admin
                         </Link>
                     </div>
                 </div>

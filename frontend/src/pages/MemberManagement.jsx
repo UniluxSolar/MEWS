@@ -227,13 +227,14 @@ const MemberManagement = () => {
         const employmentStatus = params.get('employmentStatus');
         const status = params.get('status');
 
-        // Gender Reset
+        // Gender Reset (Robust Case-Insensitive)
         if (gender) {
+            const g = gender.toLowerCase();
             setSelectedGenders({
                 All: false,
-                Male: gender === 'Male',
-                Female: gender === 'Female',
-                Other: gender === 'Other'
+                Male: g === 'male',
+                Female: g === 'female',
+                Other: g === 'other'
             });
         } else {
             setSelectedGenders({ All: true, Male: false, Female: false, Other: false });
@@ -397,13 +398,12 @@ const MemberManagement = () => {
     const [itemsPerPage, setItemsPerPage] = useState(20);
 
 
-
     const filteredMembers = useMemo(() => {
         const safeMembers = Array.isArray(members) ? members : [];
         return safeMembers.filter(member => {
             if (searchTerm) {
                 const term = searchTerm.toLowerCase();
-                const safeVillage = getLocationName(member.address?.village).toLowerCase();
+                const safeVillage = (member.villageName || member.wardNumber || '').toLowerCase();
                 const text = `${member.name} ${member.surname} ${member.mobileNumber} ${safeVillage}`.toLowerCase();
                 if (!text.includes(term)) return false;
             }
@@ -415,34 +415,34 @@ const MemberManagement = () => {
             }
 
             // Multi-Select Filters
-            // District Filter (OR logic within array)
+            // District Filter (ID or Name match)
             if (selectedDistricts.length > 0) {
-                const memberDistrict = normalizeLocation(getLocationName(member.address?.district));
-                if (!selectedDistricts.includes(memberDistrict)) return false;
+                const dName = normalizeLocation(member.districtName);
+                if (!selectedDistricts.some(d => d === dName)) return false;
             }
 
             // Municipality Filter
             if (selectedMunicipalities.length > 0) {
-                const memberMun = normalizeLocation(getLocationName(member.address?.municipality));
-                if (!selectedMunicipalities.includes(memberMun)) return false;
+                const mName = normalizeLocation(member.municipalityName);
+                if (!selectedMunicipalities.some(m => m === mName)) return false;
             }
 
             // Mandal Filter
             if (selectedMandals.length > 0) {
-                const memberMandal = normalizeLocation(getLocationName(member.address?.mandal));
-                if (!selectedMandals.includes(memberMandal)) return false;
+                const mName = normalizeLocation(member.mandalName);
+                if (!selectedMandals.some(m => m === mName)) return false;
             }
 
             // Village Filter
             if (selectedVillages.length > 0) {
-                const memberVillage = normalizeLocation(getLocationName(member.address?.village));
-                if (!selectedVillages.includes(memberVillage)) return false;
+                const vName = normalizeLocation(member.villageName);
+                if (!selectedVillages.some(v => v === vName)) return false;
             }
 
             // Ward Filter
             if (selectedWards.length > 0) {
-                const memberWard = normalizeLocation(member.address?.wardNumber || member.address?.ward || '');
-                if (!selectedWards.includes(memberWard)) return false;
+                const w = member.address?.wardNumber || member.address?.ward || '';
+                if (!selectedWards.includes(w)) return false;
             }
 
 
@@ -464,18 +464,14 @@ const MemberManagement = () => {
                 if (!selectedCategories.some(c => job.includes(c.toLowerCase()))) return false;
             }
 
-            // Gender Filter
+            // Gender Filter (Robust 'OR' Matcher)
             if (!selectedGenders.All) {
-                const g = (member.gender || '').toLowerCase();
-                if (selectedGenders.Male && g !== 'male') return false;
-                if (selectedGenders.Female && g !== 'female') return false;
-                if (selectedGenders.Other && g !== 'other') return false;
-                // If specific gender selected, ensure match. Logic above handles explicit exclusion?
-                // Better logic: if NOT All, check if current gender IS selected.
-                const isSelected = (selectedGenders.Male && g === 'male') ||
-                    (selectedGenders.Female && g === 'female') ||
-                    (selectedGenders.Other && g === 'other');
-                if (!isSelected) return false;
+                const g = (member.gender || '').toLowerCase().trim();
+                const maleMatch = selectedGenders.Male && g === 'male';
+                const femaleMatch = selectedGenders.Female && g === 'female';
+                const otherMatch = selectedGenders.Other && g === 'other';
+                
+                if (!(maleMatch || femaleMatch || otherMatch)) return false;
             }
 
             // Blood Group Filter
@@ -519,7 +515,7 @@ const MemberManagement = () => {
     // Trigger geocoding when switching to map view or filtering
     useEffect(() => {
         if (viewMode === 'map' && members.length > 0) {
-            const uniqueVillages = [...new Set(filteredMembers.map(m => getLocationName(m.address?.village)).filter(Boolean))];
+            const uniqueVillages = [...new Set(filteredMembers.map(m => m.villageName || m.wardNumber).filter(Boolean))];
             uniqueVillages.forEach((village, index) => {
                 // Stagger requests slightly to be polite to the API
                 setTimeout(() => {
@@ -557,16 +553,16 @@ const MemberManagement = () => {
                         bValue = `${b.name} ${b.surname}`.toLowerCase();
                         break;
                     case 'district':
-                        aValue = getLocationName(a.address?.district).toLowerCase();
-                        bValue = getLocationName(b.address?.district).toLowerCase();
+                        aValue = (a.districtName || '').toLowerCase();
+                        bValue = (b.districtName || '').toLowerCase();
                         break;
                     case 'mandal':
-                        aValue = getLocationName(a.address?.mandal).toLowerCase();
-                        bValue = getLocationName(b.address?.mandal).toLowerCase();
+                        aValue = (a.areaType === 'URBAN' ? a.municipalityName : a.mandalName || '').toLowerCase();
+                        bValue = (b.areaType === 'URBAN' ? b.municipalityName : b.mandalName || '').toLowerCase();
                         break;
                     case 'village':
-                        aValue = getLocationName(a.address?.village).toLowerCase();
-                        bValue = getLocationName(b.address?.village).toLowerCase();
+                        aValue = (a.areaType === 'URBAN' ? a.wardNumber : a.villageName || '').toLowerCase();
+                        bValue = (b.areaType === 'URBAN' ? b.wardNumber : b.villageName || '').toLowerCase();
                         break;
                     case 'mobileNumber':
                         aValue = a.mobileNumber || '';
@@ -680,7 +676,9 @@ const MemberManagement = () => {
             "First Name": m.name,
             "Surname": m.surname,
             "Mobile": m.mobileNumber,
-            "Village": getLocationName(m.address?.village),
+            "District": m.districtName || 'N/A',
+            "Mandal/Municipality": m.areaType === 'URBAN' ? (m.municipalityName || 'N/A') : (m.mandalName || 'N/A'),
+            "Village/Ward": m.areaType === 'URBAN' ? (m.wardNumber || 'N/A') : (m.villageName || 'N/A'),
             "Age": m.age,
             "Gender": m.gender,
             "Occupation": m.occupation,
@@ -756,15 +754,16 @@ const MemberManagement = () => {
         doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}`, 14, 28);
         doc.text(`Total Records: ${filteredMembers.length}`, 14, 33);
 
-        const tableColumn = ["ID", "Name", "Mobile", "Village", "Age", "Gender", "Occupation"];
+        const tableColumn = ["ID", "Name", "Mobile", "District", "Mandal/Municipality", "Village/Ward", "Age", "Gender"];
         const tableRows = filteredMembers.map(m => [
             m.mewsId || m._id.substring(0, 6),
             `${m.name} ${m.surname}`,
             m.mobileNumber,
-            getLocationName(m.address?.village),
+            m.districtName || 'N/A',
+            m.areaType === 'URBAN' ? (m.municipalityName || 'N/A') : (m.mandalName || 'N/A'),
+            m.areaType === 'URBAN' ? (m.wardNumber || 'N/A') : (m.villageName || 'N/A'),
             m.age,
             m.gender,
-            m.occupation,
         ]);
 
         autoTable(doc, {
@@ -1120,10 +1119,10 @@ const MemberManagement = () => {
                                                                 <div className="flex items-center gap-1">District {sortConfig.key === 'district' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
                                                             <th className="px-4 py-3 w-[9%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('mandal')}>
-                                                                <div className="flex items-center gap-1">Mandal {sortConfig.key === 'mandal' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
+                                                                <div className="flex items-center gap-1">Mandal/Municipality {sortConfig.key === 'mandal' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
                                                             <th className="px-4 py-3 w-[9%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('village')}>
-                                                                <div className="flex items-center gap-1">Village {sortConfig.key === 'village' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
+                                                                <div className="flex items-center gap-1">Village/Ward Number {sortConfig.key === 'village' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
                                                             <th className="px-4 py-3 w-[10%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('mobileNumber')}>
                                                                 <div className="flex items-center gap-1">Phone {sortConfig.key === 'mobileNumber' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
@@ -1172,7 +1171,9 @@ const MemberManagement = () => {
                                                                 </td>
                                                                 <td className="px-4 py-3">
                                                                     {(() => {
-                                                                        const roleRaw = member.role || 'MEMBER';
+                                                                        const roleRaw = member.role;
+                                                                        if (!roleRaw) return <span className="text-slate-300">N/A</span>;
+
                                                                         const roleLabel = roleRaw
                                                                             .replace(/_/g, ' ')
                                                                             .toLowerCase()
@@ -1183,10 +1184,11 @@ const MemberManagement = () => {
                                                                             DISTRICT_ADMIN: 'bg-indigo-100 text-indigo-700',
                                                                             MUNICIPALITY_ADMIN: 'bg-cyan-100 text-cyan-700',
                                                                             MANDAL_ADMIN: 'bg-orange-100 text-orange-700',
+                                                                            WARD_ADMIN: 'bg-blue-100 text-blue-700',
                                                                             VILLAGE_ADMIN: 'bg-green-100 text-green-700',
                                                                             MEMBER: 'bg-slate-100 text-slate-500',
                                                                         };
-                                                                        const colorClass = roleColors[roleRaw] || roleColors.MEMBER;
+                                                                        const colorClass = roleColors[roleRaw] || 'bg-slate-100 text-slate-500';
                                                                         return (
                                                                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide whitespace-nowrap ${colorClass}`}>
                                                                                 {roleLabel}
@@ -1194,15 +1196,18 @@ const MemberManagement = () => {
                                                                         );
                                                                     })()}
                                                                 </td>
-                                                                <td className="px-4 py-3 text-xs text-slate-600 truncate" title={getLocationName(member.address?.district) || 'N/A'}>
-                                                                    {getLocationName(member.address?.district) || <span className="text-slate-300">N/A</span>}
+                                                                <td className="px-4 py-3 text-xs text-slate-600 truncate" title={member.districtName || 'N/A'}>
+                                                                    {member.districtName || <span className="text-slate-300">N/A</span>}
                                                                 </td>
-                                                                <td className="px-4 py-3 text-xs text-slate-600 truncate" title={getLocationName(member.address?.mandal) || 'N/A'}>
-                                                                    {getLocationName(member.address?.mandal) || <span className="text-slate-300">N/A</span>}
+                                                                <td className="px-4 py-3 text-xs text-slate-600 truncate" title={member.areaType === 'URBAN' ? (member.municipalityName || 'N/A') : (member.mandalName || 'N/A')}>
+                                                                    {member.areaType === 'URBAN' 
+                                                                        ? (member.municipalityName || <span className="text-slate-300">N/A</span>) 
+                                                                        : (member.mandalName || <span className="text-slate-300">N/A</span>)}
                                                                 </td>
-                                                                <td className="px-4 py-3 text-xs font-bold text-blue-600 truncate" title={`${getLocationName(member.address?.village) || member.address?.wardNumber || 'N/A'}`}>
-                                                                    {getLocationName(member.address?.village) || member.address?.wardNumber || 'N/A'}
-                                                                    {member.address?.municipality && <span className="text-[9px] text-slate-400 block">{getLocationName(member.address?.municipality)} (Mun)</span>}
+                                                                <td className="px-4 py-3 text-xs font-bold text-blue-600 truncate" title={member.areaType === 'URBAN' ? (member.wardNumber || 'N/A') : (member.villageName || 'N/A')}>
+                                                                    {member.areaType === 'URBAN' 
+                                                                        ? (member.wardNumber || <span className="text-slate-300">N/A</span>) 
+                                                                        : (member.villageName || <span className="text-slate-300">N/A</span>)}
                                                                 </td>
                                                                 <td className="px-4 py-3 text-xs text-slate-600 font-mono">{member.mobileNumber}</td>
                                                                 <td className="px-4 py-3 text-xs text-slate-600">{member.age}</td>
@@ -1263,32 +1268,39 @@ const MemberManagement = () => {
                                                                 src={(() => {
                                                                     const photo = member.photoUrl || member.profileImage || '';
                                                                     if (!photo) return '';
-                                                                    const baseUrl = BASE_URL;
+                                                                    const bUrl = baseUrl || BASE_URL || '';
                                                                     const timestamp = member.updatedAt ? new Date(member.updatedAt).getTime() : '';
 
                                                                     if (photo.startsWith('http')) {
-                                                                        return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(photo)}&t=${timestamp}`;
+                                                                        return `${bUrl}/api/proxy-image?url=${encodeURIComponent(photo)}&t=${timestamp}`;
                                                                     }
                                                                     // Local file: Prepend BaseURL
                                                                     const cleanPath = photo.replace(/\\/g, '/').replace(/^\//, '');
-                                                                    return `${baseUrl}/${cleanPath}?t=${timestamp}`;
+                                                                    return `${bUrl}/${cleanPath}${cleanPath.includes('?') ? '&' : '?'}t=${timestamp}`;
                                                                 })()}
                                                                 alt={member.name}
                                                                 className="w-full h-full object-cover relative z-10 bg-slate-100"
                                                                 crossOrigin="anonymous"
-                                                                onError={(e) => { e.target.style.display = 'none'; }}
+                                                                onError={(e) => { 
+                                                                    const originalPhoto = member.photoUrl || member.profileImage || '';
+                                                                    if (e.target.src.includes('proxy-image') && originalPhoto.startsWith('http')) {
+                                                                        e.target.src = originalPhoto;
+                                                                    } else {
+                                                                        e.target.style.display = 'none'; 
+                                                                    }
+                                                                }}
                                                             />
                                                         </div>
                                                         <div className="text-center mb-4">
                                                             <h3 className="font-bold text-slate-800 text-sm mb-0.5 truncate px-1" title={`${member.name} ${member.surname}`}>
                                                                 <Link to={`/admin/members/${member._id}`} className="hover:text-blue-600 hover:underline">{member.name} {member.surname}</Link>
                                                             </h3>
-                                                            <p className="text-[10px] text-blue-500 font-bold mb-1 truncate px-2" title={`${getLocationName(member.address?.village)} (V), ${getLocationName(member.address?.constituency) || ''} (C), ${getLocationName(member.address?.mandal) || ''} (M), ${getLocationName(member.address?.district) || ''} (D)`}>
-                                                                {getLocationName(member.address?.village) || member.address?.wardNumber || 'N/A'}
-                                                                {member.address?.mandal && ` (V), ${getLocationName(member.address.mandal)} (M)`}
-                                                                {member.address?.constituency && ` , ${getLocationName(member.address.constituency)} (C)`}
-                                                                {member.address?.municipality && ` (W), ${getLocationName(member.address.municipality)} (Mun)`}
-                                                                {member.address?.district && `, ${getLocationName(member.address.district)} (D)`}
+                                                            <p className="text-[10px] text-blue-500 font-bold mb-1 truncate px-2" title={`${member.villageName || member.wardNumber || 'N/A'} (V), ${member.constituencyName || ''} (C), ${member.mandalName || member.municipalityName || ''} (M/Mun), ${member.districtName || ''} (D)`}>
+                                                                {member.villageName || member.wardNumber || 'N/A'}
+                                                                {member.mandalName && ` (V), ${member.mandalName} (M)`}
+                                                                {member.constituencyName && ` , ${member.constituencyName} (C)`}
+                                                                {member.municipalityName && ` (W), ${member.municipalityName} (Mun)`}
+                                                                {member.districtName && `, ${member.districtName} (D)`}
                                                             </p>
                                                             <p className="text-[10px] text-slate-400 font-mono flex items-center justify-center gap-1">
                                                                 <FaPhoneAlt size={9} /> <a href={`tel:${member.mobileNumber}`} className="hover:text-blue-600 hover:underline">{member.mobileNumber}</a>
@@ -1333,7 +1345,7 @@ const MemberManagement = () => {
                                                                 <Popup>
                                                                     <div className="text-center p-2">
                                                                         <div className="font-bold text-slate-800">{member.name} {member.surname}</div>
-                                                                        <div className="text-xs text-blue-500 font-bold mb-1">{getLocationName(member.address?.village) || member.address?.wardNumber}</div>
+                                                                        <div className="text-xs text-blue-500 font-bold mb-1">{member.villageName || member.wardNumber}</div>
                                                                         <div className="text-xs text-slate-500">{member.mobileNumber}</div>
                                                                         <Link to={`/admin/members/${member._id}`} className="block mt-2 bg-blue-600 !text-white py-2 px-3 rounded-lg text-xs font-bold hover:bg-blue-700 text-center shadow-md no-underline">View Profile</Link>
                                                                     </div>
@@ -1341,7 +1353,7 @@ const MemberManagement = () => {
                                                                 <Tooltip direction="top" offset={[0, -28]} opacity={1} className="custom-tooltip">
                                                                     <div className="label-bubble" style={{ backgroundColor: markerColor, borderColor: markerColor }}>
                                                                         <span className="block">{member.name}</span>
-                                                                        <span className="block text-[9px] opacity-80">{getLocationName(member.address?.village) || member.address?.wardNumber}</span>
+                                                                        <span className="block text-[9px] opacity-80">{member.villageName || member.wardNumber}</span>
                                                                     </div>
                                                                 </Tooltip>
                                                             </Marker>

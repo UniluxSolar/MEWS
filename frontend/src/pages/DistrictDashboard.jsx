@@ -11,7 +11,6 @@ import AdminHeader from '../components/AdminHeader';
 import StatCard from '../components/common/StatCard';
 import ActionCard from '../components/common/ActionCard';
 import DashboardHeader from '../components/common/DashboardHeader';
-import LiveUpdatesTicker from '../components/LiveUpdatesTicker';
 import {
     PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
     BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList
@@ -142,7 +141,7 @@ const DistrictDashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
+                const adminInfo = JSON.parse(sessionStorage.getItem('adminInfo'));
                 setUserName(adminInfo?.name || 'District Admin');
 
                 const query = id ? `?locationId=${id}` : ''; // API Drill Down
@@ -221,7 +220,6 @@ const DistrictDashboard = () => {
                 <AdminSidebar activePage="dashboard" />
 
                 <main id="admin-dashboard-content" className="flex-1 overflow-y-auto bg-slate-50">
-                    <LiveUpdatesTicker />
                     <div id="location-card-scroll-target">
                         <DashboardHeader
                             title={`District Overview`}

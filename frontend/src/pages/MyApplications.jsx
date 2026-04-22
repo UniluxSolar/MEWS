@@ -18,15 +18,22 @@ const StatCard = ({ icon: Icon, value, label, subtext, color, iconBg }) => (
 
 const StatusBadge = ({ status }) => {
     const styles = {
-        'Submitted': 'bg-pink-100 text-pink-700',
-        'Under Review': 'bg-yellow-100 text-yellow-700',
-        'Approved': 'bg-green-100 text-green-700',
-        'Disbursed': 'bg-blue-100 text-blue-700',
-        'Rejected': 'bg-red-100 text-red-700'
+        'PENDING_APPROVAL': 'bg-amber-100 text-amber-700',
+        'UNDER_REVIEW': 'bg-yellow-100 text-yellow-700',
+        'APPROVED': 'bg-green-100 text-green-700',
+        'ACTIVE': 'bg-blue-100 text-blue-700',
+        'DISBURSED': 'bg-indigo-100 text-indigo-700',
+        'REJECTED': 'bg-red-100 text-red-700',
+        'COMPLETED': 'bg-emerald-100 text-emerald-700'
     };
+    
+    // Fallback for older display names or unexpected case
+    const displayStatus = status || 'PENDING';
+    const key = displayStatus.toUpperCase().replace(/\s/g, '_');
+    
     return (
-        <span className={`px-3 py-1 rounded-full text-xs font-bold ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
-            {status}
+        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${styles[key] || 'bg-gray-100 text-gray-700'}`}>
+            {displayStatus.replace(/_/g, ' ')}
         </span>
     );
 };
@@ -298,9 +305,15 @@ const MyApplications = () => {
                                         </td>
                                     </tr>
                                 ))
+                            ) : stats?.applications?.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5" className="p-10 text-center text-gray-500 text-sm italic">
+                                        No fund requests available.
+                                    </td>
+                                </tr>
                             ) : (
                                 <tr>
-                                    <td colSpan="5" className="p-10 text-center text-gray-500 text-sm">
+                                    <td colSpan="5" className="p-10 text-center text-gray-500 text-sm italic">
                                         No applications match your filters.
                                     </td>
                                 </tr>

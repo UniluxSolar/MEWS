@@ -66,7 +66,7 @@ const AdminManagement = () => {
     const [viewIdCard, setViewIdCard] = useState(null);
 
     // Auth info
-    const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}');
+    const adminInfo = JSON.parse(sessionStorage.getItem('adminInfo') || '{}');
     const userRole = adminInfo.role;
 
     // Hierarchy Permissions

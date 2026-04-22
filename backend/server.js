@@ -120,7 +120,10 @@ app.get('/api/proxy-image', async (req, res) => {
         'storage.googleapis.com',
         'lh3.googleusercontent.com', // Google Profile Photos
         'lh5.googleusercontent.com',
-        'drive.google.com'
+        'drive.google.com',
+        'randomuser.me',
+        'unsplash.com',
+        'cloudinary.com'
     ];
 
     try {

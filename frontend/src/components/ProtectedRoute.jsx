@@ -14,13 +14,15 @@ const ProtectedRoute = ({ allowedRoles }) => {
                 // Check if we have an active session via cookie
                 const { data } = await axios.get('/auth/me');
                 setIsAuthenticated(true);
-                setUserRole(data.role);
+                setUserRole(data.role?.toUpperCase().replace(/-/g, '_'));
             } catch (error) {
                 console.warn('Session verification failed:', error);
                 setIsAuthenticated(false);
                 setUserRole(null);
-                // Clear any leftover local storage
-                localStorage.removeItem('adminInfo');
+                // Clear any leftover session storage
+                sessionStorage.removeItem('adminInfo');
+                sessionStorage.removeItem('memberInfo');
+                sessionStorage.removeItem('savedUser');
             } finally {
                 setIsLoading(false);
             }
@@ -52,7 +54,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
     if (allowedRoles && !allowedRoles.includes(userRole)) {
         // User is logged in but doesn't have permission
         // Redirect to their appropriate dashboard or home
-        if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') return <Navigate to="/admin/dashboard" replace />;
+        if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'SCRUTINY_ADMIN') return <Navigate to="/admin/dashboard" replace />;
         return <Navigate to="/dashboard/profile" replace />;
     }
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-    FaCamera, FaEdit, FaCheckCircle, FaSave, FaTimes, FaArrowLeft, FaFileAlt, FaIdCard, FaPrint, FaDownload
+    FaCamera, FaEdit, FaCheckCircle, FaSave, FaTimes, FaArrowLeft, FaFileAlt, FaIdCard, FaPrint, FaDownload, FaBullseye, FaHandHoldingHeart
 } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -28,100 +28,184 @@ const PrintPortal = ({ children }) => {
     return ReactDOM.createPortal(children, container);
 };
 
-const InputField = ({ label, name, value, onChange, type = "text", verified, disabled }) => (
-    <div className="flex-1 min-w-[300px]">
-        <label className="block text-xs font-bold text-gray-700 mb-1.5">
-            {label}
-            {verified && <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] rounded-full">Verified</span>}
-        </label>
-        <div className="relative">
-            <input
-                type={type}
-                name={name}
-                value={value || ''}
-                onChange={onChange}
-                disabled={disabled}
-                className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white ${disabled ? 'bg-gray-100 text-gray-500' : ''}`}
-            />
-            {!disabled && (
-                <button className="absolute right-3 top-3 text-gray-400 hover:text-primary">
-                    <FaEdit size={12} />
-                </button>
-            )}
-        </div>
+const DisplayField = ({ label, value }) => (
+    <div className="mb-4">
+        <label className="block text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">{label}</label>
+        <p className="text-sm font-bold text-gray-800">{value || '-'}</p>
+    </div>
+);
+
+const InputField = ({ label, name, value, onChange, type = "text", disabled }) => (
+    <div className="mb-4">
+        <label className="block text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">{label}</label>
+        <input
+            type={type}
+            name={name}
+            value={value || ''}
+            onChange={onChange}
+            disabled={disabled}
+            className={`w-full px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white ${disabled ? 'bg-gray-50 text-gray-400' : ''}`}
+        />
     </div>
 );
 
 const SelectField = ({ label, name, options, value, onChange }) => (
-    <div className="flex-1 min-w-[300px]">
-        <label className="block text-xs font-bold text-gray-700 mb-1.5">{label}</label>
-        <div className="relative">
-            <select
-                name={name}
-                value={value || ''}
-                onChange={onChange}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white appearance-none"
-            >
-                {options.map(opt => <option key={opt}>{opt}</option>)}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-500">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-            </div>
-        </div>
+    <div className="mb-4">
+        <label className="block text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">{label}</label>
+        <select
+            name={name}
+            value={value || ''}
+            onChange={onChange}
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white appearance-none"
+        >
+            {options.map(opt => <option key={opt}>{opt}</option>)}
+        </select>
     </div>
 );
 
-const PersonalInfoTab = ({ formData, handleChange }) => (
-    <div className="space-y-8 animate-fadeIn">
-        {/* Basic Info */}
-        <div className="flex flex-wrap gap-6">
-            <InputField label="Name" name="name" value={formData.name} onChange={handleChange} disabled={true} />
-            <InputField label="Surname" name="surname" value={formData.surname} onChange={handleChange} disabled={true} />
-        </div>
-
-        <div className="flex flex-wrap gap-6">
-            <InputField label="Email Address" name="email" value={formData.email} onChange={handleChange} disabled={true} />
-            <InputField label="Mobile Number" name="mobileNumber" value={formData.mobileNumber} onChange={handleChange} verified={true} disabled={true} />
-        </div>
-
-        <div className="flex flex-wrap gap-6">
-            <InputField label="Date of Birth" name="dob" value={formData.dob} onChange={handleChange} type="date" disabled={true} />
-            <div className="flex-1 min-w-[300px]">
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">Gender</label>
-                <input
-                    type="text"
-                    value={formData.gender}
-                    disabled={true}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-800 bg-gray-100 text-gray-500"
+const PersonalInfoTab = ({ formData, handleChange, isEditing, toggleEdit, onSave, onCancel, profileImage, onPhotoClick, saving }) => (
+    <div className="animate-fadeIn space-y-10">
+        {/* Top Header: Photo, Edit Button, ID */}
+        <div className="flex items-center gap-8">
+            <div className="relative group cursor-pointer" onClick={onPhotoClick}>
+                <img
+                    src={getImageUrl(profileImage)}
+                    alt="Profile"
+                    className="w-24 h-24 rounded-full object-cover border-4 border-gray-100 shadow-sm transition group-hover:opacity-90"
                 />
+                <button className="absolute bottom-0 right-0 bg-white p-1.5 rounded-full shadow-md text-primary hover:text-secondary transition">
+                    <FaCamera size={14} />
+                </button>
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+                {!isEditing && (
+                    <button 
+                        onClick={toggleEdit}
+                        className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-xs font-bold hover:bg-blue-100 transition w-fit border border-blue-100 shadow-sm"
+                    >
+                        <FaEdit size={12} /> Edit Profile
+                    </button>
+                )}
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">ID:</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${formData.mewsId && formData.mewsId !== 'PENDING' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
+                        {formData.mewsId || 'PENDING'}
+                    </span>
+                </div>
             </div>
         </div>
 
-        <div className="border-t border-gray-100 pt-8">
-            <h3 className="font-bold text-gray-900 mb-6">Address Information</h3>
-
-            <div className="flex flex-wrap gap-6 mb-6">
-                <InputField label="State" name="address.state" value={formData.address?.state} onChange={handleChange} disabled={true} />
-                <InputField label="District" name="address.district" value={formData.address?.district?.name || formData.address?.district} onChange={handleChange} disabled={true} />
-                <InputField label="Constituency" name="address.constituency" value={formData.address?.constituency?.name || formData.address?.constituency} onChange={handleChange} disabled={true} />
+        {/* Two-Column Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+            {/* Personal Details */}
+            <div className="space-y-6">
+                <div className="flex items-center gap-3 border-l-4 border-orange-400 pl-4 mb-8">
+                    <h3 className="font-bold text-lg text-gray-800">Personal Details</h3>
+                </div>
+                
+                {isEditing ? (
+                    <div className="space-y-2">
+                        <InputField label="First Name" name="name" value={formData.name} onChange={handleChange} />
+                        <InputField label="Surname" name="surname" value={formData.surname} onChange={handleChange} />
+                        <InputField label="Mobile Number" name="mobileNumber" value={formData.mobileNumber} onChange={handleChange} />
+                        <InputField label="Email" name="email" value={formData.email} onChange={handleChange} />
+                        <InputField label="Date of Birth" name="dob" type="date" value={formData.dob} onChange={handleChange} />
+                        <SelectField label="Gender" name="gender" options={['Male', 'Female', 'Other']} value={formData.gender} onChange={handleChange} />
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        <DisplayField label="First Name" value={formData.name} />
+                        <DisplayField label="Surname" value={formData.surname} />
+                        <div className="grid grid-cols-2 gap-4">
+                            <DisplayField label="Mobile Number" value={formData.mobileNumber} />
+                        </div>
+                        <DisplayField label="Email" value={formData.email} />
+                        <div className="grid grid-cols-2 gap-4">
+                            <DisplayField label="Date of Birth" value={new Date(formData.dob).toLocaleDateString('en-GB') === 'Invalid Date' ? formData.dob : new Date(formData.dob).toLocaleDateString('en-GB')} />
+                            <DisplayField label="Gender" value={formData.gender} />
+                        </div>
+                    </div>
+                )}
             </div>
 
-            <div className="flex flex-wrap gap-6 mb-6">
-                <InputField label="Mandal" name="address.mandal" value={formData.address?.mandal?.name || formData.address?.mandal} onChange={handleChange} disabled={true} />
-                <InputField label="Village" name="address.village" value={formData.address?.village?.name || formData.address?.village} onChange={handleChange} disabled={true} />
-                <InputField label="Pincode" name="address.pinCode" value={formData.address?.pinCode} onChange={handleChange} disabled={true} />
-            </div>
+            {/* Address Details */}
+            <div className="space-y-6">
+                <div className="flex items-center gap-3 border-l-4 border-orange-400 pl-4 mb-8">
+                    <h3 className="font-bold text-lg text-gray-800">Address Details</h3>
+                </div>
 
-            <div className="flex flex-wrap gap-6">
-                <InputField label="House Number" name="address.houseNumber" value={formData.address?.houseNumber} onChange={handleChange} disabled={true} />
-                <InputField label="Street" name="address.street" value={formData.address?.street} onChange={handleChange} disabled={true} />
-                <InputField label="Landmark" name="address.landmark" value={formData.address?.landmark} onChange={handleChange} disabled={true} />
+                {isEditing ? (
+                    <div className="space-y-2">
+                        <InputField label="House Number" name="address.houseNumber" value={formData.address?.houseNumber} onChange={handleChange} />
+                        <InputField label="Street / Colony" name="address.street" value={formData.address?.street} onChange={handleChange} />
+                        <InputField label="Landmark" name="address.landmark" value={formData.address?.landmark} onChange={handleChange} />
+                        <InputField label="Village" name="address.village" value={formData.address?.village} onChange={handleChange} />
+                        <InputField label="Mandal" name="address.mandal" value={formData.address?.mandal} onChange={handleChange} />
+                        <InputField label="Constituency" name="address.constituency" value={formData.address?.constituency} onChange={handleChange} />
+                        <InputField label="District" name="address.district" value={formData.address?.district} onChange={handleChange} />
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <DisplayField label="House Number" value={formData.address?.houseNumber} />
+                        </div>
+                        <DisplayField label="Street / Colony" value={formData.address?.street} />
+                        <DisplayField label="Landmark" value={formData.address?.landmark} />
+                        <div className="grid grid-cols-2 gap-4">
+                            <DisplayField label="Village" value={formData.address?.village?.name || formData.address?.village} />
+                            <DisplayField label="Mandal" value={formData.address?.mandal?.name || formData.address?.mandal} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <DisplayField label="Constituency" value={formData.address?.constituency?.name || formData.address?.constituency} />
+                            <DisplayField label="District" value={formData.address?.district?.name || formData.address?.district} />
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
+
+        {/* Action Buttons at bottom right */}
+        {isEditing && (
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
+                <button
+                    onClick={onCancel}
+                    className="flex items-center gap-2 px-8 py-2 bg-gray-100 text-gray-600 rounded-full text-sm font-bold hover:bg-gray-200 transition"
+                >
+                    Cancel
+                </button>
+                <button
+                    onClick={onSave}
+                    disabled={saving}
+                    className="flex items-center gap-2 px-8 py-2 bg-green-600 text-white rounded-full text-sm font-bold hover:bg-green-700 transition disabled:opacity-50"
+                >
+                    {saving ? 'Updating...' : 'Update'}
+                </button>
+            </div>
+        )}
     </div>
 );
 
-const FamilyMembersTab = ({ members, onMemberClick }) => {
+const getImageUrl = (url) => {
+    if (!url) return "/assets/images/user-profile.png";
+    if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+
+    // Ensure we handle Windows backslashes
+    const normalizedUrl = url.replace(/\\/g, '/');
+
+    // Use Proxy for GCS/Remote URLs to ensure they load (CORS/Private)
+    const baseUrl = BASE_URL;
+
+    if (normalizedUrl.startsWith('http')) {
+        return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(normalizedUrl)}`;
+    }
+
+    // Local relative paths (e.g., /uploads/...)
+    const cleanUrl = normalizedUrl.startsWith('/') ? normalizedUrl : `/${normalizedUrl}`;
+    return `${baseUrl}${cleanUrl}`;
+};
+
+const FamilyMembersTab = ({ members, onMemberClick, title = "Family Members" }) => {
     // Filter out the current user for display, but keep original list for count
     const displayMembers = members ? members.filter(m => !m.isCurrentUser) : [];
     const totalCount = members ? members.length : 0;
@@ -129,7 +213,7 @@ const FamilyMembersTab = ({ members, onMemberClick }) => {
     return (
         <div className="animate-fadeIn">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-gray-900">Family Members ({totalCount})</h3>
+                <h3 className="font-bold text-gray-900">{title} ({totalCount})</h3>
                 {/* Add Member restricted to Village Admin only */}
             </div>
 
@@ -147,9 +231,9 @@ const FamilyMembersTab = ({ members, onMemberClick }) => {
                         >
                             <div className="relative">
                                 <img
-                                    src={member.photo || "/assets/images/user-profile.png"} // Dependent usually has 'photo', Head has 'photoUrl'. Normalized in useEffect, but good to check.
+                                    src={getImageUrl(member.photo || member.photoUrl)} 
                                     alt={member.name}
-                                    className="w-12 h-12 rounded-full object-cover border border-gray-200"
+                                    className="w-12 h-12 rounded-full object-cover border border-gray-200 shadow-sm"
                                 />
                                 {member.isHead && (
                                     <span className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white">
@@ -157,11 +241,11 @@ const FamilyMembersTab = ({ members, onMemberClick }) => {
                                     </span>
                                 )}
                             </div>
-                            <div>
-                                <p className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                                <p className="font-bold text-gray-800 text-sm flex items-center gap-2 truncate">
                                     {member.name} {member.surname}
                                 </p>
-                                <p className="text-xs text-gray-500">{member.relation} • {member.age} Years</p>
+                                <p className="text-xs text-gray-400 truncate">{member.relation} • {member.age} Years</p>
                                 <span className="text-[10px] text-primary font-bold mt-1 inline-block">Click to View Profile</span>
                             </div>
                         </div>
@@ -206,75 +290,134 @@ const DocumentsTab = ({ onOpenApp, onOpenID }) => (
     </div>
 );
 
-const MOCK_NOTIFICATIONS_HISTORY = [
-    {
-        id: 1,
-        title: "Application Approved",
-        description: "Your membership application has been successfully verified and approved by the admin.",
-        date: "Jan 15, 2026 • 10:30 AM",
-        isUnread: true,
-        type: 'success'
-    },
-    {
-        id: 2,
-        title: "New Scholarship Available",
-        description: "Applications are now open for the 'Merit Excellence Scholarship 2026'. Apply before Feb 28.",
-        date: "Jan 12, 2026 • 09:15 AM",
-        isUnread: false,
-        type: 'info'
-    },
-    {
-        id: 3,
-        title: "Profile Update Reminder",
-        description: "Please verify your current address and family member details for the annual census.",
-        date: "Jan 05, 2026 • 02:00 PM",
-        isUnread: false,
-        type: 'warning'
-    },
-    {
-        id: 4,
-        title: "Donation Receipt Generated",
-        description: "Thank you for your donation! Your 80G tax receipt is now available for download.",
-        date: "Dec 28, 2025 • 04:45 PM",
-        isUnread: false,
-        type: 'success'
-    }
-];
+const NotificationsTab = ({ notifications, title = "Personal Info" }) => {
+    return (
+        <div className="animate-fadeIn">
+            <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-gray-900">{title}</h3>
+            </div>
 
-const NotificationsTab = () => (
-    <div className="animate-fadeIn">
-        <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-gray-900">Recent Notifications</h3>
-            <button className="text-xs font-bold text-secondary hover:underline">Mark all as read</button>
+            <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-gray-50/50 text-gray-500 text-[10px] uppercase tracking-wider border-b border-gray-100">
+                                <th className="py-4 pl-6 font-bold text-left whitespace-nowrap">Type of Admin</th>
+                                <th className="py-4 font-bold text-left whitespace-nowrap">Originator</th>
+                                <th className="py-4 font-bold text-left whitespace-nowrap">Date of Announcement</th>
+                                <th className="py-4 font-bold text-left">Message</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {notifications.length === 0 ? (
+                                <tr>
+                                    <td colSpan="4" className="py-12 text-center text-gray-400 text-sm">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <FaBullseye className="text-gray-200" size={40} />
+                                            No announcements found.
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                notifications.map((notification) => (
+                                    <tr key={notification._id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                                        <td className="py-4 pl-6">
+                                            <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-[10px] font-bold whitespace-nowrap uppercase">
+                                                {notification.targetAudience || 'System Admin'}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 text-sm font-bold text-gray-900 whitespace-nowrap">
+                                            {notification.title || 'System'}
+                                        </td>
+                                        <td className="py-4 text-xs font-medium text-gray-600 whitespace-nowrap">
+                                            {new Date(notification.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        </td>
+                                        <td className="py-4 pr-6">
+                                            <div className="text-sm text-gray-600 leading-relaxed max-w-md">
+                                                {notification.message || notification.description}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
+    );
+};
 
-        <div className="space-y-4">
-            {MOCK_NOTIFICATIONS_HISTORY.map((notification) => (
-                <div
-                    key={notification.id}
-                    className={`flex items-start gap-4 p-4 rounded-xl border transition-all hover:bg-gray-50 ${notification.isUnread ? 'bg-blue-50/50 border-blue-100' : 'bg-white border-gray-100'}`}
-                >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 
-                        ${notification.type === 'success' ? 'bg-green-100 text-green-600' :
-                            notification.type === 'warning' ? 'bg-amber-100 text-amber-600' :
-                                'bg-blue-100 text-blue-600'}`}>
-                        <FaCheckCircle size={16} />
+const FundRequestRow = ({ request }) => {
+    const target = request.amountRequired || 0;
+    const collected = request.amountCollected || 0;
+    const progress = Math.min(100, Math.round((collected / target) * 100) || 0);
+
+    let barColor = 'bg-orange-400';
+    let statusLabel = `Currently received: ₹${collected.toLocaleString()}`;
+
+    if (progress > 60) {
+        barColor = 'bg-green-500';
+        statusLabel = `Total amount received: ₹${collected.toLocaleString()}`;
+    } else if (progress > 30) {
+        barColor = 'bg-yellow-400';
+        statusLabel = `Currently received: ₹${collected.toLocaleString()}`;
+    }
+
+    return (
+        <tr className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+            <td className="py-4 pl-6">
+                <div className="flex flex-col text-left text-sm whitespace-nowrap">
+                    <span className="font-bold text-gray-900">{request.requestedFor?.name || 'You'} {request.requestedFor?.surname || ''}</span>
+                </div>
+            </td>
+            <td className="py-4 text-left text-xs font-medium text-gray-600 whitespace-nowrap">
+                {request.requestedFor?.address?.district || '-'}
+            </td>
+            <td className="py-4 text-left text-xs font-medium text-gray-600 whitespace-nowrap">
+                {request.requestedFor?.address?.mandal || '-'}
+            </td>
+            <td className="py-4 text-left text-xs font-medium text-gray-600 whitespace-nowrap">
+                {request.requestedFor?.address?.village || '-'}
+            </td>
+            <td className="py-4 text-left">
+                <div className="text-sm text-gray-700 font-medium line-clamp-1 max-w-xs" title={request.description}>
+                    {request.description}
+                </div>
+            </td>
+            <td className="py-4 font-bold text-gray-800 text-left whitespace-nowrap">
+                ₹{target.toLocaleString()}
+            </td>
+            <td className="py-4 border-r border-gray-50">
+                <div className="flex flex-col text-left whitespace-nowrap">
+                    <span className="font-bold text-gray-900 text-xs">{new Date(request.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                    <span className="text-[10px] text-gray-400">{new Date(request.createdAt).getFullYear()}</span>
+                </div>
+            </td>
+            <td className="py-4 px-4 min-w-[200px]">
+                <div className="flex flex-col gap-2">
+                    <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div 
+                            className={`h-full ${barColor} transition-all duration-500 ease-out`} 
+                            style={{ width: `${progress}%` }}
+                        ></div>
                     </div>
-                    <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                            <h4 className={`text-sm font-bold mb-1 ${notification.isUnread ? 'text-gray-900' : 'text-gray-700'}`}>
-                                {notification.title}
-                                {notification.isUnread && <span className="ml-2 w-2 h-2 bg-red-500 rounded-full inline-block"></span>}
-                            </h4>
-                            <span className="text-xs text-gray-400 whitespace-nowrap">{notification.date}</span>
-                        </div>
-                        <p className="text-sm text-gray-600 leading-relaxed">{notification.description}</p>
+                    <div className="flex justify-between items-center">
+                        <span className="text-[9px] font-black uppercase text-gray-500 tracking-tighter">
+                            {statusLabel}
+                        </span>
+                        <span className="text-[10px] font-black text-gray-900">{progress}%</span>
                     </div>
                 </div>
-            ))}
-        </div>
-    </div>
-);
+            </td>
+            <td className="py-4 pr-6 text-right">
+                <button className="px-4 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-opacity-90 transition shadow-sm whitespace-nowrap">
+                    Pay Now
+                </button>
+            </td>
+        </tr>
+    );
+};
 
 // Family Member Modal
 const FamilyMemberModal = ({ isOpen, onClose, onSave, member, isEditing }) => {
@@ -316,6 +459,30 @@ const ProfileSettings = () => {
     const viewParam = queryParams.get('view');
 
     const [activeTab, setActiveTab] = useState('Personal Info');
+    const [isEditing, setIsEditing] = useState(false);
+    const [originalData, setOriginalData] = useState(null); // For Cancel button
+    
+    // Determine Display Mode (Profile vs Notifications)
+    const isNotificationsMode = viewParam === 'notifications';
+    
+    // Tab Configurations
+    const tabs = [
+        { 
+            id: 'Personal Info', 
+            label: isNotificationsMode ? 'Announcements' : 'Personal Info',
+            header: isNotificationsMode ? 'Announcements' : 'Personal Info'
+        },
+        { 
+            id: 'My Documents', 
+            label: isNotificationsMode ? 'Received Fund Requests' : 'My Documents',
+            header: isNotificationsMode ? 'Received Fund Requests' : 'My Documents'
+        },
+        { 
+            id: 'Family Members', 
+            label: isNotificationsMode ? 'Tickets Received' : 'Family Members',
+            header: isNotificationsMode ? 'Tickets Received' : 'Family Members'
+        }
+    ];
     const [showCamera, setShowCamera] = useState(false);
     const [profileImage, setProfileImage] = useState("/assets/images/user-profile.png");
     const [loading, setLoading] = useState(true);
@@ -367,6 +534,8 @@ const ProfileSettings = () => {
 
     const [isReadOnly, setIsReadOnly] = useState(false); // New state for View Only mode
     const [viewingMemberId, setViewingMemberId] = useState(null); // Track if we are viewing a specific family member
+    const [notifications, setNotifications] = useState([]);
+    const [receivedRequests, setReceivedRequests] = useState([]);
 
     // Fetch User Data
     // Helper to calculate relationship relative to the logged-in user
@@ -406,10 +575,14 @@ const ProfileSettings = () => {
         const fetchProfile = async () => {
             try {
                 // Check multiple possible sources for logged-in user information
-                const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
-                const memberInfo = JSON.parse(localStorage.getItem('memberInfo'));
-                const savedUser = JSON.parse(localStorage.getItem('savedUser'));
+                const adminInfoStr = sessionStorage.getItem('adminInfo');
+                const memberInfoStr = sessionStorage.getItem('memberInfo');
+                const savedUserStr = sessionStorage.getItem('savedUser');
                 
+                const adminInfo = adminInfoStr ? JSON.parse(adminInfoStr) : null;
+                const memberInfo = memberInfoStr ? JSON.parse(memberInfoStr) : null;
+                const savedUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+
                 const userInfo = adminInfo || memberInfo || savedUser;
                 const userId = userInfo?._id || userInfo?.id || userInfo?.memberId;
 
@@ -501,9 +674,9 @@ const ProfileSettings = () => {
                             }; // Use family member data
                             setActiveTab('Personal Info'); // Force tab
                         }
-                    } else if (adminInfo.memberId && adminInfo.memberId !== adminInfo._id) {
+                    } else if (userInfo?.memberId && userInfo?.memberId !== userInfo?._id) {
                         // Default Dependent Login view
-                        const foundMember = data.familyMembers?.find(fm => (fm._id === adminInfo.memberId || fm.mewsId === adminInfo.memberId));
+                        const foundMember = data.familyMembers?.find(fm => (fm._id === userInfo.memberId || fm.mewsId === userInfo.memberId));
                         if (foundMember) {
                             memberToDisplay = {
                                 ...data,
@@ -539,7 +712,8 @@ const ProfileSettings = () => {
                                 if (headVal && typeof headVal === 'string' && !/^[0-9a-fA-F]{24}$/.test(headVal)) return headVal;
                                 return '';
                             }
-                            return val || headAddr?.[f]?.name || (typeof headAddr?.[f] === 'string' ? headAddr?.[f] : '') || '';
+                            // Fallback for cases where val is populated but not accessed correctly
+                            return val?.name || val || headAddr?.[f]?.name || (typeof headAddr?.[f] === 'string' ? headAddr?.[f] : '') || '';
                         };
 
                         return {
@@ -559,7 +733,8 @@ const ProfileSettings = () => {
                     const finalAddress = resolveAddress(memberToDisplay.address || memberToDisplay.presentAddress, headAddress);
                     const finalPermAddress = resolveAddress(memberToDisplay.permanentAddress, headPermAddress);
 
-                    setFormData({
+                    // Populate Form
+                    const resolvedProfile = {
                         ...memberToDisplay,
                         mewsId: memberToDisplay.mewsId || memberToDisplay.memberId || 'PENDING',
                         name: memberToDisplay.name || '',
@@ -567,11 +742,14 @@ const ProfileSettings = () => {
                         mobileNumber: memberToDisplay.mobileNumber || '',
                         email: memberToDisplay.email || '',
                         gender: memberToDisplay.gender || '',
-                        address: finalAddress,
-                        permanentAddress: finalPermAddress,
+                        address: resolveAddress(memberToDisplay.address || memberToDisplay.presentAddress, headAddress),
+                        permanentAddress: resolveAddress(memberToDisplay.permanentAddress, headPermAddress),
                         dob: memberToDisplay.dob ? memberToDisplay.dob.split('T')[0] : '',
                         familyMembers: response.data.familyMembers || []
-                    });
+                    };
+
+                    setFormData(resolvedProfile);
+                    setOriginalData(resolvedProfile);
 
                     // Photo Handling
                     // Dependents often have 'photo' (GCS path) or 'photoUrl' (signed/full). 
@@ -592,6 +770,39 @@ const ProfileSettings = () => {
                     } else if (viewParam === 'idcard') {
                         setActiveTab('My Documents');
                         setShowIDModal(true);
+                    } else if (viewParam === 'notifications') {
+                        setActiveTab('Personal Info');
+                    }
+
+                    // Fetch Notifications
+                    try {
+                        const notifRes = await API.get('/notifications');
+                        setNotifications(Array.isArray(notifRes.data) ? notifRes.data : []);
+                    } catch (e) {
+                        console.warn("Failed to fetch notifications in profile", e);
+                    }
+
+                    // Fetch Received Fund Requests for "Announcements" tab
+                    try {
+                        const fundRequestsRes = await API.get('/fund-requests');
+                        if (fundRequestsRes.data) {
+                            const memberInfo = JSON.parse(sessionStorage.getItem('memberInfo')) || JSON.parse(sessionStorage.getItem('adminInfo')) || JSON.parse(sessionStorage.getItem('savedUser'));
+                            const currentId = memberInfo?._id || memberInfo?.id;
+
+                            // Cutoff date to clear existing test data (April 7, 2026, 10:20 PM)
+                            const cutoffDate = new Date('2026-04-07T22:20:00Z');
+
+                            // Filter requests where someone else requested FOR this user AND it's a new request
+                            const requests = Array.isArray(fundRequestsRes.data) ? fundRequestsRes.data : [];
+                            const received = requests.filter(req => {
+                                const isOtherUser = req.requestedBy?._id && req.requestedBy._id !== currentId;
+                                const isNewRequest = new Date(req.createdAt) > cutoffDate;
+                                return isOtherUser && isNewRequest;
+                            });
+                            setReceivedRequests(received);
+                        }
+                    } catch (e) {
+                        console.warn("Failed to fetch fund requests in profile", e);
                     }
                 }
             } catch (error) {
@@ -640,7 +851,7 @@ const ProfileSettings = () => {
     const handleSave = async () => {
         setSaving(true);
         try {
-            const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
+            const adminInfo = JSON.parse(sessionStorage.getItem('adminInfo'));
 
             const submitData = new FormData();
             submitData.append('name', formData.name);
@@ -668,35 +879,54 @@ const ProfileSettings = () => {
             }
 
             // Using API utility automatically handles cookies and FormData content-type usually
-            const response = await API.put(`/members/${adminInfo._id}`, submitData);
+            const targetId = formData._id || formData.mewsId;
+            const response = await API.put(`/members/${targetId}`, submitData);
 
             if (response.data) {
-                const storedAdmin = JSON.parse(localStorage.getItem('adminInfo'));
+                const storedAdmin = JSON.parse(sessionStorage.getItem('adminInfo'));
+                const storedMember = JSON.parse(sessionStorage.getItem('memberInfo'));
 
-                // If backend returns the updated member, we can update local storage logic if needed
-                // But usually we just re-fetch in useEffect or update photo displayed
-                // Let's see if we can get the new photo URL from response if needed
+                // Reload data to ensure everything is in sync correctly
                 const updatedMember = response.data;
-                if (updatedMember.photoUrl) {
-                    setProfileImage(updatedMember.photoUrl);
-                    // Update adminInfo in localStorage if photo changed?
-                    if (storedAdmin) {
-                        storedAdmin.photoUrl = updatedMember.photoUrl;
-                        localStorage.setItem('adminInfo', JSON.stringify(storedAdmin));
-                        window.dispatchEvent(new Event('storage'));
-                    }
+                const updatedName = `${updatedMember.surname} ${updatedMember.name}`;
+
+                if (storedAdmin) {
+                    if (updatedMember.photoUrl) storedAdmin.photoUrl = updatedMember.photoUrl;
+                    storedAdmin.name = updatedName;
+                    sessionStorage.setItem('adminInfo', JSON.stringify(storedAdmin));
+                }
+                if (storedMember) {
+                    if (updatedMember.photoUrl) storedMember.photoUrl = updatedMember.photoUrl;
+                    storedMember.name = updatedName;
+                    sessionStorage.setItem('memberInfo', JSON.stringify(storedMember));
                 }
 
+                if (updatedMember.photoUrl) {
+                    setProfileImage(updatedMember.photoUrl);
+                }
+
+                setOriginalData(formData);
+                setIsEditing(false); // Toggle back to view mode
                 alert("Profile Updated Successfully!");
+                window.dispatchEvent(new Event('storage'));
             } else {
                 alert("Failed to update profile");
             }
         } catch (error) {
             console.error("Error updating profile:", error);
-            alert("An error occurred");
+            alert(`Failed to update profile: ${error.response?.data?.message || error.message}`);
         } finally {
             setSaving(false);
         }
+    };
+
+    const toggleEdit = () => {
+        setIsEditing(!isEditing);
+    };
+
+    const handleCancel = () => {
+        setFormData(originalData); // Restore original data
+        setIsEditing(false);
     };
 
     const handlePhotoCapture = (imgSrc) => {
@@ -731,21 +961,6 @@ const ProfileSettings = () => {
         }
     };
 
-    const getImageUrl = (url) => {
-        if (!url) return "/assets/images/user-profile.png";
-        if (url.startsWith('data:') || url.startsWith('blob:')) return url;
-
-        // Use Proxy for GCS/Remote URLs to ensure they load (CORS/Private)
-        const baseUrl = BASE_URL;
-
-        if (url.startsWith('http')) {
-            return `${baseUrl}/api/proxy-image?url=${encodeURIComponent(url)}`;
-        }
-
-        // Local relative paths (e.g., /uploads/...)
-        const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-        return `${baseUrl}${cleanUrl}`;
-    };
 
     const navigate = useNavigate(); // Hook for navigation
 
@@ -923,365 +1138,123 @@ const ProfileSettings = () => {
 
                 {/* Tabs Header */}
                 <div className="flex border-b border-gray-200 overflow-x-auto bg-gray-50/50 px-4 md:px-8">
-                    {['Personal Info', 'My Documents', 'Family Members', 'Notifications'].map((tab) => (
+                    {tabs.map((tab) => (
                         <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`px-4 md:px-6 py-4 font-semibold text-sm transition-all whitespace-nowrap border-b-2 ${activeTab === tab
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`px-4 md:px-6 py-4 font-semibold text-sm transition-all whitespace-nowrap border-b-2 ${activeTab === tab.id
                                 ? 'text-primary border-primary bg-white'
                                 : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-100/50'
                                 }`}
                         >
-                            {tab}
+                            {tab.label}
                         </button>
                     ))}
                 </div>
 
                 <div className="p-6 md:p-8">
+                    {/* Tab 1 Content */}
                     {activeTab === 'Personal Info' && (
                         <div className="animate-fadeIn w-full">
-                            {/* Profile Header Section */}
-                            <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-10 pb-8 border-b border-gray-100">
-                                <div className="relative group shrink-0">
-                                    <div className="w-32 h-32 rounded-full ring-4 ring-white shadow-lg overflow-hidden relative">
-                                        <img
-                                            src={getImageUrl(profileImage)}
-                                            alt="Profile"
-                                            className="w-full h-full object-cover bg-gray-100"
-                                        />
-                                        {!isReadOnly && (
-                                            <div
-                                                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-sm"
-                                                onClick={() => document.getElementById('photo-upload').click()}
-                                            >
-                                                <FaCamera className="text-white text-2xl" />
-                                            </div>
-                                        )}
-                                    </div>
-                                    {!isReadOnly && (
-                                        <input
-                                            type="file"
-                                            id="photo-upload"
-                                            className="hidden"
-                                            accept="image/*"
-                                            onChange={(e) => {
-                                                const file = e.target.files[0];
-                                                if (file) {
-                                                    if (file.size > 5242880) {
-                                                        alert("File size exceeds 5 MB. Please upload a smaller file.");
-                                                        e.target.value = null;
-                                                        return;
-                                                    }
-                                                    const reader = new FileReader();
-                                                    reader.onloadend = () => {
-                                                        setProfileImage(reader.result);
-                                                        setFormData(prev => ({ ...prev, photoUrl: reader.result }));
-                                                    }
-                                                    reader.readAsDataURL(file);
-                                                }
-                                            }}
-                                        />
-                                    )}
-                                </div>
-                                <div className="text-center md:text-left flex-1">
-                                    <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
-                                        <h1 className="text-3xl font-bold text-gray-900">{formData.name} {formData.surname}</h1>
-                                        {isReadOnly ? (
-                                            <button 
-                                                onClick={() => setIsReadOnly(false)}
-                                                className="px-4 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-full border border-blue-200 hover:bg-blue-100 transition shadow-sm flex items-center gap-2"
-                                            >
-                                                <FaEdit size={10} /> Edit Profile
-                                            </button>
-                                        ) : (
-                                            <button 
-                                                onClick={() => setIsReadOnly(true)}
-                                                className="px-4 py-1.5 bg-gray-50 text-gray-600 text-xs font-bold rounded-full border border-gray-200 hover:bg-gray-100 transition shadow-sm flex items-center gap-2"
-                                            >
-                                                <FaTimes size={10} /> Cancel Editing
-                                            </button>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-wrap justify-center md:justify-start gap-6 text-sm text-gray-500">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-medium text-gray-400">ID:</span>
-                                            <span className="font-mono text-primary bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                                                {/* Display logic: Valid ID or PENDING */}
-                                                {(formData.mewsId && formData.mewsId !== 'PENDING') ? formData.mewsId : 'PENDING'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Details Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                                {/* Personal Details Column */}
-                                <div className="space-y-6">
-                                    <h3 className="text-lg font-bold text-gray-900 border-l-4 border-primary pl-3">Personal Details</h3>
-
-                                    <div className="grid gap-6">
-                                        <div className="group">
-                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">First Name</label>
-                                            {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.name}</p>
-                                            ) : (
-                                                <input
-                                                    type="text"
-                                                    name="name"
-                                                    value={formData.name}
-                                                    onChange={handleChange}
-                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                />
-                                            )}
-                                        </div>
-
-                                        <div className="group">
-                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Surname</label>
-                                            {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.surname}</p>
-                                            ) : (
-                                                <input
-                                                    type="text"
-                                                    name="surname"
-                                                    value={formData.surname}
-                                                    onChange={handleChange}
-                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                />
-                                            )}
-                                        </div>
-
-                                        <div className="group">
-                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Mobile Number</label>
-                                            {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1 flex items-center gap-2">
-                                                    {formData.mobileNumber}
-                                                </p>
-                                            ) : (
-                                                <input
-                                                    type="text"
-                                                    name="mobileNumber"
-                                                    value={formData.mobileNumber}
-                                                    onChange={handleChange}
-                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                />
-                                            )}
-                                        </div>
-
-                                        <div className="group">
-                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Email</label>
-                                            {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.email || '-'}</p>
-                                            ) : (
-                                                <input
-                                                    type="email"
-                                                    name="email"
-                                                    value={formData.email}
-                                                    onChange={handleChange}
-                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                />
-                                            )}
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="group">
-                                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Date of Birth</label>
-                                                {isReadOnly ? (
-                                                    <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.dob}</p>
-                                                ) : (
-                                                    <input
-                                                        type="date"
-                                                        name="dob"
-                                                        value={formData.dob}
-                                                        onChange={handleChange}
-                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                    />
-                                                )}
-                                            </div>
-                                            <div className="group">
-                                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Gender</label>
-                                                {isReadOnly ? (
-                                                    <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.gender}</p>
-                                                ) : (
-                                                    <select
-                                                        name="gender"
-                                                        value={formData.gender}
-                                                        onChange={handleChange}
-                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                    >
-                                                        <option value="Male">Male</option>
-                                                        <option value="Female">Female</option>
-                                                        <option value="Other">Other</option>
-                                                    </select>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Address Details Column */}
-                                <div className="space-y-6">
-                                    <h3 className="text-lg font-bold text-gray-900 border-l-4 border-amber-500 pl-3">Address Details</h3>
-
-                                    <div className="grid gap-6">
-                                        <div className="group">
-                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">House Number</label>
-                                            {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.houseNumber || '-'}</p>
-                                            ) : (
-                                                <input
-                                                    type="text"
-                                                    name="address.houseNumber"
-                                                    value={formData.address?.houseNumber}
-                                                    onChange={handleChange}
-                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                />
-                                            )}
-                                        </div>
-                                        <div className="group">
-                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Street / Colony</label>
-                                            {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.street || '-'}</p>
-                                            ) : (
-                                                <input
-                                                    type="text"
-                                                    name="address.street"
-                                                    value={formData.address?.street}
-                                                    onChange={handleChange}
-                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                />
-                                            )}
-                                        </div>
-                                        <div className="group">
-                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Landmark</label>
-                                            {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.landmark || '-'}</p>
-                                            ) : (
-                                                <input
-                                                    type="text"
-                                                    name="address.landmark"
-                                                    value={formData.address?.landmark}
-                                                    onChange={handleChange}
-                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                />
-                                            )}
-                                        </div>
-                                        <div className="group">
-                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Village</label>
-                                            {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.village || '-'}</p>
-                                            ) : (
-                                                <input
-                                                    type="text"
-                                                    name="address.village"
-                                                    value={formData.address?.village}
-                                                    onChange={handleChange}
-                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                />
-                                            )}
-                                        </div>
-                                        <div className="group">
-                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Mandal</label>
-                                            {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.mandal || '-'}</p>
-                                            ) : (
-                                                <input
-                                                    type="text"
-                                                    name="address.mandal"
-                                                    value={formData.address?.mandal}
-                                                    onChange={handleChange}
-                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                />
-                                            )}
-                                        </div>
-                                        <div className="group">
-                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Constituency</label>
-                                            {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.constituency?.name || formData.address?.constituency || '-'}</p>
-                                            ) : (
-                                                <input
-                                                    type="text"
-                                                    name="address.constituency"
-                                                    value={formData.address?.constituency?.name || formData.address?.constituency}
-                                                    onChange={handleChange}
-                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                />
-                                            )}
-                                        </div>
-                                        <div className="group">
-                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">District</label>
-                                            {isReadOnly ? (
-                                                <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.district || '-'}</p>
-                                            ) : (
-                                                <input
-                                                    type="text"
-                                                    name="address.district"
-                                                    value={formData.address?.district}
-                                                    onChange={handleChange}
-                                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                />
-                                            )}
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="group">
-                                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">State</label>
-                                                {isReadOnly ? (
-                                                    <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.state || 'Telangana'}</p>
-                                                ) : (
-                                                    <input
-                                                        type="text"
-                                                        name="address.state"
-                                                        value={formData.address?.state}
-                                                        onChange={handleChange}
-                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                    />
-                                                )}
-                                            </div>
-                                            <div className="group">
-                                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Pin Code</label>
-                                                {isReadOnly ? (
-                                                    <p className="text-gray-900 font-medium text-lg border-b border-gray-100 py-1">{formData.address?.pinCode || '-'}</p>
-                                                ) : (
-                                                    <input
-                                                        type="text"
-                                                        name="address.pinCode"
-                                                        value={formData.address?.pinCode}
-                                                        onChange={handleChange}
-                                                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition"
-                                                    />
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Only Show Update Button if NOT Read Only */}
-                            {!isReadOnly && (
-                                <div className="pt-8 flex justify-end border-t border-gray-100 mt-8">
-                                    <button
-                                        onClick={handleSave}
-                                        disabled={saving}
-                                        className={`px-8 py-3 bg-gradient-to-r from-primary to-blue-600 text-white font-bold rounded-lg shadow-md hover:shadow-lg transform active:scale-95 transition-all flex items-center gap-2 ${saving ? 'opacity-70 cursor-wait' : ''}`}
-                                    >
-                                        {saving && <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                                        {saving ? 'Updating...' : 'Update Profile'}
-                                    </button>
-                                </div>
+                            {isNotificationsMode ? (
+                                <NotificationsTab
+                                    title={tabs.find(t => t.id === 'Personal Info')?.header}
+                                    notifications={notifications}
+                                    onMarkRead={async (id) => {
+                                        try {
+                                            await API.put(`/notifications/${id}/read`);
+                                            setNotifications(notifications.map(n => n._id === id ? { ...n, isRead: true } : n));
+                                        } catch (e) {
+                                            console.warn("Failed to mark notification as read", e);
+                                        }
+                                    }}
+                                />
+                            ) : (
+                                <PersonalInfoTab 
+                                    formData={formData} 
+                                    handleChange={handleChange} 
+                                    isEditing={isEditing}
+                                    toggleEdit={toggleEdit}
+                                    onSave={handleSave}
+                                    onCancel={handleCancel}
+                                    profileImage={profileImage}
+                                    onPhotoClick={() => setShowCamera(true)}
+                                    saving={saving}
+                                />
                             )}
                         </div>
                     )}
 
-                    {activeTab === 'My Documents' && <DocumentsTab onOpenApp={() => setShowAppModal(true)} onOpenID={() => setShowIDModal(true)} />}
+                    {/* Tab 2 Content */}
+                    {activeTab === 'My Documents' && (
+                        <div className="animate-fadeIn">
+                            {isNotificationsMode ? (
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+                                                <FaHandHoldingHeart size={18} />
+                                            </div>
+                                            <div className="text-left">
+                                                <h2 className="font-bold text-xl text-gray-800">{tabs.find(t => t.id === 'My Documents')?.header}</h2>
+                                                <p className="text-xs text-gray-500">Fund requests initiated by others on your behalf</p>
+                                            </div>
+                                        </div>
+                                    </div>
 
+                                    <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left border-collapse">
+                                                <thead>
+                                                    <tr className="bg-gray-50/50 text-gray-500 text-[10px] uppercase tracking-wider border-b border-gray-100">
+                                                        <th className="py-4 pl-6 font-bold text-left">Beneficiary Name</th>
+                                                        <th className="py-4 font-bold text-left">District</th>
+                                                        <th className="py-4 font-bold text-left">Mandal</th>
+                                                        <th className="py-4 font-bold text-left">Village / Municipality</th>
+                                                        <th className="py-4 font-bold text-left">Description / Reasons</th>
+                                                        <th className="py-4 font-bold text-left">Target Amount</th>
+                                                        <th className="py-4 font-bold text-left">Date Of Raised Request</th>
+                                                        <th className="py-4 font-bold text-left">Payment Status</th>
+                                                        <th className="py-4 pr-6 text-right font-bold">Pay Now</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {receivedRequests.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan="9" className="py-12 text-center text-gray-400 text-sm">
+                                                                <div className="flex flex-col items-center gap-2">
+                                                                    <FaHandHoldingHeart className="text-gray-200" size={40} />
+                                                                    No fund requests found.
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ) : (
+                                                        receivedRequests.map((req) => (
+                                                            <FundRequestRow key={req._id} request={req} />
+                                                        ))
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <DocumentsTab
+                                    onOpenApp={() => setShowAppModal(true)}
+                                    onOpenID={() => setShowIDModal(true)}
+                                />
+                            )}
+                        </div>
+                    )}
+
+                    {/* Tab 3 Content */}
                     {activeTab === 'Family Members' && (
                         <FamilyMembersTab
+                            title={tabs.find(t => t.id === 'Family Members')?.header}
                             members={familyList}
                             onMemberClick={handleViewMember}
                         />
                     )}
-
-                    {activeTab === 'Notifications' && <NotificationsTab />}
                 </div>
             </div>
         </div >

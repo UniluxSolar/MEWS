@@ -37,8 +37,64 @@ const signMemberData = async (memberDoc) => {
     // Convert to plain object if it's a Mongoose document
     const member = memberDoc.toObject ? memberDoc.toObject() : memberDoc;
 
+    if (member.address) {
+        // Detect Area Type (Prioritize municipality presence for legacy/self-reg data)
+        member.areaType = (member.address.municipality || member.address.areaType === 'URBAN') ? 'URBAN' : 'RURAL';
+        
+        // Resolve names via lookup if they are just ObjectIds (not populated)
+        // Check if the field is an object and HAS a name property (indicates successful population)
+        const isPopulated = (obj) => obj && typeof obj === 'object' && obj.name;
+
+        if (member.address.constituency) {
+            const loc = isPopulated(member.address.constituency) ? member.address.constituency : await Location.findById(member.address.constituency);
+            member.constituencyName = loc?.name || '';
+        }
+        if (member.address.district) {
+            const loc = isPopulated(member.address.district) ? member.address.district : await Location.findById(member.address.district);
+            member.districtName = loc?.name || '';
+        }
+        if (member.address.mandal) {
+            const loc = isPopulated(member.address.mandal) ? member.address.mandal : await Location.findById(member.address.mandal);
+            member.mandalName = loc?.name || '';
+        }
+        if (member.address.municipality) {
+            const loc = isPopulated(member.address.municipality) ? member.address.municipality : await Location.findById(member.address.municipality);
+            member.municipalityName = loc?.name || '';
+        }
+        if (member.address.village) {
+            const loc = isPopulated(member.address.village) ? member.address.village : await Location.findById(member.address.village);
+            member.villageName = loc?.name || '';
+        }
+
+        // Fix Ward Number resolution
+        const wardVal = member.address.wardNumber;
+        const wardId = member.address.ward;
+        if (wardVal && !mongoose.Types.ObjectId.isValid(wardVal)) {
+            member.wardNumber = wardVal;
+        } else {
+            const idToResolve = wardId || (mongoose.Types.ObjectId.isValid(wardVal) ? wardVal : null);
+            if (idToResolve) {
+                const loc = isPopulated(idToResolve) ? idToResolve : await Location.findById(idToResolve);
+                member.wardNumber = loc?.name || (mongoose.Types.ObjectId.isValid(wardVal) ? '' : wardVal);
+            } else {
+                member.wardNumber = wardVal || '';
+            }
+        }
+    }
+
     // 1. Top Level Fields
     if (member.photoUrl) member.photoUrl = await getSignedUrl(member.photoUrl);
+    if (member.profileImage) member.profileImage = await getSignedUrl(member.profileImage);
+
+    // Sign family member photos and docs
+    if (member.familyMembers && Array.isArray(member.familyMembers)) {
+        for (let i = 0; i < member.familyMembers.length; i++) {
+            const fm = member.familyMembers[i];
+            if (fm.photo) fm.photo = await getSignedUrl(fm.photo);
+            if (fm.voterIdFront) fm.voterIdFront = await getSignedUrl(fm.voterIdFront);
+            if (fm.voterIdBack) fm.voterIdBack = await getSignedUrl(fm.voterIdBack);
+        }
+    }
 
     // 2. Nested Objects
     if (member.casteDetails?.certificateUrl) {
@@ -92,7 +148,16 @@ const registerMember = asyncHandler(async (req, res) => {
     let mandalId = clean(data.presentMandal);
     let districtId = clean(data.presentDistrict);
     let municipalityId = clean(data.presentMunicipality);
-    let wardNumber = clean(data.presentWardNumber) || clean(data.presentWard); // Handle keys
+    let rawWard = clean(data.presentWardNumber) || clean(data.presentWard);
+    let wardNumber = rawWard;
+    let wardId = undefined;
+
+    // Resolve Ward if ID
+    if (rawWard && mongoose.Types.ObjectId.isValid(rawWard)) {
+        wardId = rawWard;
+        const wLoc = await Location.findById(wardId);
+        if (wLoc) wardNumber = wLoc.name;
+    }
 
     if (req.user && req.user.assignedLocation) {
         if (req.user.role === 'VILLAGE_ADMIN') villageId = req.user.assignedLocation;
@@ -212,11 +277,13 @@ const registerMember = asyncHandler(async (req, res) => {
         alternateMobile: clean(data.alternateMobile),
 
         address: {
+            areaType: (data.presentAreaType === 'Urban' || data.areaType === 'URBAN') ? 'URBAN' : 'RURAL',
             district: districtId,
             constituency: clean(data.presentConstituency),
             mandal: mandalId,
             village: villageId,
             municipality: municipalityId,
+            ward: wardId,
             wardNumber: wardNumber,
             houseNumber: clean(data.presentHouseNo),
             street: clean(data.presentStreet),
@@ -226,10 +293,14 @@ const registerMember = asyncHandler(async (req, res) => {
             state: 'Telangana' // Default to Telangana for now as per project context
         },
         permanentAddress: {
+            areaType: (data.permAreaType === 'Urban' || data.presentAreaType === 'Urban' || data.areaType === 'URBAN') ? 'URBAN' : 'RURAL',
             district: clean(data.permDistrict),
             constituency: clean(data.permConstituency),
             mandal: clean(data.permMandal),
             village: clean(data.permVillage),
+            municipality: clean(data.permMunicipality),
+            ward: mongoose.Types.ObjectId.isValid(clean(data.permWardNumber)) ? clean(data.permWardNumber) : undefined,
+            wardNumber: clean(data.permWardNumber) || clean(data.permWard),
             houseNumber: clean(data.permHouseNo),
             street: clean(data.permStreet),
             pinCode: clean(data.permPincode),
@@ -286,17 +357,17 @@ const registerMember = asyncHandler(async (req, res) => {
     };
 
     // --- AUTO GENERATE STANDARDIZED PASSWORD ---
-    // Updated to Unilux Standard: Mews@6303109394
+    // Standardized Password Generation
     const bcrypt = require('bcryptjs');
-    const standardizedPassword = "Mews@6303109394";
+    const standardizedPassword = "Mews@Admin2024";
     const salt = await bcrypt.genSalt(10);
     memberData.passwordHash = await bcrypt.hash(standardizedPassword, salt);
     
     // Set default email if missing
     if (!memberData.email) {
-        memberData.email = "uniluxsolar@gmail.com";
+        memberData.email = "admin@mews.com";
     }
-    console.log(`[REG] Standardized password generated for member: Mews@6303109394`);
+    console.log(`[REG] Standardized password generated for member: Mews@Admin2024`);
 
     // Process Family Members
     if (data.familyMembers) {
@@ -502,18 +573,39 @@ const registerMember = asyncHandler(async (req, res) => {
                     { role: 'SUPER_ADMIN' },
                     { role: 'VILLAGE_ADMIN', assignedLocation: villageId },
                     { role: 'MANDAL_ADMIN', assignedLocation: mandalId },
+                    { role: 'MUNICIPALITY_ADMIN', assignedLocation: municipalityId },
+                    { role: 'WARD_ADMIN', assignedLocation: wardId },
                     { role: 'DISTRICT_ADMIN', assignedLocation: districtId }
                 ]
             };
             const admins = await User.find(adminQuery).select('_id');
-            for (const admin of admins) {
+            const SCRUTINY_ADMIN_ID = '507f191e810c19729de860ea';
+            
+            // Create list of unique recipient IDs
+            const recipientIds = new Set(admins.map(a => a._id.toString()));
+            recipientIds.add(SCRUTINY_ADMIN_ID);
+
+            // Fetch Mandal Name for grouping if Scrutiny Admin is involved
+            let mandalName = 'General';
+            if (mandalId) {
+                const mandalLoc = await Location.findById(mandalId).select('name');
+                if (mandalLoc) mandalName = mandalLoc.name;
+            }
+
+            for (const adminId of recipientIds) {
                 await createNotification(
-                    admin._id,
+                    adminId,
                     'member',
                     'New Member Registration',
-                    `New member ${member.name} registered in your jurisdiction.`,
+                    `New member ${member.name} registered in mandal ${mandalName}.`,
                     member._id,
-                    'Member'
+                    'Member',
+                    mandalName, // targetAudience stores the Mandal Name
+                    mandalId,
+                    'SYSTEM',
+                    villageId,
+                    municipalityId,
+                    wardId
                 );
             }
         } catch (notifErr) {
@@ -1019,6 +1111,29 @@ const updateMember = asyncHandler(async (req, res) => {
         const member = await Member.findById(req.params.id).session(session);
 
         if (member) {
+            // Self-Edit Restriction for MEMBER role: can only edit own record
+            const userRole = (req.user.role || '').toString().trim().toUpperCase();
+            if (userRole === 'MEMBER') {
+                const targetId = req.params.id;
+                const isHeadMatch = targetId === req.user._id.toString() || targetId === req.user.mewsId;
+                
+                let isDependentMatch = false;
+                if (req.loggedInMemberId) {
+                    const dependent = req.user.familyMembers?.find(fm => 
+                        (fm._id && fm._id.toString() === req.loggedInMemberId) || 
+                        (fm.mewsId && fm.mewsId === req.loggedInMemberId)
+                    );
+                    if (dependent && (targetId === dependent._id.toString() || targetId === dependent.mewsId)) {
+                        isDependentMatch = true;
+                    }
+                }
+
+                if (!isHeadMatch && !isDependentMatch) {
+                    if (transactionStarted) await session.abortTransaction();
+                    res.status(403);
+                    throw new Error('You are only authorized to update your own profile details.');
+                }
+            }
             console.log(`----- UPDATE MEMBER START: ${member._id} (Tx=${transactionStarted}) -----`);
             const data = req.body;
             const opts = session ? { session } : undefined;
@@ -1118,6 +1233,22 @@ const updateMember = asyncHandler(async (req, res) => {
             if (data.residenceType !== undefined) member.address.residencyType = clean(data.residenceType);
             if (data.presentLandmark !== undefined) member.address.landmark = clean(data.presentLandmark);
 
+            // Urban Address Updates
+            if (data.presentMunicipality !== undefined) member.address.municipality = await resolveLocation(data.presentMunicipality, 'MUNICIPALITY');
+            if (data.presentAreaType !== undefined) member.address.areaType = data.presentAreaType.toUpperCase();
+            if (data.presentWardNumber !== undefined) {
+                let wVal = clean(data.presentWardNumber);
+                if (wVal && mongoose.Types.ObjectId.isValid(wVal)) {
+                    member.address.ward = wVal;
+                    const wLoc = await Location.findById(wVal);
+                    if (wLoc) member.address.wardNumber = wLoc.name;
+                    else member.address.wardNumber = wVal;
+                } else {
+                    member.address.wardNumber = wVal;
+                    member.address.ward = undefined;
+                }
+            }
+
 
             // Update Permanent Address
             if (!member.permanentAddress) member.permanentAddress = {};
@@ -1129,6 +1260,22 @@ const updateMember = asyncHandler(async (req, res) => {
             if (data.permStreet !== undefined) member.permanentAddress.street = clean(data.permStreet);
             if (data.permPincode !== undefined) member.permanentAddress.pinCode = clean(data.permPincode);
             if (data.permLandmark !== undefined) member.permanentAddress.landmark = clean(data.permLandmark);
+
+            // Urban Permanent Address Updates
+            if (data.permMunicipality !== undefined) member.permanentAddress.municipality = await resolveLocation(data.permMunicipality, 'MUNICIPALITY');
+            if (data.permAreaType !== undefined) member.permanentAddress.areaType = data.permAreaType.toUpperCase();
+            if (data.permWardNumber !== undefined) {
+                let pwVal = clean(data.permWardNumber);
+                if (pwVal && mongoose.Types.ObjectId.isValid(pwVal)) {
+                    member.permanentAddress.ward = pwVal;
+                    const pwLoc = await Location.findById(pwVal);
+                    if (pwLoc) member.permanentAddress.wardNumber = pwLoc.name;
+                    else member.permanentAddress.wardNumber = pwVal;
+                } else {
+                    member.permanentAddress.wardNumber = pwVal;
+                    member.permanentAddress.ward = undefined;
+                }
+            }
 
             // Caste Details
             if (!member.casteDetails) member.casteDetails = {};

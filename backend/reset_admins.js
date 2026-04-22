@@ -62,7 +62,8 @@ const resetAdmins = async () => {
         // 4. PREPARE ADMIN DATA
         // Default password '123456' hashed
         const salt = await bcrypt.genSalt(10);
-        const passwordHash = await bcrypt.hash('123456', salt);
+        const defaultPasswordHash = await bcrypt.hash('123456', salt);
+        const superAdminPasswordHash = await bcrypt.hash('Mews@8500626600', salt);
 
         const newAdmins = [
             {
@@ -70,7 +71,8 @@ const resetAdmins = async () => {
                 mobile: '8500626600',
                 username: '8500626600', // Username same as mobile for consistency
                 location: null, // Global
-                locationName: 'All India'
+                locationName: 'All India',
+                passwordHash: superAdminPasswordHash
             },
             {
                 role: 'STATE_ADMIN',
@@ -158,7 +160,7 @@ const resetAdmins = async () => {
                 mobileNumber: admin.mobile,
                 role: admin.role,
                 assignedLocation: admin.location,
-                passwordHash: passwordHash,
+                passwordHash: admin.passwordHash || defaultPasswordHash,
                 isActive: true,
                 isPhoneVerified: true,
                 memberId: memberId

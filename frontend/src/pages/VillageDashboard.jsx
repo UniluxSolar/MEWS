@@ -16,11 +16,26 @@ import AdminHeader from '../components/AdminHeader';
 import StatCard from '../components/common/StatCard';
 import ActionCard from '../components/common/ActionCard';
 import DashboardHeader from '../components/common/DashboardHeader';
-import LiveUpdatesTicker from '../components/LiveUpdatesTicker';
 
 const VillageDashboard = () => {
     const navigate = useNavigate();
     const { id } = useParams(); // URL Param if drill-down
+    const [stats, setStats] = useState({
+        locationName: 'Village',
+        members: 0,
+        families: 0,
+        pendingMembers: 0,
+        institutions: 0,
+        sos: 0
+    });
+
+    const [demographics, setDemographics] = useState({
+        gender: [], occupation: [], caste: [], marital: [], age: [], bloodGroup: [], voter: [], employment: []
+    });
+
+    const adminInfo = JSON.parse(sessionStorage.getItem('adminInfo') || sessionStorage.getItem('savedUser') || '{}');
+    const isWard = (adminInfo.role === 'WARD_ADMIN') || (stats.locationName && stats.locationName.toLowerCase().includes('ward'));
+    const label = isWard ? 'Ward' : 'Village';
 
     const handleChartClick = (data, type) => {
         if (!data) return;
@@ -64,25 +79,13 @@ const VillageDashboard = () => {
             // If we are viewing a specific village (via drill-down `id` or just implicit),
             // we should ideally filter the members list by this village.
             // Using stats.locationName to set 'villages' filter which AdminMembers supports.
-            if (stats.locationName && stats.locationName !== 'Village') {
+            if (stats.locationName && stats.locationName !== label) {
                 query += `&villages=${encodeURIComponent(stats.locationName)}`;
             }
             navigate(`/admin/members${query}`);
         }
     };
 
-    const [stats, setStats] = useState({
-        locationName: 'Village',
-        members: 0,
-        families: 0,
-        pendingMembers: 0,
-        institutions: 0,
-        sos: 0
-    });
-
-    const [demographics, setDemographics] = useState({
-        gender: [], occupation: [], caste: [], marital: [], age: [], bloodGroup: [], voter: [], employment: []
-    });
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -135,15 +138,14 @@ const VillageDashboard = () => {
                 };
 
                 setDemographics({
-                    gender: sanitize(analyticsData.demographics.gender),
-                    occupation: sanitize(analyticsData.demographics.occupation),
-                    community: sanitize(analyticsData.demographics.caste).sort((a, b) => b.count - a.count),
-                    marital: sanitize(analyticsData.demographics.marital),
-
-                    age: processAgeData(analyticsData.demographics.age), // Use custom processor
-                    bloodGroup: sanitize(analyticsData.demographics.bloodGroup),
-                    voter: sanitize(analyticsData.demographics.voter),
-                    employment: sanitize(analyticsData.demographics.employment)
+                    gender: sanitize(analyticsData?.demographics?.gender),
+                    occupation: sanitize(analyticsData?.demographics?.occupation),
+                    community: sanitize(analyticsData?.demographics?.caste || analyticsData?.demographics?.community).sort((a, b) => (b.count || 0) - (a.count || 0)),
+                    marital: sanitize(analyticsData?.demographics?.marital),
+                    age: processAgeData(analyticsData?.demographics?.age),
+                    bloodGroup: sanitize(analyticsData?.demographics?.bloodGroup),
+                    voter: sanitize(analyticsData?.demographics?.voter),
+                    employment: sanitize(analyticsData?.demographics?.employment)
                 });
 
             } catch (error) {
@@ -166,7 +168,6 @@ const VillageDashboard = () => {
 
                 {/* Main Content */}
                 <main id="admin-dashboard-content" className="flex-1 overflow-y-auto">
-                    <LiveUpdatesTicker />
                     {/* Welcome Header with Gradient */}
                     <div id="location-card-scroll-target">
                         <DashboardHeader
@@ -180,7 +181,7 @@ const VillageDashboard = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                             <StatCard
                                 title="Total Members"
-                                value={stats.members.toLocaleString()}
+                                value={(Number(stats.members) || 0).toLocaleString()}
                                 subtext="Registered & Verified"
                                 icon={FaUsers}
                                 color="bg-emerald-500"
@@ -191,7 +192,7 @@ const VillageDashboard = () => {
                             />
                             <StatCard
                                 title="Institutions"
-                                value={stats.institutions.toLocaleString()}
+                                value={(Number(stats.institutions) || 0).toLocaleString()}
                                 subtext="Registered & Verified"
                                 icon={FaBuilding}
                                 color="bg-blue-500"
@@ -202,16 +203,29 @@ const VillageDashboard = () => {
                             />
                             <StatCard
                                 title="Total Families"
-                                value={stats.families.toLocaleString()}
+                                value={(Number(stats.families) || 0).toLocaleString()}
                                 subtext="Registered Households"
                                 icon={FaUsers}
                                 color="bg-orange-500"
                                 onClick={() => {
-                                    const query = stats.locationName && stats.locationName !== 'Village' ? `?villages=${encodeURIComponent(stats.locationName)}` : '';
+                                    const query = stats.locationName && stats.locationName !== label ? `?villages=${encodeURIComponent(stats.locationName)}` : '';
                                     navigate(`/admin/members${query}`);
                                 }}
                             />
                         </div>
+
+                        {/* [WARD DETAILS FALLBACK] */}
+                        {isWard && (
+                            <div className="mb-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Ward Information</h3>
+                                    <p className="text-2xl font-black text-[#1e2a4a]">{stats.locationName}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full inline-block">Urban Sector</p>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Demographics Overview */}
                         <div className="mb-8">
@@ -235,8 +249,8 @@ const VillageDashboard = () => {
                                                 <div className="w-24 h-24 rounded-full bg-blue-50 flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors shadow-sm">
                                                     <FaMale className="text-blue-500 text-6xl" />
                                                 </div>
-                                                <div className="text-3xl font-bold text-slate-700 mb-1">
-                                                    {(demographics.gender.find(g => (g._id || '').toLowerCase() === 'male')?.count || 0)}
+                                                 <div className="text-3xl font-bold text-slate-700 mb-1">
+                                                    {(demographics?.gender?.find(g => (g?._id || '').toLowerCase() === 'male')?.count || 0).toLocaleString()}
                                                 </div>
                                                 <div className="text-xs font-bold uppercase text-slate-400 tracking-wider">Male</div>
                                             </div>
@@ -249,8 +263,8 @@ const VillageDashboard = () => {
                                                 <div className="w-24 h-24 rounded-full bg-pink-50 flex items-center justify-center mb-4 group-hover:bg-pink-100 transition-colors shadow-sm">
                                                     <FaFemale className="text-pink-500 text-6xl" />
                                                 </div>
-                                                <div className="text-3xl font-bold text-slate-700 mb-1">
-                                                    {(demographics.gender.find(g => (g._id || '').toLowerCase() === 'female')?.count || 0)}
+                                                 <div className="text-3xl font-bold text-slate-700 mb-1">
+                                                    {(demographics?.gender?.find(g => (g?._id || '').toLowerCase() === 'female')?.count || 0).toLocaleString()}
                                                 </div>
                                                 <div className="text-xs font-bold uppercase text-slate-400 tracking-wider">Female</div>
                                             </div>
@@ -267,7 +281,7 @@ const VillageDashboard = () => {
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
                                                 <Pie
-                                                    data={demographics.marital || []}
+                                                    data={(demographics.marital || []).length > 0 ? demographics.marital : [{_id: 'N/A', count: 0}]}
                                                     cx="50%"
                                                     cy="50%"
                                                     innerRadius={0}

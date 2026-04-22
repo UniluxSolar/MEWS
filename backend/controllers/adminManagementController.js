@@ -4,12 +4,15 @@ const Location = require('../models/Location');
 const bcrypt = require('bcryptjs');
 const { sendAdminPromotionNotification } = require('../utils/notificationService');
 
+const DEFAULT_PASSWORD = "Mews@Admin2024";
+
 const HIERARCHY_LEVELS = {
-    'SUPER_ADMIN': 5,
-    'STATE_ADMIN': 4,
-    'DISTRICT_ADMIN': 3,
-    'MANDAL_ADMIN': 2,
-    'MUNICIPALITY_ADMIN': 2,
+    'SUPER_ADMIN': 6,
+    'STATE_ADMIN': 5,
+    'DISTRICT_ADMIN': 4,
+    'MUNICIPALITY_ADMIN': 3,
+    'MANDAL_ADMIN': 3,
+    'WARD_ADMIN': 2,
     'VILLAGE_ADMIN': 1
 };
 
@@ -118,13 +121,11 @@ const createAdmin = asyncHandler(async (req, res) => {
     }
 
     // 4. Create User with Standardized Password
-    // Updated to Unilux Standard: Mews@6303109394
-    const standardizedPassword = "Mews@6303109394";
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(standardizedPassword, salt);
+    const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, salt);
     
     const finalEmail = email || "uniluxsolar@gmail.com";
-    console.log(`[Admin Management] Generated standardized password for ${username}: ${standardizedPassword}`);
+    console.log(`[Admin Management] Generated standardized password for ${username}: ${DEFAULT_PASSWORD}`);
 
     const user = await User.create({
         username,
@@ -394,15 +395,14 @@ const promoteMember = asyncHandler(async (req, res) => {
     }
 
     // 3. Create or Update User Account
-    // Username = Mobile Number
+    // Username = User identifier
     let user = await User.findOne({ username: member.mobileNumber });
 
     if (!user) {
         // Create new User
-        // Updated to Unilux Standard: Mews@6303109394
-        const defaultPassword = "Mews@6303109394"; 
+        // Standardized Password Generation
         const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(defaultPassword, salt);
+        const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, salt);
 
         user = await User.create({
             username: member.mobileNumber,

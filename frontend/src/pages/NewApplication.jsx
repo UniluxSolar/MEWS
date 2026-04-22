@@ -44,17 +44,6 @@ const NewApplication = () => {
         doctorName: '',
         condition: '', // Reason/Condition
 
-        // Welfare
-        purposeDescription: '',
-
-        // Employment
-        skillName: '',
-        jobRole: '',
-
-        // Legal
-        caseType: '',
-        advocateName: '',
-
         // Bank - Common
         bankName: '',
         branchName: '',
@@ -71,16 +60,24 @@ const NewApplication = () => {
     useEffect(() => {
         const fetchMemberDetails = async () => {
             try {
-                const adminInfo = JSON.parse(localStorage.getItem('adminInfo'));
-                if (!adminInfo?._id) return;
+                const adminInfo = JSON.parse(sessionStorage.getItem('adminInfo'));
+                const memberInfo = JSON.parse(sessionStorage.getItem('memberInfo'));
+                const savedUser = JSON.parse(sessionStorage.getItem('savedUser'));
+                
+                const userInfo = adminInfo || memberInfo || savedUser;
+                const userId = userInfo?._id || userInfo?.id || userInfo?.memberId;
 
-                const response = await API.get(`/members/${adminInfo._id}`);
+                if (!userId) return;
+
+                const response = await API.get(`/members/${userId}`);
 
                 if (response.data) {
                     const memberData = response.data;
+                    const fullName = (memberData.surname + ' ' + memberData.name).trim();
+                    
                     setApplicationDetails(prev => ({
                         ...prev,
-                        beneficiaryName: (memberData.name + ' ' + memberData.surname).trim(),
+                        beneficiaryName: fullName,
                         bankName: memberData.bankDetails?.bankName || '',
                         branchName: memberData.bankDetails?.branchName || '',
                         accountNumber: memberData.bankDetails?.accountNumber || '',
@@ -143,24 +140,6 @@ const NewApplication = () => {
             border: 'border-blue-200'
         },
         {
-            id: 'Employment',
-            title: 'Employment Support',
-            description: 'Help with skill development, training programs, tools for trade, or job placement.',
-            icon: FaBriefcase,
-            color: 'text-amber-500',
-            bg: 'bg-amber-50',
-            border: 'border-amber-200'
-        },
-        {
-            id: 'Legal',
-            title: 'Legal Aid',
-            description: 'Assistance for legal representation, court fees, and justice-related expenses.',
-            icon: FaBalanceScale,
-            color: 'text-purple-500',
-            bg: 'bg-purple-50',
-            border: 'border-purple-200'
-        },
-        {
             id: 'Health',
             title: 'Medical Assistance',
             description: 'Support for hospital bills, surgeries, medicines, and critical health emergencies.',
@@ -168,15 +147,6 @@ const NewApplication = () => {
             color: 'text-red-500',
             bg: 'bg-red-50',
             border: 'border-red-200'
-        },
-        {
-            id: 'Welfare',
-            title: 'Social Welfare',
-            description: 'General support for basic needs, housing, food, or community welfare projects.',
-            icon: FaHandHoldingHeart,
-            color: 'text-green-500',
-            bg: 'bg-green-50',
-            border: 'border-green-200'
         }
     ];
 
@@ -247,9 +217,6 @@ const NewApplication = () => {
             let description = applicationDetails.reason;
             // Append specific fields to description for generic storage in backend if specific fields don't exist
             if (selectedType === 'Health') description += ` | Hospital: ${applicationDetails.hospitalName}, Doctor: ${applicationDetails.doctorName}`;
-            if (selectedType === 'Legal') description += ` | Case: ${applicationDetails.caseType}, Advocate: ${applicationDetails.advocateName}`;
-            if (selectedType === 'Employment') description += ` | Skill: ${applicationDetails.skillName}, Role: ${applicationDetails.jobRole}`;
-            if (selectedType === 'Welfare') description += ` | Purpose: ${applicationDetails.purposeDescription}`;
 
             const payload = {
                 type: selectedType,
@@ -373,7 +340,15 @@ const NewApplication = () => {
                                 {/* Common Field: Beneficiary Name */}
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2">Beneficiary Name</label>
-                                    <input type="text" name="beneficiaryName" value={applicationDetails.beneficiaryName} onChange={handleInputChange} className={`w-full border rounded-lg p-3 ${errors.beneficiaryName ? 'border-red-500' : 'border-gray-300'}`} placeholder="Full Name of Person needing help" />
+                                    <input 
+                                        type="text" 
+                                        name="beneficiaryName" 
+                                        value={applicationDetails.beneficiaryName} 
+                                        onChange={handleInputChange} 
+                                        className={`w-full border rounded-lg p-3 bg-gray-50 cursor-not-allowed ${errors.beneficiaryName ? 'border-red-500' : 'border-gray-300'}`} 
+                                        placeholder="Full Name of Beneficiary" 
+                                        readOnly 
+                                    />
                                     {errors.beneficiaryName && <p className="text-red-500 text-xs mt-1">{errors.beneficiaryName}</p>}
                                 </div>
 
@@ -407,23 +382,6 @@ const NewApplication = () => {
                                     </>
                                 )}
 
-                                {selectedType === 'Employment' && (
-                                    <>
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-700 mb-2">Skill / Training Program</label>
-                                            <input type="text" name="skillName" value={applicationDetails.skillName} onChange={handleInputChange} className="w-full border border-gray-300 rounded-lg p-3" placeholder="e.g. Tailoring, Computer Course" />
-                                        </div>
-                                    </>
-                                )}
-
-                                {selectedType === 'Legal' && (
-                                    <>
-                                        <div>
-                                            <label className="block text-sm font-bold text-gray-700 mb-2">Case Type</label>
-                                            <input type="text" name="caseType" value={applicationDetails.caseType} onChange={handleInputChange} className="w-full border border-gray-300 rounded-lg p-3" placeholder="e.g. Civil Dispute, Family Court" />
-                                        </div>
-                                    </>
-                                )}
 
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2">Description / Reason</label>

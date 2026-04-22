@@ -17,15 +17,15 @@ const registerInstitution = asyncHandler(async (req, res) => {
     }
 
     // --- AUTO GENERATE STANDARDIZED PASSWORD ---
-    // Updated to Unilux Standard: Mews@6303109394
+    // Standardized Password Generation
     const bcrypt = require('bcryptjs');
-    const standardizedPassword = "Mews@6303109394";
+    const standardizedPassword = "Mews@Admin2024";
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(standardizedPassword, salt);
     
     // Set default email if missing
-    const finalEmail = req.body.email || "uniluxsolar@gmail.com";
-    console.log(`[Institution REG] Generated standardized password: Mews@6303109394`);
+    const finalEmail = req.body.email || "admin@mews.com";
+    console.log(`[Institution REG] Generated standardized password: Mews@Admin2024`);
 
     const institution = await Institution.create({
         type,

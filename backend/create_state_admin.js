@@ -31,10 +31,10 @@ const createStateAdmin = async () => {
 
         console.log(`Phase 1: Found State - ${stateLocation.name}`);
 
-        const username = 'telangana_state_admin';
-        const password = 'Pass@123';
+        const username = '6303109394';
+        const password = 'Mews@6303109394';
         const role = 'STATE_ADMIN';
-        const mobileNumber = '8977760488';
+        const mobileNumber = '6303109394';
 
         // Hash password
         const salt = await bcrypt.genSalt(10);

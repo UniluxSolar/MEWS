@@ -24,8 +24,8 @@ const API = axios.create({
 
 // Add a request interceptor to include the token
 API.interceptors.request.use((req) => {
-    const adminInfo = localStorage.getItem('adminInfo');
-    const memberInfo = localStorage.getItem('memberInfo');
+    const adminInfo = sessionStorage.getItem('adminInfo');
+    const memberInfo = sessionStorage.getItem('memberInfo');
 
     const authInfo = adminInfo ? JSON.parse(adminInfo) : (memberInfo ? JSON.parse(memberInfo) : null);
 

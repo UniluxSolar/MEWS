@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FaLock, FaUser, FaArrowLeft, FaCheckCircle, FaExclamationCircle, FaShieldAlt, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import API from '../api';
@@ -43,13 +43,16 @@ const Feedback = ({ feedback }) => feedback && (
 
 const AdminLoginPage = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const query = new URLSearchParams(location.search);
+    const isScrutinyFlow = query.get('type') === 'scrutiny';
 
     // View Modes: 'LOGIN', 'FORGOT', 'RESET'
     const [viewMode, setViewMode] = useState('LOGIN');
 
     // Data
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
+    const [username, setUsername] = useState(isScrutinyFlow ? '' : 'uniluxsolar@gmail.com');
+    const [password, setPassword] = useState(isScrutinyFlow ? '' : 'Mews@8500626600');
     const [resetCode, setResetCode] = useState('');
     const [newPassword, setNewPassword] = useState('');
 
@@ -60,16 +63,19 @@ const AdminLoginPage = () => {
 
     const handleLoginSuccess = (data) => {
         // Normalize role for comparison
-        const userRole = (data.role || '').trim().toUpperCase();
+        const userRole = (data.role || '').trim().toUpperCase().replace(/-/g, '_');
         console.log('[Auth] Received Role:', userRole);
 
         const adminRoles = [
             'SUPER_ADMIN', 
             'STATE_ADMIN', 
+            'MEMBER_ADMIN',
             'DISTRICT_ADMIN', 
             'MANDAL_ADMIN', 
             'VILLAGE_ADMIN', 
+            'WARD_ADMIN',
             'MUNICIPALITY_ADMIN',
+            'SCRUTINY_ADMIN',
             'ADMIN' // Fallback for production accounts returning generic ADMIN role
         ];
         
@@ -78,33 +84,64 @@ const AdminLoginPage = () => {
             return;
         }
 
-        localStorage.setItem('adminInfo', JSON.stringify(data));
-        localStorage.setItem('memberInfo', JSON.stringify(data));
+        sessionStorage.setItem('adminInfo', JSON.stringify(data));
+        sessionStorage.setItem('memberInfo', JSON.stringify(data));
 
         const userToSave = {
             _id: data._id,
             name: data.name,
             email: data.email,
             role: data.role,
-            memberType: data.memberType
+            memberType: data.memberType,
+            mandal_id: data.mandal_id,
+            mandal_name: data.mandal_name,
+            location_name: data.location_name,
+            location_type: data.location_type
         };
-        localStorage.setItem('savedUser', JSON.stringify(userToSave));
+        sessionStorage.setItem('savedUser', JSON.stringify(userToSave));
 
-        const target = (data.role === 'MEMBER' || data.role === 'INSTITUTION') ? '/dashboard' : '/admin/dashboard';
+        // Dispatch event for components to update immediately
+        window.dispatchEvent(new Event('login-success'));
+
+        let target = '/admin/dashboard';
+        if (userRole === 'SUPER_ADMIN') target = '/super-admin/dashboard';
+        else if (userRole === 'SCRUTINY_ADMIN') target = '/admin/notifications';
+        else if (userRole === 'STATE_ADMIN') target = '/state-admin/dashboard';
+        else if (userRole === 'MEMBER' || userRole === 'INSTITUTION') target = '/dashboard';
+
         navigate(target, { replace: true });
     };
 
     const handleLogin = async (e) => {
         if (e) e.preventDefault();
-        if (!username || !password) {
-            setFeedback({ type: 'error', text: 'Enter your credentials' });
+        
+        // Basic Validations
+        if (!username || !password || password === 'Mews@') {
+            setFeedback({ type: 'error', text: 'Username and password are required' });
+            return;
+        }
+
+        const isEmail = username.includes('@');
+        if (isEmail) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(username)) {
+                setFeedback({ type: 'error', text: 'Invalid email format' });
+                return;
+            }
+        } else if (username.length < 10) {
+            setFeedback({ type: 'error', text: 'Valid mobile number or email required' });
             return;
         }
 
         setLoading(true);
         setFeedback(null);
         try {
-            const { data } = await API.post('/auth/login', { username, password, portal: 'ADMIN' });
+            const { data } = await API.post('/auth/login', { 
+                username, 
+                password, 
+                portal: 'ADMIN',
+                isScrutiny: isScrutinyFlow 
+            });
             handleLoginSuccess(data);
         } catch (error) {
             setFeedback({ type: 'error', text: error.response?.data?.message || 'Invalid Credentials' });
@@ -134,7 +171,7 @@ const AdminLoginPage = () => {
 
     const handleResetPassword = async (e) => {
         if (e) e.preventDefault();
-        if (!resetCode || !newPassword) {
+        if (!resetCode || !newPassword || newPassword === 'Mews@') {
             setFeedback({ type: 'error', text: 'All fields required' });
             return;
         }
@@ -197,16 +234,28 @@ const AdminLoginPage = () => {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="uniluxsolar@gmail.com / 1234567890"
+                            autoComplete="off"
                         />
                         <InputField
                             label="Password"
                             icon={FaLock}
                             type={showPassword ? "text" : "password"}
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
+                            onFocus={(e) => {
+                                if (!password) setPassword('Mews@');
+                            }}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val.startsWith('Mews@')) {
+                                    setPassword(val);
+                                } else if (val.length < 5) {
+                                    setPassword('Mews@');
+                                }
+                            }}
+                            placeholder="Mews@123..."
                             suffixIcon={showPassword ? FaEyeSlash : FaEye}
                             onSuffixClick={() => setShowPassword(!showPassword)}
+                            autoComplete="new-password"
                         />
 
                         <Feedback feedback={feedback} />
@@ -277,8 +326,18 @@ const AdminLoginPage = () => {
                             icon={FaLock}
                             type={showPassword ? "text" : "password"}
                             value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="Enter your new password"
+                            onFocus={() => {
+                                if (!newPassword) setNewPassword('Mews@');
+                            }}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val.startsWith('Mews@')) {
+                                    setNewPassword(val);
+                                } else if (val.length < 5) {
+                                    setNewPassword('Mews@');
+                                }
+                            }}
+                            placeholder="Mews@YourPassword"
                             suffixIcon={showPassword ? FaEyeSlash : FaEye}
                             onSuffixClick={() => setShowPassword(!showPassword)}
                         />

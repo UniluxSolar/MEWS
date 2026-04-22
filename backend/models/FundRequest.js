@@ -34,8 +34,24 @@ const FundRequestSchema = new mongoose.Schema({
     // Workflow
     status: {
         type: String,
-        enum: ['DRAFT', 'PENDING_APPROVAL', 'ACTIVE', 'COMPLETED', 'REJECTED', 'FROZEN'],
+        enum: ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'ACTIVE', 'COMPLETED', 'REJECTED', 'FROZEN', 'FORWARDED'],
         default: 'PENDING_APPROVAL'
+    },
+    forwarded_to: {
+        type: String,
+        enum: ['DISTRICT', 'STATE', 'NONE'],
+        default: 'NONE'
+    },
+    forwarded_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    is_forwarded: {
+        type: Boolean,
+        default: false
+    },
+    forwarded_at: {
+        type: Date
     },
     approvalLevel: {
         type: String,

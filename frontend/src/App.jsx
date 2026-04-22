@@ -5,10 +5,12 @@ import LoginPage from './pages/LoginPage';
 import InstitutionLoginPage from './pages/InstitutionLoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminDashboard from './pages/AdminDashboard';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import DistrictDashboard from './pages/DistrictDashboard';
 import MandalDashboard from './pages/MandalDashboard';
 import VillageDashboard from './pages/VillageDashboard';
 import MunicipalityDashboard from './pages/MunicipalityDashboard';
+import StateDashboard from './pages/StateDashboard';
 import AssignAdmin from './pages/AssignAdmin';
 import AdminManagement from './pages/AdminManagement';
 import MemberManagement from './pages/MemberManagement';
@@ -36,6 +38,7 @@ import MEWSServices from './pages/MEWSServices';
 
 import Notifications from './pages/Notifications';
 import AdminNotifications from './pages/AdminNotifications';
+import AdminAuthorization from './pages/AdminAuthorization';
 import Helpdesk from './pages/Helpdesk';
 import HelpSupport from './pages/HelpSupport';
 import JobsEvents from './pages/JobsEvents';
@@ -90,8 +93,10 @@ function App() {
                 <Route path="/admin/login" element={<AdminLoginPage />} />
 
                 {/* Protected Admin Routes */}
-                <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'VILLAGE_ADMIN', 'MUNICIPALITY_ADMIN', 'MANDAL_ADMIN', 'DISTRICT_ADMIN', 'STATE_ADMIN']} />}>
+                <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'MUNICIPALITY_ADMIN', 'WARD_ADMIN', 'SCRUTINY_ADMIN', 'MEMBER_ADMIN']} />}>
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
+                    <Route path="/state-admin/dashboard" element={<StateDashboard />} />
                     {/* Drill-Down Dashboard Routes */}
                     <Route path="/admin/dashboard/district/:id" element={<DistrictDashboard />} />
                     <Route path="/admin/dashboard/mandal/:id" element={<MandalDashboard />} />
@@ -113,8 +118,14 @@ function App() {
                     <Route path="/admin/activity-log" element={<AdminActivityLog />} />
                     <Route path="/admin/settings" element={<AdminVillageSettings />} />
                     <Route path="/admin/help" element={<AdminHelpSupport />} />
-                    <Route path="/admin/notifications" element={<AdminNotifications />} />
-                    <Route path="/admin/carousel" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><CarouselManagement /></ProtectedRoute>} />
+                    <Route element={<ProtectedRoute allowedRoles={['MEMBER_ADMIN', 'SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'MUNICIPALITY_ADMIN', 'WARD_ADMIN', 'SCRUTINY_ADMIN']} />}>
+                        <Route path="/admin/notifications" element={<AdminNotifications />} />
+                    </Route>
+
+                    <Route path="/admin/authorization" element={<AdminAuthorization />} />
+                    <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
+                        <Route path="/admin/carousel" element={<CarouselManagement />} />
+                    </Route>
                     <Route path="/admin/members/:id" element={<MemberRegistration />} />
                     <Route path="/admin/members/edit/:id" element={<MemberRegistration />} />
                 </Route>
@@ -124,7 +135,7 @@ function App() {
 
 
                 {/* Dashboard Area - Protected (Member & Institution & Admins) */}
-                <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['MEMBER', 'INSTITUTION', 'SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'ADMIN']} />}>
+                <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['MEMBER', 'INSTITUTION', 'SUPER_ADMIN', 'STATE_ADMIN', 'DISTRICT_ADMIN', 'MANDAL_ADMIN', 'VILLAGE_ADMIN', 'WARD_ADMIN', 'ADMIN']} />}>
                     <Route element={<DashboardLayout />}>
                         <Route index element={<DashboardHome />} />
                         <Route path="applications" element={<MyApplications />} />
