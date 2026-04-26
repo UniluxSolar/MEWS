@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
     FaUsers, FaBuilding, FaExclamationTriangle, FaFileAlt,
     FaMapMarkedAlt, FaClock, FaTable, FaThLarge, FaMapMarkerAlt,
-    FaChevronRight, FaChartPie, FaChartBar
+    FaChevronRight, FaChartPie, FaChartBar, FaMale
 } from 'react-icons/fa';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
@@ -255,8 +255,9 @@ const StateDashboard = () => {
                                     {/* Member Distribution Chart */}
                                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                                         <div className="flex items-center justify-between mb-6">
-                                            <h3 className="font-bold text-[#1e2a4a] text-lg flex items-center gap-2">
-                                                <FaChartBar className="text-[#f59e0b]" /> Top Districts by Membership
+                                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
+                                                <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><FaChartBar /></div>
+                                                Top Districts by Membership
                                             </h3>
                                         </div>
                                         <div className="h-64 w-full">
@@ -289,11 +290,26 @@ const StateDashboard = () => {
                                     </div>
 
                                     {/* Demographics Pie Chart */}
-                                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 group hover:shadow-md transition-shadow">
                                         <div className="flex items-center justify-between mb-6">
-                                            <h3 className="font-bold text-[#1e2a4a] text-lg flex items-center gap-2">
-                                                <FaChartPie className="text-[#f59e0b]" /> Gender Demographics
+                                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
+                                                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FaMale /></div>
+                                                Gender Distribution
                                             </h3>
+                                            <div className="flex flex-col gap-1 text-[10px] font-bold uppercase tracking-wider">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 bg-[#ec4899] rounded-sm"></div>
+                                                    <span className="text-slate-400">Female</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 bg-[#3b82f6] rounded-sm"></div>
+                                                    <span className="text-slate-400">Male</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 bg-[#94a3b8] rounded-sm"></div>
+                                                    <span className="text-slate-400">Others</span>
+                                                </div>
+                                            </div>
                                         </div>
                                         <div className="h-64 w-full flex items-center justify-center">
                                             <ResponsiveContainer width="100%" height="100%">
@@ -306,7 +322,7 @@ const StateDashboard = () => {
                                                         outerRadius={80}
                                                         paddingAngle={5}
                                                         dataKey="value"
-                                                        label={({ value }) => value}
+                                                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                                                         onClick={(data) => {
                                                             if (data && data.name) {
                                                                 navigate(`/admin/members?gender=${data.name}`);
@@ -319,9 +335,30 @@ const StateDashboard = () => {
                                                         ))}
                                                     </Pie>
                                                     <Tooltip />
-                                                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
+
                                                 </PieChart>
                                             </ResponsiveContainer>
+                                        </div>
+                                        {/* Gender Stat Cards - Super Admin Style */}
+                                        <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+                                            <div className="p-3 bg-slate-50 rounded-xl">
+                                                <p className="text-[10px] uppercase font-bold text-slate-400">Male</p>
+                                                <p className="text-lg font-bold text-blue-600">
+                                                    {analytics?.demographics?.gender?.find(g => g._id === 'Male')?.count || 0}
+                                                </p>
+                                            </div>
+                                            <div className="p-3 bg-slate-50 rounded-xl">
+                                                <p className="text-[10px] uppercase font-bold text-slate-400">Female</p>
+                                                <p className="text-lg font-bold text-pink-500">
+                                                    {analytics?.demographics?.gender?.find(g => g._id === 'Female')?.count || 0}
+                                                </p>
+                                            </div>
+                                            <div className="p-3 bg-slate-50 rounded-xl">
+                                                <p className="text-[10px] uppercase font-bold text-slate-400">Others</p>
+                                                <p className="text-lg font-bold text-emerald-500">
+                                                    {analytics?.demographics?.gender?.find(g => g._id === 'Other' || g._id === 'Others')?.count || 0}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

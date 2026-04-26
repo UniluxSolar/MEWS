@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import AdminHeader from '../components/AdminHeader';
 import AdminSidebar from '../components/AdminSidebar';
-import { FaSave, FaBuilding, FaBell, FaLock, FaPalette } from 'react-icons/fa';
+import { FaSave, FaBuilding, FaBell, FaLock, FaPalette, FaCamera, FaUsers, FaTrash, FaIdCard } from 'react-icons/fa';
 import DashboardHeader from '../components/common/DashboardHeader';
-import API from '../api';
+import API, { BASE_URL } from '../api';
 
 const AdminVillageSettings = () => {
     const [activeSection, setActiveSection] = useState('general');
@@ -24,6 +24,8 @@ const AdminVillageSettings = () => {
     const [locationFieldLabel, setLocationFieldLabel] = useState('Location Name');
     const [locationFieldValue, setLocationFieldValue] = useState('');
     const [adminRole, setAdminRole] = useState('');
+    const [heroMembers, setHeroMembers] = useState({});
+    const [uploading, setUploading] = useState(false);
 
     // Determine titles based on role
     useEffect(() => {
@@ -32,27 +34,32 @@ const AdminVillageSettings = () => {
             const { role } = JSON.parse(info);
             setAdminRole(role);
             if (role === 'VILLAGE_ADMIN') {
-                setPageTitle('Village Settings');
-                setPageSubtitle('Manage configuration and preferences for your village.');
+                setPageTitle('Village Admin Settings');
+                setPageSubtitle('Manage configuration and preferences for your Village Admin account.');
                 setLocationFieldLabel('Village Name');
+            } else if (role === 'WARD_ADMIN') {
+                setPageTitle('Ward Admin Settings');
+                setPageSubtitle('Manage configuration and preferences for your Ward Admin account.');
+                setLocationFieldLabel('Ward Number');
             } else if (role === 'MANDAL_ADMIN') {
-                setPageTitle('Mandal Settings');
-                setPageSubtitle('Manage configuration and preferences for your mandal.');
+                setPageTitle('Mandal Admin Settings');
+                setPageSubtitle('Manage configuration and preferences for your Mandal Admin account.');
                 setLocationFieldLabel('Mandal Name');
             } else if (role === 'MUNICIPALITY_ADMIN') {
-                setPageTitle('Municipality Settings');
-                setPageSubtitle('Manage configuration and preferences for your municipality.');
+                setPageTitle('Municipality Admin Settings');
+                setPageSubtitle('Manage configuration and preferences for your Municipality Admin account.');
                 setLocationFieldLabel('Municipality Name');
             } else if (role === 'DISTRICT_ADMIN') {
-                setPageTitle('District Settings');
-                setPageSubtitle('Manage configuration and preferences for your district.');
+                setPageTitle('District Admin Settings');
+                setPageSubtitle('Manage configuration and preferences for your District Admin account.');
                 setLocationFieldLabel('District Name');
             } else if (role === 'STATE_ADMIN') {
-                setPageTitle('State Settings');
-                setPageSubtitle('Manage configuration and preferences for the state.');
+                setPageTitle('State Admin Settings');
+                setPageSubtitle('Manage configuration and preferences for the State Admin account.');
                 setLocationFieldLabel('State Name');
             } else {
-                setPageTitle('Admin Settings');
+                setPageTitle('Super Admin Settings');
+                setPageSubtitle('Manage global configuration and platform preferences.');
             }
         }
     }, []);
@@ -136,6 +143,89 @@ const AdminVillageSettings = () => {
         }
     };
 
+    // Hero Members Management Logic
+    useEffect(() => {
+        if (adminRole === 'SUPER_ADMIN') {
+            const fetchMembers = async () => {
+                try {
+                    const { data } = await API.get('/carousel/public?type=hero_member');
+                    const memberMap = {};
+                    data.forEach(m => {
+                        memberMap[m.order] = m;
+                    });
+                    setHeroMembers(memberMap);
+                } catch (err) {
+                    console.error("Failed to fetch hero members", err);
+                }
+            };
+            fetchMembers();
+        }
+    }, [adminRole]);
+
+    const handleUpload = async (slot, file) => {
+        if (!file) return;
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('type', 'hero_member');
+        formData.append('order', slot);
+        formData.append('isActive', true);
+        formData.append('title', heroMembers[slot]?.title || 'Name');
+        formData.append('description', heroMembers[slot]?.description || 'Designation');
+
+        try {
+            if (heroMembers[slot]?._id) {
+                await API.delete(`/carousel/${heroMembers[slot]._id}`);
+            }
+            const { data } = await API.post('/carousel', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            setHeroMembers(prev => ({ ...prev, [slot]: data }));
+            alert("Photo updated successfully!");
+        } catch (err) {
+            console.error("Upload failed", err);
+            alert("Upload failed. Please try again.");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const updateMemberText = (slot, field, value) => {
+        setHeroMembers(prev => ({
+            ...prev,
+            [slot]: { ...prev[slot], [field]: value }
+        }));
+    };
+
+    const saveMemberText = async (slot) => {
+        const member = heroMembers[slot];
+        if (!member || !member._id) return;
+        try {
+            await API.put(`/carousel/${member._id}`, {
+                title: member.title,
+                description: member.description
+            });
+        } catch (err) {
+            console.error("Save failed", err);
+        }
+    };
+
+    const deleteMember = async (slot) => {
+        const member = heroMembers[slot];
+        if (!member || !member._id) return;
+        if (!window.confirm("Delete this profile?")) return;
+        try {
+            await API.delete(`/carousel/${member._id}`);
+            setHeroMembers(prev => {
+                const newMap = { ...prev };
+                delete newMap[slot];
+                return newMap;
+            });
+        } catch (err) {
+            console.error("Delete failed", err);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[#f3f4f6] font-sans flex flex-col dark:bg-slate-900 transition-colors duration-300">
             <AdminHeader />
@@ -182,6 +272,14 @@ const AdminVillageSettings = () => {
                                 >
                                     <FaPalette /> Appearance
                                 </button>
+                                {adminRole === 'SUPER_ADMIN' && (
+                                    <button
+                                        onClick={() => setActiveSection('photos')}
+                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-colors ${activeSection === 'photos' ? 'bg-[#1e2a4a] text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-100'}`}
+                                    >
+                                        <FaIdCard /> Upload & Edit Photos
+                                    </button>
+                                )}
                             </div>
 
                             {/* Settings Content */}
@@ -308,6 +406,68 @@ const AdminVillageSettings = () => {
                                                 <div className="h-20 bg-gray-800 rounded mb-2 shadow-inner border border-gray-700"></div>
                                                 <p className={`text-center text-sm font-bold ${theme === 'dark' ? 'text-blue-400' : 'text-gray-400'}`}>Dark Mode</p>
                                             </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeSection === 'photos' && adminRole === 'SUPER_ADMIN' && (
+                                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-fade-in-up">
+                                        <h2 className="text-lg font-bold text-gray-900 mb-6 border-b pb-4">Hero Section Members</h2>
+                                        <p className="text-sm text-gray-500 mb-8">Manage the 6 circular profile photos and details displayed on the Home Page Hero Section.</p>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                                            {[0, 1, 2, 3, 4, 5].map((slot) => (
+                                                <div key={slot} className="flex flex-col items-center p-6 border border-gray-100 rounded-2xl bg-gray-50 hover:bg-white hover:shadow-md transition-all group">
+                                                    <div className="relative mb-6">
+                                                        <div className="w-24 h-24 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-200 flex items-center justify-center">
+                                                            {heroMembers[slot]?.imageUrl ? (
+                                                                <img 
+                                                                    src={heroMembers[slot].imageUrl.startsWith('http') ? heroMembers[slot].imageUrl : `${BASE_URL}/${heroMembers[slot].imageUrl.replace(/\\/g, '/')}`} 
+                                                                    className="w-full h-full object-cover"
+                                                                    alt="Preview"
+                                                                />
+                                                            ) : (
+                                                                <FaUsers size={40} className="text-gray-400" />
+                                                            )}
+                                                        </div>
+                                                        <label className="absolute bottom-0 right-0 w-8 h-8 bg-[#1e2a4a] text-white rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 transition shadow-md border-2 border-white">
+                                                            <FaCamera size={14} />
+                                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUpload(slot, e.target.files[0])} />
+                                                        </label>
+                                                    </div>
+                                                    
+                                                    <div className="w-full space-y-3">
+                                                        <div>
+                                                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Name</label>
+                                                            <input 
+                                                                type="text"
+                                                                value={heroMembers[slot]?.title || ''}
+                                                                onChange={(e) => updateMemberText(slot, 'title', e.target.value)}
+                                                                onBlur={() => saveMemberText(slot)}
+                                                                placeholder="Enter Name"
+                                                                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold focus:outline-none focus:border-blue-500 transition shadow-sm"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Designation</label>
+                                                            <input 
+                                                                type="text"
+                                                                value={heroMembers[slot]?.description || ''}
+                                                                onChange={(e) => updateMemberText(slot, 'description', e.target.value)}
+                                                                onBlur={() => saveMemberText(slot)}
+                                                                placeholder="Enter Designation"
+                                                                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none focus:border-blue-500 transition shadow-sm"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {heroMembers[slot]?._id && (
+                                                        <button onClick={() => deleteMember(slot)} className="mt-4 text-xs text-red-500 font-bold hover:text-red-700 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <FaTrash size={10} /> Delete Profile
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 )}

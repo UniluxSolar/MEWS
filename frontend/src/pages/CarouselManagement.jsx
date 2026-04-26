@@ -15,6 +15,7 @@ const CarouselManagement = () => {
     const [loading, setLoading] = useState(true);
 
     // UI State
+    const [currentType, setCurrentType] = useState('carousel_slide');
     const [filterStatus, setFilterStatus] = useState('ALL'); // ALL, PUBLISHED, DRAFT
     const [selectedIds, setSelectedIds] = useState([]);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -28,13 +29,14 @@ const CarouselManagement = () => {
     const [newDesc, setNewDesc] = useState('');
     const [newOrder, setNewOrder] = useState(0);
     const [newExpiryDate, setNewExpiryDate] = useState('');
+    const [newType, setNewType] = useState('carousel_slide');
 
     const [editingId, setEditingId] = useState(null);
     const [editData, setEditData] = useState({});
 
     useEffect(() => {
         fetchImages();
-    }, []);
+    }, [currentType]);
 
     useEffect(() => {
         filterImages();
@@ -43,7 +45,7 @@ const CarouselManagement = () => {
     const fetchImages = async () => {
         try {
             setLoading(true);
-            const { data } = await API.get('/carousel/all');
+            const { data } = await API.get(`/carousel/all?type=${currentType}`);
             setImages(data);
         } catch (error) {
             console.error("Error fetching images", error);
@@ -149,6 +151,7 @@ const CarouselManagement = () => {
             formData.append('title', newTitle);
             formData.append('description', newDesc);
             formData.append('order', newOrder);
+            formData.append('type', newType);
             if (newExpiryDate) formData.append('expiryDate', newExpiryDate);
             formData.append('isActive', false); // Default to Draft
 
@@ -164,7 +167,7 @@ const CarouselManagement = () => {
             setNewOrder(0);
             setNewExpiryDate('');
             fetchImages();
-            alert("Image uploaded as Draft!");
+            alert(`Carousel Slide uploaded as Draft!`);
         } catch (error) {
             console.error("Upload error", error);
             alert("Failed to upload image");
@@ -209,19 +212,20 @@ const CarouselManagement = () => {
                     <div className="max-w-7xl mx-auto space-y-6">
 
                         {/* Header */}
-                        <div className="flex justify-between items-end">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                             <div>
                                 <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                                    <FaImages className="text-blue-600" /> Carousel Manager
+                                    <FaImages className="text-blue-600" /> Banner Manager
                                 </h1>
-                                <p className="text-slate-500 mt-1">Manage public landing page and login sliders.</p>
+                                <p className="text-slate-500 mt-1">Manage public landing page slides.</p>
                             </div>
+
                         </div>
 
                         {/* Upload Section (Collapsible or compact) */}
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                             <h2 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-700">
-                                <FaUpload /> Upload New Slide
+                                <FaUpload /> Upload New Carousel Slide
                             </h2>
                             <form onSubmit={handleUpload} className="flex flex-col md:flex-row gap-6 items-start">
                                 {/* Image Input */}
@@ -238,7 +242,7 @@ const CarouselManagement = () => {
                                         ) : (
                                             <div className="p-4 text-slate-400">
                                                 <FaImages className="text-3xl mx-auto mb-2" />
-                                                <span className="text-xs font-bold">Click to Select</span>
+                                                <span className="text-xs font-bold">Click to Select Image</span>
                                             </div>
                                         )}
                                     </div>
@@ -250,13 +254,14 @@ const CarouselManagement = () => {
                                         <label className="text-xs font-bold text-slate-500 uppercase">Title</label>
                                         <input
                                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-100 outline-none"
-                                            placeholder="Slide Title"
+                                            placeholder="Banner Title"
                                             value={newTitle}
                                             onChange={e => setNewTitle(e.target.value)}
                                         />
                                     </div>
+
                                     <div>
-                                        <label className="text-xs font-bold text-slate-500 uppercase">Order</label>
+                                        <label className="text-xs font-bold text-slate-500 uppercase">Display Order</label>
                                         <input
                                             type="number"
                                             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-100 outline-none"
@@ -264,7 +269,7 @@ const CarouselManagement = () => {
                                             onChange={e => setNewOrder(e.target.value)}
                                         />
                                     </div>
-                                    <div className="md:col-span-2">
+                                    <div>
                                         <label className="text-xs font-bold text-slate-500 uppercase">Expiry Date (Optional)</label>
                                         <input
                                             type="date"
@@ -272,7 +277,6 @@ const CarouselManagement = () => {
                                             value={newExpiryDate}
                                             onChange={e => setNewExpiryDate(e.target.value)}
                                         />
-                                        <p className="text-[10px] text-slate-400 mt-1">Banner will auto-hide after this date.</p>
                                     </div>
                                     <div className="md:col-span-2">
                                         <label className="text-xs font-bold text-slate-500 uppercase">Description</label>
@@ -298,7 +302,7 @@ const CarouselManagement = () => {
 
                         {/* Control Toolbar */}
                         <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm sticky top-0 z-10">
-                            {/* Tabs */}
+                            {/* Filter Status Tabs */}
                             <div className="flex bg-slate-100 p-1 rounded-lg">
                                 {['ALL', 'PUBLISHED', 'DRAFT'].map(status => (
                                     <button

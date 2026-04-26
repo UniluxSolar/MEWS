@@ -60,3 +60,10 @@ frontend/LICENSE*
 frontend/ReleaseNotes.html
 frontend/author-nvm*
 frontend/git-*
+
+scratch/
+tmp/
+backend/scratch/
+backend/check_status.js
+backend/list_creds.js
+backend/show_member_logins.js

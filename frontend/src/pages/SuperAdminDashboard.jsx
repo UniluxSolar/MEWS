@@ -204,10 +204,26 @@ const SuperAdminDashboard = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* Gender Distribution */}
                             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
-                                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
-                                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FaMale /></div>
-                                    Gender Distribution
-                                </h3>
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
+                                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FaMale /></div>
+                                        Gender Distribution
+                                    </h3>
+                                    <div className="flex flex-col gap-1 text-[10px] font-bold uppercase tracking-wider">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-[#ec4899] rounded-sm"></div>
+                                            <span className="text-slate-400">Female</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-[#3b82f6] rounded-sm"></div>
+                                            <span className="text-slate-400">Male</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-[#94a3b8] rounded-sm"></div>
+                                            <span className="text-slate-400">Others</span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div className="h-72 w-full flex items-center justify-center">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
@@ -229,7 +245,7 @@ const SuperAdminDashboard = () => {
                                                 ))}
                                             </Pie>
                                             <RechartsTooltip />
-                                            <Legend verticalAlign="bottom" />
+
                                         </PieChart>
                                     </ResponsiveContainer>
                                 </div>

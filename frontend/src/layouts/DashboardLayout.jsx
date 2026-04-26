@@ -248,12 +248,9 @@ const DashboardLayout = () => {
                         : `relative ${collapsed ? 'w-20' : 'w-64'}`
                     }`}
             >
-                <div className="h-16 flex items-center gap-3 px-6 border-b border-gray-700 bg-[#151f38]">
-                    <div className="text-secondary p-1 rounded">
-                        <FaUserCircle size={24} />
-                    </div>
+                <div className="h-16 flex items-center justify-center border-b border-gray-700 bg-[#151f38]">
                     {/* Show Text if on Mobile (always full width when open) OR Desktop Not Collapsed */}
-                    {(isMobile || !collapsed) && <span className="text-xl font-bold text-white tracking-tight">MEWS</span>}
+                    {(isMobile || !collapsed) && <span className="text-xl font-bold text-white tracking-tight uppercase">MEWS</span>}
                 </div>
 
                 <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1 scrollbar-thin scrollbar-thumb-gray-600">

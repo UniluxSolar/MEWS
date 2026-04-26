@@ -11,7 +11,7 @@ const AdminHelpSupport = () => {
 
     const faqs = [
         { q: "How do I register a new family member?", a: "Go to Member Management > Add New Member. Fill in the details for the head of the family first, then use the 'Add Family Member' button." },
-        { q: "How can I update my village's information?", a: "Navigate to Village Settings > General Info to update the village name and contact details." },
+        { q: "How can I update my village's information?", a: "Navigate to Village Admin Settings > General Info to update the village name and contact details." },
         { q: "What should I do in case of an SOS alert?", a: "Immediately check the SOS Management dashboard for location details and contact local authorities or the user directly." },
         { q: "How do I export member data?", a: "In the Member Management page, click the 'Export Excel' button to download the current list of members." },
     ];

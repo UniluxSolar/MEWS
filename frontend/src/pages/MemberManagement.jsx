@@ -354,7 +354,9 @@ const MemberManagement = () => {
                     console.log('[DEBUG] First Member Address:', data[0].address);
                     console.log('[DEBUG] First Member Status:', data[0].verificationStatus);
                 }
-                setMembers(data);
+                // Add stable S.No based on original fetch order
+                const membersWithSNo = data.map((m, index) => ({ ...m, sNo: index + 1 }));
+                setMembers(membersWithSNo);
             } else {
                 console.error('[ERROR] API returned non-array data:', data);
                 setMembers([]); // Fallback to empty array to prevent crash
@@ -1109,6 +1111,9 @@ const MemberManagement = () => {
                                                                     onChange={handleSelectAll}
                                                                 />
                                                             </th>
+                                                            <th className="px-4 py-3 w-16 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider border-r border-slate-100">
+                                                                S.No
+                                                            </th>
                                                             <th className="px-4 py-3 w-[15%] cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => requestSort('name')}>
                                                                 <div className="flex items-center gap-1">Name {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? <FaSortUp /> : <FaSortDown />) : <FaSort className="text-slate-300" />}</div>
                                                             </th>
@@ -1146,7 +1151,7 @@ const MemberManagement = () => {
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-50">
-                                                        {displayedMembers.map(member => (
+                                                        {displayedMembers.map((member, index) => (
                                                             <tr key={member._id} className={`transition-colors group ${selectedMemberIds.includes(member._id) ? 'bg-blue-50/50' : 'hover:bg-slate-50/80'}`}>
                                                                 <td className="px-4 py-3 text-center">
                                                                     <input
@@ -1155,6 +1160,11 @@ const MemberManagement = () => {
                                                                         checked={selectedMemberIds.includes(member._id)}
                                                                         onChange={() => handleSelectMember(member._id)}
                                                                     />
+                                                                </td>
+                                                                <td className="px-4 py-3 text-center border-r border-slate-50">
+                                                                    <span className="text-xs font-bold text-slate-400">
+                                                                        {(currentPage - 1) * itemsPerPage + index + 1}
+                                                                    </span>
                                                                 </td>
                                                                 <td className="px-4 py-3">
                                                                     <div className="flex flex-col truncate pr-2">

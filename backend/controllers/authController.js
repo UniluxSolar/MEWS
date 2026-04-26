@@ -104,7 +104,7 @@ const loginUser = asyncHandler(async (req, res) => {
         try {
 
             if (p === 'ADMIN') {
-                const results = await User.find(query).populate('memberId', 'name surname');
+                const results = await User.find(query).populate('memberId', 'name surname photoUrl');
                 return { results, type: 'ADMIN' };
             }
             if (p === 'MEMBER') {
@@ -302,6 +302,7 @@ const loginUser = asyncHandler(async (req, res) => {
         location_type: locationInfo.type,
         mandal_id: loggedRole === 'SCRUTINY_ADMIN' || loggedRole === 'MANDAL_ADMIN' ? locationInfo.id : null,
         mandal_name: loggedRole === 'SCRUTINY_ADMIN' || loggedRole === 'MANDAL_ADMIN' ? locationInfo.name : '',
+        photoUrl: user.photoUrl ? await getSignedUrl(user.photoUrl) : (user.memberId?.photoUrl ? await getSignedUrl(user.memberId.photoUrl) : ''),
         token: generateToken(user._id, user._id)
     };
 
@@ -372,9 +373,9 @@ const getMe = asyncHandler(async (req, res) => {
         role: req.user.role || 'MEMBER', // Default to MEMBER if role is missing
         assignedLocation: req.user.assignedLocation,
         institutionId: req.user.institutionId,
-        // photoUrl for frontend
-        photoUrl: await getSignedUrl(req.user.photoUrl),
-        headPhotoUrl: await getSignedUrl(req.user.photoUrl),
+        // photoUrl for frontend - try direct photo then member photo
+        photoUrl: req.user.photoUrl ? await getSignedUrl(req.user.photoUrl) : (req.user.memberId?.photoUrl ? await getSignedUrl(req.user.memberId.photoUrl) : ''),
+        headPhotoUrl: req.user.photoUrl ? await getSignedUrl(req.user.photoUrl) : (req.user.memberId?.photoUrl ? await getSignedUrl(req.user.memberId.photoUrl) : ''),
         memberType: 'HEAD'
     };
 
@@ -629,7 +630,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
         user = await Institution.findOne(query);
         foundUserType = 'INSTITUTION';
     } else if (userType === 'ADMIN') {
-        user = await User.findOne(query);
+        user = await User.findOne(query).populate('memberId', 'photoUrl');
         foundUserType = 'ADMIN';
     } else {
         // Fallback
@@ -684,7 +685,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
         name: `${user.surname} ${user.name}`,
         mobileNumber: user.mobileNumber,
         email: user.email,
-        photoUrl: user.photoUrl,
+        photoUrl: await getSignedUrl(user.photoUrl),
         memberType: 'HEAD'
     };
 
@@ -695,7 +696,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
             surname: '',
             mobileNumber: user.mobileNumber,
             email: user.email,
-            photoUrl: '',
+            photoUrl: user.photoUrl ? await getSignedUrl(user.photoUrl) : (user.memberId?.photoUrl ? await getSignedUrl(user.memberId.photoUrl) : ''),
             memberType: 'ADMIN'
         };
     }

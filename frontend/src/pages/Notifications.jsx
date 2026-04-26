@@ -8,6 +8,65 @@ import {
     FaChevronDown, FaChevronUp, FaShieldAlt
 } from 'react-icons/fa';
 
+const NotificationTable = ({ notifications, title, showCount = false }) => (
+    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden min-h-[500px] p-6 md:p-8 animate-fadeIn">
+        <h2 className="text-lg font-bold text-gray-900 mb-6">
+            {title}{showCount ? ` (${notifications.length})` : ''}
+        </h2>
+        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-gray-50/50 text-gray-500 text-[10px] uppercase tracking-wider border-b border-gray-100">
+                            <th className="py-4 pl-6 font-bold text-left whitespace-nowrap">Type of Admin</th>
+                            <th className="py-4 font-bold text-left whitespace-nowrap">Originator</th>
+                            <th className="py-4 font-bold text-left whitespace-nowrap">Date of Announcement</th>
+                            <th className="py-4 font-bold text-left">Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {notifications.length === 0 ? (
+                            <tr>
+                                <td colSpan="4" className="py-20 text-center">
+                                    <div className="flex flex-col items-center justify-center gap-4">
+                                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                            <FaBullseye size={30} className="text-gray-200" />
+                                        </div>
+                                        <p className="text-gray-400 text-sm font-medium">
+                                            {title === 'Tickets Received' ? 'No tickets received.' : (title === 'Announcements' ? 'No announcements found.' : `No ${title.toLowerCase()} found.`)}
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : (
+                            notifications.map((n) => (
+                                <tr key={n._id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                                    <td className="py-4 pl-6">
+                                        <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-[10px] font-bold whitespace-nowrap uppercase">
+                                            {n.targetAudience || n.notificationType || 'System Admin'}
+                                        </span>
+                                    </td>
+                                    <td className="py-4 text-sm font-bold text-gray-900 whitespace-nowrap">
+                                        {n.senderInfo || n.title || 'System'}
+                                    </td>
+                                    <td className="py-4 text-xs font-medium text-gray-600 whitespace-nowrap">
+                                        {new Date(n.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    </td>
+                                    <td className="py-4 pr-6">
+                                        <div className="text-sm text-gray-600 leading-relaxed max-w-md">
+                                            {n.message}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+);
+
 const NotificationItem = ({ 
     id, type, title, message, time, isRead, onRead, onDelete, attachments, 
     targetAudience, onClick, isSelectable, isSelected, onToggleSelect, 
@@ -265,6 +324,7 @@ const Notifications = ({ isAdminView = false }) => {
     const [userRole, setUserRole] = useState('');
     const [mandalName, setMandalName] = useState('');
     const [mandalId, setMandalId] = useState('');
+    const [activeSubTab, setActiveSubTab] = useState('announcements'); // announcements, requests, tickets
     const [showSuccess, setShowSuccess] = useState(false);
     const { adminLocation } = useAdminLocation();
 
@@ -272,7 +332,8 @@ const Notifications = ({ isAdminView = false }) => {
         const info = sessionStorage.getItem('savedUser') || sessionStorage.getItem('adminInfo') || sessionStorage.getItem('memberInfo');
         if (info) {
             const parsed = JSON.parse(info);
-            setUserRole(parsed.role?.toUpperCase() || '');
+            const role = (parsed.role || '').toUpperCase().replace(/-/g, '_');
+            setUserRole(role);
             setMandalName(parsed.mandal_name || '');
             setMandalId(parsed.mandal_id || '');
         }
@@ -408,7 +469,26 @@ const Notifications = ({ isAdminView = false }) => {
         }
     };
 
-    const filteredNotifications = (filter === 'all' ? notifications : notifications.filter(n => !n.isRead));
+    const isExcludedRole = userRole === 'MEMBER' || userRole === 'SCRUTINY_ADMIN';
+    const showTabs = isAdminView && !isExcludedRole;
+
+    const filteredNotifications = (filter === 'all' ? notifications : notifications.filter(n => !n.isRead))
+        .filter(n => {
+            if (!showTabs) return true;
+
+            const isAnnouncement = n.notificationType === 'ANNOUNCEMENT' || n.relatedModel === 'Announcement' || n.notificationType === 'SYSTEM';
+            const isFundRequest = n.relatedModel === 'FundRequest' || n.notificationType === 'USER_REQUEST';
+
+            if (activeSubTab === 'announcements') {
+                return isAnnouncement && !isFundRequest;
+            } else if (activeSubTab === 'requests') {
+                return isFundRequest;
+            } else {
+                // Tickets Received / Others
+                return !isAnnouncement && !isFundRequest;
+            }
+        });
+
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
     return (
@@ -453,47 +533,80 @@ const Notifications = ({ isAdminView = false }) => {
                 </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden min-h-[500px]">
-                <div className="animate-fadeIn">
-                    {loading && notifications.length === 0 ? (
-                        <div className="py-20 flex flex-col items-center justify-center">
-                            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                            <p className="mt-4 text-[10px] uppercase font-black text-gray-400 tracking-widest">Loading notifications...</p>
-                        </div>
-                    ) : filteredNotifications.length === 0 ? (
-                        <div className="py-20 flex flex-col items-center justify-center text-gray-300">
-                            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
-                                <FaBell size={32} className="opacity-20" />
-                            </div>
-                            <span className="text-xs font-bold uppercase tracking-widest">No notifications available.</span>
-                        </div>
-                    ) : (
-                        <div className="divide-y divide-gray-50">
-                            {filteredNotifications.map((ann) => (
-                                <NotificationItem
-                                    key={ann._id}
-                                    id={ann._id}
-                                    {...ann}
-                                    time={new Date(ann.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                                    onRead={handleMarkRead}
-                                    onDelete={() => handleDelete(ann._id)}
-                                    onClick={() => setActiveId(activeId === ann._id ? null : ann._id)}
-                                    active={activeId === ann._id}
-                                    showActions={isAdminView && (ann.relatedModel === 'FundRequest' || ann.notificationType === 'USER_REQUEST')}
-                                    onToggleAction={(id, type) => handleAction(id, type)}
-                                    onReject={(id) => {
-                                        if (window.confirm("Reject this request?")) {
-                                            handleAction(id, 'REJECT');
-                                        }
-                                    }}
-                                    mandalName={mandalName}
-                                    districtName={adminLocation?.districtName || 'District'}
-                                />
-                            ))}
-                        </div>
+            {showTabs && (
+                <div className="flex border-b border-gray-200 mb-6 bg-white shadow-sm overflow-x-auto scrollbar-hide">
+                    <button
+                        onClick={() => setActiveSubTab('announcements')}
+                        className={`px-8 py-4 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${activeSubTab === 'announcements' ? 'border-[#1e2a4a] text-[#1e2a4a]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                    >
+                        Announcements
+                    </button>
+                    <button
+                        onClick={() => setActiveSubTab('requests')}
+                        className={`px-8 py-4 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${activeSubTab === 'requests' ? 'border-[#1e2a4a] text-[#1e2a4a]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                    >
+                        Received Fund Requests
+                    </button>
+                    {!(userRole === 'MEMBER_ADMIN' || userRole === 'MEMBER') && (
+                        <button
+                            onClick={() => setActiveSubTab('tickets')}
+                            className={`px-8 py-4 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${activeSubTab === 'tickets' ? 'border-[#1e2a4a] text-[#1e2a4a]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                        >
+                            Tickets Received
+                        </button>
                     )}
                 </div>
-            </div>
+            )}
+
+            {showTabs ? (
+                <NotificationTable 
+                    notifications={filteredNotifications} 
+                    title={activeSubTab === 'announcements' ? 'Announcements' : (activeSubTab === 'requests' ? 'Received Fund Requests' : 'Tickets Received')} 
+                    showCount={activeSubTab === 'tickets' || activeSubTab === 'requests'}
+                />
+            ) : (
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden min-h-[500px]">
+                    <div className="animate-fadeIn">
+                        {loading && notifications.length === 0 ? (
+                            <div className="py-20 flex flex-col items-center justify-center">
+                                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                <p className="mt-4 text-[10px] uppercase font-black text-gray-400 tracking-widest">Loading notifications...</p>
+                            </div>
+                        ) : filteredNotifications.length === 0 ? (
+                            <div className="py-20 flex flex-col items-center justify-center text-gray-300">
+                                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
+                                    <FaBell size={32} className="opacity-20" />
+                                </div>
+                                <span className="text-xs font-bold uppercase tracking-widest">No notifications available.</span>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-gray-50">
+                                {filteredNotifications.map((ann) => (
+                                    <NotificationItem
+                                        key={ann._id}
+                                        id={ann._id}
+                                        {...ann}
+                                        time={new Date(ann.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                        onRead={handleMarkRead}
+                                        onDelete={() => handleDelete(ann._id)}
+                                        onClick={() => setActiveId(activeId === ann._id ? null : ann._id)}
+                                        active={activeId === ann._id}
+                                        showActions={isAdminView && (ann.relatedModel === 'FundRequest' || ann.notificationType === 'USER_REQUEST')}
+                                        onToggleAction={(id, type) => handleAction(id, type)}
+                                        onReject={(id) => {
+                                            if (window.confirm("Reject this request?")) {
+                                                handleAction(id, 'REJECT');
+                                            }
+                                        }}
+                                        mandalName={mandalName}
+                                        districtName={adminLocation?.districtName || 'District'}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

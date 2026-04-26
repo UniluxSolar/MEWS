@@ -218,6 +218,12 @@ const MunicipalityDashboard = () => {
         return colors[index % colors.length];
     };
 
+    const genderData = demographics.gender.map(g => ({
+        name: g._id,
+        value: g.count,
+        color: g._id === 'Male' ? '#3b82f6' : g._id === 'Female' ? '#ec4899' : '#10b981'
+    }));
+
     // --- MAP HELPERS ---
     const getCoordinates = (inputString) => {
         // Hash based generation as placeholder 
@@ -293,43 +299,78 @@ const MunicipalityDashboard = () => {
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                                 {/* Gender Distribution */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                    <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
-                                        Gender Distribution
-                                    </h3>
-                                    <div className="h-72 w-full flex items-center justify-center">
-                                        <div className="flex items-center gap-12">
-                                            {/* Male Stats */}
-                                            <div className="flex flex-col items-center group cursor-pointer" onClick={() => handleChartClick({ _id: 'Male' }, 'gender')}>
-                                                <div className="w-24 h-24 rounded-full bg-blue-50 flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors shadow-sm">
-                                                    <FaMale className="text-blue-500 text-6xl" />
-                                                </div>
-                                                <div className="text-3xl font-bold text-slate-700 mb-1">
-                                                    {(demographics.gender.find(g => (g._id || '').toLowerCase() === 'male')?.count || 0)}
-                                                </div>
-                                                <div className="text-xs font-bold uppercase text-slate-400 tracking-wider">Male</div>
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
+                                    <div className="flex items-center justify-between mb-6 border-b pb-4">
+                                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
+                                            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FaMale /></div>
+                                            Gender Distribution
+                                        </h3>
+                                        <div className="flex flex-col gap-1 text-[10px] font-bold uppercase tracking-wider">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-[#ec4899] rounded-sm"></div>
+                                                <span className="text-slate-400">Female</span>
                                             </div>
-
-                                            {/* Divider */}
-                                            <div className="h-32 w-px bg-slate-100 hidden sm:block"></div>
-
-                                            {/* Female Stats */}
-                                            <div className="flex flex-col items-center group cursor-pointer" onClick={() => handleChartClick({ _id: 'Female' }, 'gender')}>
-                                                <div className="w-24 h-24 rounded-full bg-pink-50 flex items-center justify-center mb-4 group-hover:bg-pink-100 transition-colors shadow-sm">
-                                                    <FaFemale className="text-pink-500 text-6xl" />
-                                                </div>
-                                                <div className="text-3xl font-bold text-slate-700 mb-1">
-                                                    {(demographics.gender.find(g => (g._id || '').toLowerCase() === 'female')?.count || 0)}
-                                                </div>
-                                                <div className="text-xs font-bold uppercase text-slate-400 tracking-wider">Female</div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-[#3b82f6] rounded-sm"></div>
+                                                <span className="text-slate-400">Male</span>
                                             </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-[#94a3b8] rounded-sm"></div>
+                                                <span className="text-slate-400">Others</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="h-64 w-full flex items-center justify-center">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={genderData}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={60}
+                                                    outerRadius={80}
+                                                    paddingAngle={5}
+                                                    dataKey="value"
+                                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                                    onClick={(data) => handleChartClick(data, 'gender')}
+                                                    style={{ cursor: 'pointer' }}
+                                                >
+                                                    {genderData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                                    ))}
+                                                </Pie>
+                                                <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                    {/* Gender Stat Cards - Super Admin Style */}
+                                    <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+                                        <div className="p-3 bg-slate-50 rounded-xl">
+                                            <p className="text-[10px] uppercase font-bold text-slate-400">Male</p>
+                                            <p className="text-lg font-bold text-blue-600">
+                                                {demographics.gender.find(g => (g._id || '').toLowerCase() === 'male')?.count || 0}
+                                            </p>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 rounded-xl">
+                                            <p className="text-[10px] uppercase font-bold text-slate-400">Female</p>
+                                            <p className="text-lg font-bold text-pink-500">
+                                                {demographics.gender.find(g => (g._id || '').toLowerCase() === 'female')?.count || 0}
+                                            </p>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 rounded-xl">
+                                            <p className="text-[10px] uppercase font-bold text-slate-400">Others</p>
+                                            <p className="text-lg font-bold text-emerald-500">
+                                                {demographics.gender.find(g => (g._id || '').toLowerCase() === 'other' || (g._id || '').toLowerCase() === 'others')?.count || 0}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Marital Status */}
                                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                    <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
+                                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><FaChartBar /></div>
                                         Marital Status
                                     </h3>
                                     <div className="h-72 w-full">
@@ -361,7 +402,8 @@ const MunicipalityDashboard = () => {
 
                                 {/* Blood Group Chart (Replaces Registration Status) */}
                                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                    <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
+                                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-red-50 text-red-600 rounded-lg"><FaChartPie /></div>
                                         Blood Group Distribution
                                     </h3>
                                     <div className="h-72 w-full">
@@ -398,7 +440,8 @@ const MunicipalityDashboard = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                             {/* Top Occupations (Converted from Bar to Pie) */}
                             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
+                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                    <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><FaBuilding /></div>
                                     Occupation Distribution
                                 </h3>
                                 <div className="h-80 w-full">
@@ -427,7 +470,8 @@ const MunicipalityDashboard = () => {
 
                             {/* Employment Status */}
                             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
+                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                    <div className="p-2 bg-cyan-50 text-cyan-600 rounded-lg"><FaUsers /></div>
                                     Employment Status
                                 </h3>
                                 <div className="h-80 w-full">
@@ -456,7 +500,8 @@ const MunicipalityDashboard = () => {
 
                             {/* Total Voters (Moved Here) */}
                             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
+                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><FaTable /></div>
                                     Total Voters
                                 </h3>
                                 <div className="h-80 w-full">

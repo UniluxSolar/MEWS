@@ -58,6 +58,7 @@ const UserSchema = new mongoose.Schema({
     otpHash: String,
     otpExpires: Date,
     otpLastSent: Date,
+    photoUrl: String,
 
 }, {
     timestamps: true

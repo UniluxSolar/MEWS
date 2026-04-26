@@ -454,6 +454,7 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
             let contextRole = req.user.role;
             // Adjust scope based on target location type
             if (locationDoc.type === 'DISTRICT') contextRole = 'DISTRICT_ADMIN';
+            if (locationDoc.type === 'MUNICIPALITY') contextRole = 'MUNICIPALITY_ADMIN';
             if (locationDoc.type === 'MANDAL') contextRole = 'MANDAL_ADMIN';
             if (locationDoc.type === 'VILLAGE') contextRole = 'VILLAGE_ADMIN';
             if (locationDoc.type === 'WARD') contextRole = 'WARD_ADMIN';
@@ -485,6 +486,14 @@ const getAnalyticsData = asyncHandler(async (req, res) => {
                 });
                 const mandalIds = matchingMandals.map(m => m._id);
                 memberQuery = { 'address.mandal': { $in: mandalIds } };
+            } else if (contextRole === 'MUNICIPALITY_ADMIN') {
+                const escapedName = locationDoc.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const relatedLocations = await Location.find({
+                    name: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
+                    type: 'MUNICIPALITY'
+                });
+                const locIds = relatedLocations.map(l => l._id);
+                memberQuery = { 'address.municipality': { $in: locIds } };
             } else if (contextRole === 'DISTRICT_ADMIN') {
                 memberQuery = { 'address.district': targetLocationId };
             } else if (contextRole === 'STATE_ADMIN' || contextRole === 'SUPER_ADMIN') {

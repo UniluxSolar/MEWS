@@ -199,33 +199,19 @@ const CreateTicketModal = ({ isOpen, onClose, onCreate }) => {
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1.5">Category</label>
-                            <select
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-white"
-                                value={formData.category}
-                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                            >
-                                <option>General Inquiry</option>
-                                <option>Scholarship</option>
-                                <option>Technical Issue</option>
-                                <option>Profile Update</option>
-                                <option>Payment/Donation</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1.5">Priority</label>
-                            <select
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-white"
-                                value={formData.priority}
-                                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                            >
-                                <option>Low</option>
-                                <option>Medium</option>
-                                <option>High</option>
-                            </select>
-                        </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1.5">Category</label>
+                        <select
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+                            value={formData.category}
+                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        >
+                            <option>General Inquiry</option>
+                            <option>Scholarship</option>
+                            <option>Technical Issue</option>
+                            <option>Profile Update</option>
+                            <option>Payment/Donation</option>
+                        </select>
                     </div>
 
                     <div>

@@ -10,7 +10,7 @@ import {
     FaArrowLeft, FaShieldAlt, FaSave, FaEraser, FaUpload, FaEye,
     FaCalendarAlt, FaIdCard, FaMapMarkerAlt, FaUsers, FaRing,
     FaRupeeSign, FaVoteYea, FaUniversity, FaFileImage, FaChevronRight,
-    FaHome, FaCheckSquare,
+    FaHome, FaCheckSquare, FaQrcode, FaCheckCircle,
     // Admin Layout Icons
     FaThLarge, FaBuilding, FaExclamationTriangle, FaFileAlt,
     FaHandHoldingUsd, FaChartLine, FaCog, FaQuestionCircle, FaBullhorn,
@@ -455,6 +455,8 @@ const MemberRegistration = () => {
     // State for Admin Location & Role (Removed - using Hook)
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
+    const [showScanner, setShowScanner] = useState(false);
+    const [isPaid, setIsPaid] = useState(false);
 
     // Helper: only show error for a field the user has already interacted with
     const getFieldError = (fieldName) => touched[fieldName] ? errors[fieldName] : undefined;
@@ -725,7 +727,8 @@ const MemberRegistration = () => {
         6: false,
         7: false,
         8: false,
-        9: false
+        9: false,
+        10: false
     });
 
     const toggleSection = (id) => {
@@ -831,8 +834,11 @@ const MemberRegistration = () => {
                 6: false,
                 7: false,
                 8: false,
-                9: false
+                9: false,
+                10: false
             });
+            setShowScanner(false);
+            setIsPaid(false);
 
             // Reset Location Lists
             setMandals([]);
@@ -4104,6 +4110,64 @@ const MemberRegistration = () => {
                                             </div>
                                         </div>
                                     )}
+                                </CollapsibleSection>
+                                
+                                {/* MEWS AC Scanner Section */}
+                                <CollapsibleSection
+                                    title="MEWS AC Scanner"
+                                    icon={FaQrcode}
+                                    sectionNumber={9}
+                                    isOpen={openSections[10]}
+                                    onToggle={() => toggleSection(10)}
+                                >
+                                    <div className="space-y-6">
+                                        <div 
+                                            className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 cursor-pointer hover:bg-gray-100 transition-all flex items-center justify-between"
+                                            onClick={() => setShowScanner(!showScanner)}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <FaQrcode className="text-blue-600" />
+                                                <span className="text-sm font-bold text-gray-700 uppercase tracking-wide">MEWS AC Scanner</span>
+                                            </div>
+                                            <FaChevronRight className={`text-gray-400 transition-transform ${showScanner ? 'rotate-90' : ''}`} />
+                                        </div>
+
+                                        {showScanner && (
+                                            <div className="relative border border-gray-200 rounded-xl p-8 bg-white shadow-sm flex flex-col items-center animate-fadeIn">
+                                                {/* Payment Checkbox at Top Right */}
+                                                <div className="absolute top-4 right-4 flex flex-col items-center bg-gray-50 p-3 rounded-xl border border-gray-100 shadow-inner">
+                                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={isPaid}
+                                                            onChange={(e) => setIsPaid(e.target.checked)}
+                                                            className="w-6 h-6 text-green-600 rounded-lg focus:ring-green-500 border-gray-300 cursor-pointer transition-all"
+                                                        />
+                                                        {isPaid && <FaCheckCircle className="text-green-500 animate-bounce" size={20} />}
+                                                    </label>
+                                                    {isPaid && <span className="text-[10px] font-black text-green-600 mt-1 uppercase tracking-tighter">Paid</span>}
+                                                </div>
+
+                                                <div className="text-center mb-6">
+                                                    <h4 className="text-lg font-extrabold text-gray-800">Payment Gateway</h4>
+                                                    <p className="text-xs text-gray-500 mt-1">Scan the QR code below to complete registration payment</p>
+                                                </div>
+                                                
+                                                <div className="p-4 bg-white rounded-2xl shadow-lg border border-gray-100 mb-4">
+                                                    <img 
+                                                        src="/assets/images/mews_qr.png" 
+                                                        alt="MEWS QR Code" 
+                                                        className="w-72 h-auto rounded-lg"
+                                                    />
+                                                </div>
+                                                
+                                                <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-4 py-2 rounded-full border border-amber-100">
+                                                    <FaExclamationTriangle size={12} />
+                                                    <span className="text-[10px] font-bold">Please confirm payment using the checkbox above after scanning</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </CollapsibleSection>
 
                                 {/* Legal Consent Checkbox */}

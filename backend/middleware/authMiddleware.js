@@ -24,7 +24,7 @@ const protect = async (req, res, next) => {
 
             if (mongoose.Types.ObjectId.isValid(decoded.id)) {
                 // Check User (Admin) Collection
-                user = await User.findById(decoded.id).select('-passwordHash');
+                user = await User.findById(decoded.id).select('-passwordHash').populate('memberId', 'photoUrl');
 
                 // 2. If not found in User, check Member (Member Login)
                 if (!user) {

@@ -25,8 +25,9 @@ const createLog = async (req, action, details) => {
 const getPublicCarouselImages = async (req, res) => {
     console.log('[API] GET /api/carousel/public - Fetching images...');
     try {
+        const { type } = req.query;
         const now = new Date();
-        console.log('[DEBUG] Querying CarouselImage with date:', now);
+        console.log(`[DEBUG] Querying CarouselImage (Type: ${type || 'carousel_slide'}) with date:`, now);
         
         // Ensure model is available
         if (!CarouselImage) {
@@ -34,31 +35,24 @@ const getPublicCarouselImages = async (req, res) => {
             return res.status(500).json({ message: 'Model configuration error' });
         }
 
-        const images = await CarouselImage.find({
+        const query = {
             isActive: true,
+            type: type || 'carousel_slide',
             $or: [
                 { expiryDate: null },
                 { expiryDate: { $gt: now } }
             ]
-        }).sort({ order: 1, createdAt: -1 });
+        };
 
-        console.log(`[DEBUG] Found ${images ? images.length : 0} active images`);
+        const images = await CarouselImage.find(query).sort({ order: 1, createdAt: -1 });
+
+        console.log(`[DEBUG] Found ${images ? images.length : 0} active images for type ${type || 'carousel_slide'}`);
         res.json(images || []);
     } catch (error) {
         console.error('Error fetching public carousel images:', error);
-        // Log more details if it's a mongo error
-        if (error.kind || error.name === 'MongoError' || error.name === 'MongooseError') {
-            console.error('[DB ERROR] Details:', {
-                name: error.name,
-                code: error.code,
-                message: error.message,
-                stack: error.stack
-            });
-        }
         res.status(500).json({ 
             message: 'Server Error fetching carousel',
-            details: error.message, // Added for easier debugging on server
-            stack: process.env.NODE_ENV === 'production' ? null : error.stack 
+            details: error.message
         });
     }
 };
@@ -68,7 +62,9 @@ const getPublicCarouselImages = async (req, res) => {
 // @access  Private (Super Admin)
 const getAllCarouselImages = async (req, res) => {
     try {
-        const images = await CarouselImage.find({}).sort({ order: 1, createdAt: -1 });
+        const { type } = req.query;
+        const query = type ? { type } : {};
+        const images = await CarouselImage.find(query).sort({ order: 1, createdAt: -1 });
         res.json(images);
     } catch (error) {
         console.error('Error fetching all carousel images:', error);
@@ -85,23 +81,22 @@ const uploadCarouselImage = async (req, res) => {
             return res.status(400).json({ message: 'No image file uploaded' });
         }
 
-        const { title, description, order, isActive, expiryDate } = req.body;
+        const { title, description, order, isActive, expiryDate, type } = req.body;
 
-        // Construct image URL (assuming local storage for now based on other controllers, or simple relative path)
-        // If uploadMiddleware saves to 'uploads/', then URL is 'uploads/filename'
         const imageUrl = `uploads/${req.file.filename}`;
 
         const newImage = await CarouselImage.create({
             title,
             description,
             imageUrl,
+            type: type || 'carousel_slide',
             order: order ? parseInt(order) : 0,
             isActive: isActive === 'true' || isActive === true,
             expiryDate: expiryDate ? new Date(expiryDate) : null,
             uploadedBy: req.user._id
         });
 
-        await createLog(req, 'CREATE', `Uploaded new image: ${title || 'Untitled'} (${newImage._id})`);
+        await createLog(req, 'CREATE', `Uploaded new ${type || 'carousel_slide'}: ${title || 'Untitled'} (${newImage._id})`);
 
         res.status(201).json(newImage);
     } catch (error) {
@@ -121,13 +116,14 @@ const updateCarouselImage = async (req, res) => {
             return res.status(404).json({ message: 'Image not found' });
         }
 
-        const { title, description, order, isActive, expiryDate } = req.body;
+        const { title, description, order, isActive, expiryDate, type } = req.body;
 
         if (title !== undefined) image.title = title;
         if (description !== undefined) image.description = description;
         if (order !== undefined) image.order = parseInt(order);
         if (isActive !== undefined) image.isActive = isActive;
         if (expiryDate !== undefined) image.expiryDate = expiryDate ? new Date(expiryDate) : null;
+        if (type !== undefined) image.type = type;
 
         const updatedImage = await image.save();
 

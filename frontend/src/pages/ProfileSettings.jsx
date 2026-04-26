@@ -219,7 +219,9 @@ const FamilyMembersTab = ({ members, onMemberClick, title = "Family Members" }) 
 
             {displayMembers.length === 0 ? (
                 <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                    <p className="text-gray-500 text-sm">No other family members found.</p>
+                    <p className="text-gray-500 text-sm">
+                        {title === 'Tickets Received' ? 'No tickets received.' : 'No other family members found.'}
+                    </p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -477,11 +479,12 @@ const ProfileSettings = () => {
             label: isNotificationsMode ? 'Received Fund Requests' : 'My Documents',
             header: isNotificationsMode ? 'Received Fund Requests' : 'My Documents'
         },
-        { 
+        // Only show the 3rd tab if NOT in Notifications mode (previously 'Tickets Received')
+        ...(!isNotificationsMode ? [{ 
             id: 'Family Members', 
-            label: isNotificationsMode ? 'Tickets Received' : 'Family Members',
-            header: isNotificationsMode ? 'Tickets Received' : 'Family Members'
-        }
+            label: 'Family Members',
+            header: 'Family Members'
+        }] : [])
     ];
     const [showCamera, setShowCamera] = useState(false);
     const [profileImage, setProfileImage] = useState("/assets/images/user-profile.png");

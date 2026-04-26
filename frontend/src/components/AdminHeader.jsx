@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaShieldAlt, FaSearch, FaExclamationTriangle, FaBell, FaChevronDown, FaUser, FaSignOutAlt, FaBars } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
-import API from '../api';
+import API, { BASE_URL } from '../api';
 
 import mewsLogo from '../assets/mews_main_logo_new.png';
 
@@ -125,16 +125,17 @@ const AdminHeader = ({ locationName: propLocationName, onToggleSidebar }) => { /
             // Dynamic Profile Image Logic
             const photo = info.photoUrl || info.photo || info.photo_url;
             
-            // Build full photo URL
+            // Build full photo URL using robust logic (consistent with DashboardLayout)
             let finalMemberPhoto = '/assets/images/user-profile.png'; // Default fallback
             if (photo) {
-                if (photo.startsWith('http')) {
-                    finalMemberPhoto = photo;
+                const normalizedPhoto = photo.replace(/\\/g, '/');
+                if (normalizedPhoto.startsWith('http')) {
+                    // Use proxy for remote/GCS URLs to handle CORS and auth
+                    finalMemberPhoto = `${BASE_URL}/api/proxy-image?url=${encodeURIComponent(normalizedPhoto)}`;
                 } else {
-                    // Robust normalization: handle Windows backslashes and prevent double slashes
-                    const root = API.defaults.baseURL ? API.defaults.baseURL.replace(/\/api\/?$/, '') : '';
-                    const cleanPhoto = photo.replace(/\\/g, '/').replace(/^\//, ''); // Remove leading slash
-                    finalMemberPhoto = root ? `${root}/${cleanPhoto}` : `/${cleanPhoto}`;
+                    // Handle local uploads
+                    const cleanPhoto = normalizedPhoto.startsWith('/') ? normalizedPhoto : `/${normalizedPhoto}`;
+                    finalMemberPhoto = `${BASE_URL}${cleanPhoto}`;
                 }
             }
             
@@ -184,24 +185,28 @@ const AdminHeader = ({ locationName: propLocationName, onToggleSidebar }) => { /
                                 <FaBars size={20} />
                             </button>
                         )}
-                        <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center border border-white/20 overflow-hidden">
-                            <img 
-                                src={profileLogo} 
-                                alt="Profile" 
-                                className="w-full h-full object-cover" 
-                                onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src = "/assets/images/user-profile.png";
-                                }}
-                            />
-                        </div>
-                        <div>
-                            <div className="font-bold text-lg leading-none tracking-tight">MEWS</div>
-                            <div className="text-xs font-bold text-blue-200 leading-none mt-1">
-                                {adminName}
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/admin/dashboard')}>
+                            <div className="w-10 h-10 rounded-full border-2 border-white/20 overflow-hidden flex-shrink-0 bg-white/10">
+                                <img 
+                                    src={profileLogo} 
+                                    alt="Admin Profile" 
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.src = "/assets/images/user-profile.png";
+                                    }}
+                                />
                             </div>
-                            <div className="text-[10px] text-gray-400 leading-none mt-0.5 uppercase tracking-wider">
-                                {roleText}
+                            <div className="flex flex-col">
+                                <div className={`font-bold leading-none tracking-tight ${userName.length > 15 ? 'text-sm' : userName.length > 10 ? 'text-base' : 'text-lg'}`}>
+                                    {(roleText === 'MEMBER PORTAL' || roleText === 'MEMBER ADMIN PORTAL') ? userName : 'MEWS'}
+                                </div>
+                                <div className="text-xs font-bold text-blue-200 leading-none mt-1">
+                                    {adminName}
+                                </div>
+                                <div className="text-[10px] text-gray-400 leading-none mt-0.5 uppercase tracking-wider">
+                                    {roleText}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -262,7 +267,11 @@ const AdminHeader = ({ locationName: propLocationName, onToggleSidebar }) => { /
                             className="flex items-center gap-2 pl-4 border-l border-slate-700 cursor-pointer hover:opacity-80 transition"
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         >
-                            <img src={mewsLogo} alt="MEWS Logo" className="w-9 h-9 rounded-full border-2 border-slate-600 bg-white object-cover" />
+                            <img 
+                                src={mewsLogo} 
+                                alt="MEWS Logo" 
+                                className="w-9 h-9 rounded-full border-2 border-slate-600 bg-white object-cover shadow-sm"
+                            />
                             <FaChevronDown size={10} className={`text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                         </div>
 

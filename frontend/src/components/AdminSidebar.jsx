@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { BASE_URL } from '../api';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     FaThLarge, FaUsers, FaBuilding, FaUserPlus,
@@ -20,6 +21,7 @@ const AdminSidebar = ({ activePage }) => {
     const [adminName, setAdminName] = useState('');
     const [userRole, setUserRole] = useState('');
     const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const [profilePhoto, setProfilePhoto] = useState('/assets/images/user-profile.png');
 
     useEffect(() => {
         const loadUserInfo = () => {
@@ -70,12 +72,27 @@ const AdminSidebar = ({ activePage }) => {
                 else setRoleLabel('Admin Dashboard');
 
                 // Settings Label
-                if (role === 'VILLAGE_ADMIN') setSettingsLabel('Village Settings');
-                else if (role === 'WARD_ADMIN') setSettingsLabel('Ward Settings');
-                else if (role === 'MANDAL_ADMIN') setSettingsLabel('Mandal Settings');
-                else if (role === 'DISTRICT_ADMIN') setSettingsLabel('District Settings');
-                else if (role === 'STATE_ADMIN') setSettingsLabel('State Settings');
-                else setSettingsLabel('Admin Settings');
+                if (role === 'VILLAGE_ADMIN') setSettingsLabel('Village Admin Settings');
+                else if (role === 'WARD_ADMIN') setSettingsLabel('Ward Admin Settings');
+                else if (role === 'MANDAL_ADMIN') setSettingsLabel('Mandal Admin Settings');
+                else if (role === 'MUNICIPALITY_ADMIN') setSettingsLabel('Municipality Admin Settings');
+                else if (role === 'DISTRICT_ADMIN') setSettingsLabel('District Admin Settings');
+                else if (role === 'STATE_ADMIN') setSettingsLabel('State Admin Settings');
+                else setSettingsLabel('Super Admin Settings');
+
+                // Dynamic Profile Image Logic
+                const photo = parsed.photoUrl || parsed.photo || parsed.photo_url;
+                let finalMemberPhoto = '/assets/images/user-profile.png';
+                if (photo) {
+                    const normalizedPhoto = photo.replace(/\\/g, '/');
+                    if (normalizedPhoto.startsWith('http')) {
+                        finalMemberPhoto = `${BASE_URL}/api/proxy-image?url=${encodeURIComponent(normalizedPhoto)}`;
+                    } else {
+                        const cleanPhoto = normalizedPhoto.startsWith('/') ? normalizedPhoto : `/${normalizedPhoto}`;
+                        finalMemberPhoto = `${BASE_URL}${cleanPhoto}`;
+                    }
+                }
+                setProfilePhoto(finalMemberPhoto);
             }
         };
 
@@ -131,13 +148,13 @@ const AdminSidebar = ({ activePage }) => {
             `}>
                 <div className="p-4 space-y-1">
                     {/* Admin Name Display */}
-                    <div className="mb-4 px-4 flex justify-between items-center">
-                        <div>
-                            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Welcome</h2>
-                            <p className="text-lg font-bold text-[#1e2a4a] truncate max-w-[150px]">{adminName}</p>
+                    <div className="mb-6 px-4 flex items-center gap-3">
+                        <div className="overflow-hidden">
+                            <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-0.5">Welcome</h2>
+                            <p className="text-sm font-black text-[#1e2a4a] truncate dark:text-white uppercase">{adminName}</p>
                         </div>
-                        {/* Close Button Mobile */}
-                        <button onClick={() => setIsMobileOpen(false)} className="md:hidden text-gray-400 hover:text-red-500 text-lg">
+                        {/* Close Button Mobile - Keep it separate or handle if needed */}
+                        <button onClick={() => setIsMobileOpen(false)} className="md:hidden ml-auto text-gray-400 hover:text-red-500 text-lg">
                             ✕
                         </button>
                     </div>

@@ -21,6 +21,11 @@ const CarouselImageSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    type: {
+        type: String,
+        enum: ['carousel_slide', 'hero_background', 'hero_member'],
+        default: 'carousel_slide'
+    },
     expiryDate: {
         type: Date,
         default: null // Optional: If set, banner auto-hides after this date
