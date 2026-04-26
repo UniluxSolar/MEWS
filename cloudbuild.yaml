@@ -7,7 +7,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/mews-app']
   
-  # Deploy container to Cloud Run
+  # Deploy container to Cloud Run (Service 1: mews-backend)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -21,5 +21,21 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
+
+  # Deploy container to Cloud Run (Service 2: mews)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'mews'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/mews-app'
+      - '--region'
+      - 'asia-south1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+
 images:
   - 'gcr.io/$PROJECT_ID/mews-app'
