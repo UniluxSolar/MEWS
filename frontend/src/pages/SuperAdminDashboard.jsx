@@ -142,6 +142,10 @@ const SuperAdminDashboard = () => {
         navigate(`/admin/members?${type}=${value}`);
     };
 
+    const toggleSidebar = () => {
+        window.dispatchEvent(new CustomEvent('toggle-admin-sidebar'));
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -161,9 +165,9 @@ const SuperAdminDashboard = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
-            <AdminHeader />
+            <AdminHeader onToggleSidebar={toggleSidebar} />
             <div className="flex flex-1 overflow-hidden">
-                <AdminSidebar activePage="dashboard" />
+                <AdminSidebar activePage="dashboard" showMobileHeader={false} />
 
                 <main className="flex-1 overflow-y-auto bg-slate-50">
                     <DashboardHeader
@@ -171,7 +175,7 @@ const SuperAdminDashboard = () => {
                         subtitle="Here's what's happening in All Locations today. You have 0 new registrations to review."
                     />
 
-                    <div className="px-4 md:px-8 -mt-10 pb-12 w-full space-y-8">
+                    <div className="px-3 md:px-8 -mt-6 md:-mt-10 pb-12 w-full space-y-6 md:space-y-8">
                         {/* Summary Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <StatCard
@@ -201,9 +205,9 @@ const SuperAdminDashboard = () => {
                         </div>
 
                         {/* Charts Section - Row 1 */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                             {/* Gender Distribution */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
+                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
                                 <div className="flex items-center justify-between mb-6">
                                     <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
                                         <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FaMale /></div>
@@ -224,7 +228,7 @@ const SuperAdminDashboard = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="h-72 w-full flex items-center justify-center">
+                                <div className="h-64 md:h-72 w-full flex items-center justify-center">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie
@@ -266,12 +270,12 @@ const SuperAdminDashboard = () => {
                             </div>
 
                             {/* Marital Status */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
+                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
                                 <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
                                     <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><FaChartBar /></div>
                                     Marital Status
                                 </h3>
-                                <div className="h-72 w-full">
+                                <div className="h-64 md:h-72 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={demographics.marital}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -288,14 +292,14 @@ const SuperAdminDashboard = () => {
                         </div>
 
                         {/* Charts Section - Row 2 */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                             {/* Blood Group Distribution */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
+                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
                                 <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
                                     <div className="p-2 bg-red-50 text-red-600 rounded-lg"><FaChartPie /></div>
                                     Blood Group Distribution
                                 </h3>
-                                <div className="h-72 w-full">
+                                <div className="h-64 md:h-72 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie
@@ -322,12 +326,12 @@ const SuperAdminDashboard = () => {
                             </div>
 
                             {/* Occupation Distribution */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
+                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
                                 <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
                                     <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><FaBuilding /></div>
                                     Top Occupations
                                 </h3>
-                                <div className="h-72 w-full">
+                                <div className="h-64 md:h-72 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={demographics.occupation} layout="vertical" margin={{ left: 30 }}>
                                             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
@@ -344,14 +348,14 @@ const SuperAdminDashboard = () => {
                         </div>
 
                         {/* Charts Section - Row 3 */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                             {/* Employment Status */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
+                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
                                 <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
                                     <div className="p-2 bg-cyan-50 text-cyan-600 rounded-lg"><FaUsers /></div>
                                     Employment Status
                                 </h3>
-                                <div className="h-72 w-full">
+                                <div className="h-64 md:h-72 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie
@@ -379,12 +383,12 @@ const SuperAdminDashboard = () => {
                             </div>
 
                             {/* Voter Statistics */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
+                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
                                 <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
                                     <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><FaTable /></div>
                                     Voter Statistics (18+)
                                 </h3>
-                                <div className="h-72 w-full">
+                                <div className="h-64 md:h-72 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={demographics.voter}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -402,7 +406,7 @@ const SuperAdminDashboard = () => {
 
                         {/* Districts Breakdown Table */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                            <div className="p-6 border-b border-slate-50 flex justify-between items-center">
+                            <div className="p-4 md:p-6 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
                                     <div className="p-2 bg-orange-50 text-orange-600 rounded-lg"><FaMapMarkedAlt /></div>
                                     District Wise Performance
@@ -465,14 +469,14 @@ const SuperAdminDashboard = () => {
                         </div>
 
                         {/* Charts Section - Final Row (Community & Age) */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                             {/* Community / Sub-Castes */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow lg:col-span-1">
+                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow lg:col-span-1">
                                 <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
                                     <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><FaUsers /></div>
                                     Community / Sub-Castes
                                 </h3>
-                                <div className="h-72 w-full">
+                                <div className="h-64 md:h-72 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={demographics.community}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -488,12 +492,12 @@ const SuperAdminDashboard = () => {
                             </div>
 
                             {/* Age Demographics */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow lg:col-span-1">
+                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow lg:col-span-1">
                                 <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
                                     <div className="p-2 bg-pink-50 text-pink-600 rounded-lg"><FaChartBar /></div>
                                     Age Demographics
                                 </h3>
-                                <div className="h-72 w-full">
+                                <div className="h-64 md:h-72 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={demographics.age}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />

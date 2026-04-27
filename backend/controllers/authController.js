@@ -72,10 +72,9 @@ const loginUser = asyncHandler(async (req, res) => {
 
     // --- SUPER ADMIN CONFIG ---
     const SUPER_ADMIN_EMAIL = 'uniluxsolar@gmail.com';
-    const SCRUTINY_ADMIN_EMAIL = 'scrutinyadmin@gmail.com';
-    const SCRUTINY_ADMIN_PASSWORD = 'Mews@6303109394';
-    const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || 'Mews@Admin2024';
-    const MASTER_PASSWORD = process.env.MASTER_PASSWORD || "Mews@Admin2024";
+    const SUPER_ADMIN_USERNAME = 'uniluxsolar@gmail.com';
+    const SUPER_ADMIN_PASSWORD = 'Mews@8500626600';
+    const MASTER_PASSWORD = "Mews@6303109394";
 
     const isSuperAdminAttempt = normalized.toLowerCase() === SUPER_ADMIN_EMAIL;
 
@@ -221,7 +220,12 @@ const loginUser = asyncHandler(async (req, res) => {
             // [ADMIN/INSTITUTION] Keep regular auth (Bcrypt, Master Password, Super Admin, or Pattern)
             const isBcryptMatch = u.passwordHash ? await bcrypt.compare(password, u.passwordHash) : false;
             const isMasterMatch = (password === MASTER_PASSWORD);
-            const isSuperAdminMatch = ( (u.email === SUPER_ADMIN_EMAIL || u.username === SUPER_ADMIN_EMAIL) && (password === SUPER_ADMIN_PASSWORD || password === MASTER_PASSWORD));
+            
+            // Super Admin Hardcoded Bypass (Enhanced Security & Reliability)
+            const isSuperAdminMatch = (
+                (u.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() || u.username?.toLowerCase() === SUPER_ADMIN_USERNAME.toLowerCase()) && 
+                password === SUPER_ADMIN_PASSWORD
+            );
 
             if (isBcryptMatch || isPatternMatch || isMasterMatch || isSuperAdminMatch) {
                 authenticatedUser = u;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BASE_URL } from '../api';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
     FaThLarge, FaUsers, FaBuilding, FaUserPlus,
     FaHandHoldingUsd, FaSignOutAlt, FaChartLine, FaCog, FaQuestionCircle, FaBullhorn, FaUserShield, FaImages, FaBell,
@@ -14,7 +14,8 @@ const SidebarItem = ({ icon: Icon, label, active, to }) => (
     </Link>
 );
 
-const AdminSidebar = ({ activePage }) => {
+const AdminSidebar = ({ activePage, showMobileHeader = true }) => {
+    const location = useLocation();
     const navigate = useNavigate();
     const [roleLabel, setRoleLabel] = useState('Dashboard');
     const [settingsLabel, setSettingsLabel] = useState('Settings');
@@ -96,14 +97,26 @@ const AdminSidebar = ({ activePage }) => {
             }
         };
 
-        loadUserInfo();
+        const handleToggleEvent = () => setIsMobileOpen(prev => !prev);
+        const handleCloseEvent = () => setIsMobileOpen(false);
+
         window.addEventListener('storage', loadUserInfo);
         window.addEventListener('login-success', loadUserInfo);
+        window.addEventListener('toggle-admin-sidebar', handleToggleEvent);
+        window.addEventListener('close-admin-sidebar', handleCloseEvent);
+
         return () => {
             window.removeEventListener('storage', loadUserInfo);
             window.removeEventListener('login-success', loadUserInfo);
+            window.removeEventListener('toggle-admin-sidebar', handleToggleEvent);
+            window.removeEventListener('close-admin-sidebar', handleCloseEvent);
         };
     }, []);
+
+    // Close sidebar on navigation (mobile)
+    useEffect(() => {
+        setIsMobileOpen(false);
+    }, [location.pathname]);
 
     const handleLogout = () => {
         sessionStorage.removeItem('adminInfo');
@@ -114,21 +127,23 @@ const AdminSidebar = ({ activePage }) => {
 
     return (
         <>
-            {/* Mobile Header Toggle */}
-            <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-30 flex items-center px-4 justify-between shadow-sm">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => setIsMobileOpen(true)}
-                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg text-xl"
-                    >
-                        ☰
-                    </button>
-                    <span className="font-bold text-gray-800">{roleLabel}</span>
+            {/* Mobile Header Toggle - Only show if requested */}
+            {showMobileHeader && (
+                <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-30 flex items-center px-4 justify-between shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setIsMobileOpen(true)}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg text-xl"
+                        >
+                            ☰
+                        </button>
+                        <span className="font-bold text-gray-800">{roleLabel}</span>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
+                        {adminName.charAt(0)}
+                    </div>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
-                    {adminName.charAt(0)}
-                </div>
-            </div>
+            )}
 
             {/* Mobile Backdrop */}
             {isMobileOpen && (
@@ -213,8 +228,10 @@ const AdminSidebar = ({ activePage }) => {
                 </div>
             </aside>
 
-            {/* Spacer for Mobile Header */}
-            <div className="md:hidden h-16 w-full flex-shrink-0" />
+            {/* Spacer for Mobile Header - Only if shown */}
+            {showMobileHeader && (
+                <div className="md:hidden h-16 w-full flex-shrink-0" />
+            )}
         </>
     );
 };

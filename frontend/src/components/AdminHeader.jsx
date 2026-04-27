@@ -174,9 +174,9 @@ const AdminHeader = ({ locationName: propLocationName, onToggleSidebar }) => { /
 
     return (
         <>
-            <header className="bg-[#0f172a] text-white h-16 flex items-center justify-between px-6 sticky top-0 z-50 shadow-md flex-shrink-0">
-                <div className="flex items-center gap-12">
-                    <div className="flex items-center gap-3">
+            <header className="bg-[#0f172a] text-white h-16 flex items-center justify-between px-3 md:px-6 sticky top-0 z-50 shadow-md flex-shrink-0">
+                <div className="flex items-center gap-2 md:gap-12">
+                    <div className="flex items-center gap-2 md:gap-3">
                         {onToggleSidebar && (
                             <button
                                 onClick={onToggleSidebar}
@@ -197,14 +197,14 @@ const AdminHeader = ({ locationName: propLocationName, onToggleSidebar }) => { /
                                     }}
                                 />
                             </div>
-                            <div className="flex flex-col">
-                                <div className={`font-bold leading-none tracking-tight ${userName.length > 15 ? 'text-sm' : userName.length > 10 ? 'text-base' : 'text-lg'}`}>
+                            <div className="flex flex-col min-w-0">
+                                <div className={`font-bold leading-none tracking-tight truncate ${userName.length > 15 ? 'text-xs md:text-sm' : userName.length > 10 ? 'text-sm md:text-base' : 'text-base md:text-lg'}`}>
                                     {(roleText === 'MEMBER PORTAL' || roleText === 'MEMBER ADMIN PORTAL') ? userName : 'MEWS'}
                                 </div>
-                                <div className="text-xs font-bold text-blue-200 leading-none mt-1">
+                                <div className="text-[10px] md:text-xs font-bold text-blue-200 leading-none mt-1 truncate">
                                     {adminName}
                                 </div>
-                                <div className="text-[10px] text-gray-400 leading-none mt-0.5 uppercase tracking-wider">
+                                <div className="text-[8px] md:text-[10px] text-gray-400 leading-none mt-0.5 uppercase tracking-wider truncate">
                                     {roleText}
                                 </div>
                             </div>
@@ -253,10 +253,10 @@ const AdminHeader = ({ locationName: propLocationName, onToggleSidebar }) => { /
                     </div>
                 </div>
 
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2 md:gap-6">
                     {showNotifications && (
                         <Link to="/admin/notifications" className="relative cursor-pointer hover:bg-white/10 p-2 rounded-full transition">
-                            <FaBell size={18} className="text-gray-300" />
+                            <FaBell size={16} className="text-gray-300 md:size-18" />
                             <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0f172a]"></span>
                         </Link>
                     )}
@@ -264,15 +264,15 @@ const AdminHeader = ({ locationName: propLocationName, onToggleSidebar }) => { /
                     {/* Profile Dropdown */}
                     <div className="relative" ref={dropdownRef}>
                         <div
-                            className="flex items-center gap-2 pl-4 border-l border-slate-700 cursor-pointer hover:opacity-80 transition"
+                            className="flex items-center gap-2 pl-2 md:pl-4 border-l border-slate-700 cursor-pointer hover:opacity-80 transition"
                             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         >
                             <img 
                                 src={mewsLogo} 
                                 alt="MEWS Logo" 
-                                className="w-9 h-9 rounded-full border-2 border-slate-600 bg-white object-cover shadow-sm"
+                                className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-slate-600 bg-white object-cover shadow-sm"
                             />
-                            <FaChevronDown size={10} className={`text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                            <FaChevronDown size={8} className={`text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''} md:size-10`} />
                         </div>
 
                         {isDropdownOpen && (
