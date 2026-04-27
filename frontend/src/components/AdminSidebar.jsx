@@ -104,6 +104,8 @@ const AdminSidebar = ({ activePage, showMobileHeader = true }) => {
         window.addEventListener('login-success', loadUserInfo);
         window.addEventListener('toggle-admin-sidebar', handleToggleEvent);
         window.addEventListener('close-admin-sidebar', handleCloseEvent);
+        
+        loadUserInfo();
 
         return () => {
             window.removeEventListener('storage', loadUserInfo);
