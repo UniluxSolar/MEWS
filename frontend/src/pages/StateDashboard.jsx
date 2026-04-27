@@ -91,6 +91,7 @@ const StateDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState('cards'); // 'table', 'cards', 'map'
     const [userName, setUserName] = useState('');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -187,29 +188,34 @@ const StateDashboard = () => {
         return [17.0500 + latBase, 79.2667 + lngBase];
     };
 
+    const toggleSidebar = () => {
+        setIsSidebarOpen(!isSidebarOpen);
+        window.dispatchEvent(new CustomEvent('toggle-admin-sidebar'));
+    };
+
     return (
-        <div className="min-h-screen bg-slate-50/50 font-sans flex flex-col">
-            <AdminHeader />
-            <div className="flex flex-1 overflow-hidden">
-                <AdminSidebar activePage="dashboard" />
+        <div className="min-h-screen bg-slate-50/50 font-sans flex flex-col overflow-hidden">
+            <AdminHeader onToggleSidebar={toggleSidebar} />
+            <div className="flex flex-1 overflow-hidden relative">
+                <AdminSidebar activePage="dashboard" showMobileHeader={false} />
 
                 <main id="admin-dashboard-content" className="flex-1 overflow-y-auto bg-slate-50">
-                    <div id="location-card-scroll-target">
+                    <div id="location-card-scroll-target" className="pb-10">
                         <DashboardHeader
                             title={`State Overview`}
                             subtitle={stats.locationName}
                             breadcrumb={<span className="text-white/80">{stats.locationName}</span>}
                         >
-                            <div className="text-right text-white">
+                            <div className="text-right text-white hidden sm:block">
                                 <p className="text-xs opacity-80">Welcome back,</p>
                                 <p className="text-lg font-bold">{userName}</p>
                             </div>
                         </DashboardHeader>
 
-                        <div className="px-4 md:px-8 -mt-10 pb-12 w-full space-y-8">
+                        <div className="px-4 md:px-8 -mt-10 pb-12 w-full space-y-8 relative z-10">
 
                             {/* 1. STATS OVERVIEW CARDS */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-in slide-in-from-bottom-4 duration-500">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 animate-in slide-in-from-bottom-4 duration-500">
                                 <StatCard
                                     title="Total Members"
                                     value={stats.members.toLocaleString()}
@@ -253,19 +259,19 @@ const StateDashboard = () => {
                             {!loading && (
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     {/* Member Distribution Chart */}
-                                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                    <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-200">
                                         <div className="flex items-center justify-between mb-6">
-                                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
-                                                <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><FaChartBar /></div>
-                                                Top Districts by Membership
+                                            <h3 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-3">
+                                                <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><FaChartBar size={14} /></div>
+                                                Top Districts
                                             </h3>
                                         </div>
-                                        <div className="h-64 w-full">
+                                        <div className="h-[300px] md:h-64 w-full">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <BarChart
                                                     data={districtChartData}
                                                     layout="vertical"
-                                                    margin={{ left: 40 }}
+                                                    margin={{ left: 10, right: 30 }}
                                                     onClick={(data) => {
                                                         if (data && data.activePayload && data.activePayload[0]) {
                                                             const id = data.activePayload[0].payload.id;
@@ -276,13 +282,19 @@ const StateDashboard = () => {
                                                 >
                                                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.5} />
                                                     <XAxis type="number" hide />
-                                                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fontWeight: 'bold' }} />
+                                                    <YAxis 
+                                                        dataKey="name" 
+                                                        type="category" 
+                                                        width={100} 
+                                                        tick={{ fontSize: 10, fontWeight: 'bold' }}
+                                                        hide={window.innerWidth < 640} // Hide names on very small screens to save space
+                                                    />
                                                     <Tooltip
                                                         cursor={{ fill: '#f1f5f9' }}
                                                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                                     />
                                                     <Bar dataKey="members" fill="#1e2a4a" radius={[0, 4, 4, 0]} barSize={20}>
-                                                        <LabelList dataKey="members" position="right" style={{ fill: '#1e2a4a', fontWeight: 'bold', fontSize: '11px' }} />
+                                                        <LabelList dataKey="members" position="right" style={{ fill: '#1e2a4a', fontWeight: 'bold', fontSize: '10px' }} />
                                                     </Bar>
                                                 </BarChart>
                                             </ResponsiveContainer>
@@ -290,39 +302,35 @@ const StateDashboard = () => {
                                     </div>
 
                                     {/* Demographics Pie Chart */}
-                                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 group hover:shadow-md transition-shadow">
+                                    <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-200 group hover:shadow-md transition-shadow">
                                         <div className="flex items-center justify-between mb-6">
-                                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
-                                                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FaMale /></div>
-                                                Gender Distribution
+                                            <h3 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-3">
+                                                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FaMale size={14} /></div>
+                                                Demographics
                                             </h3>
-                                            <div className="flex flex-col gap-1 text-[10px] font-bold uppercase tracking-wider">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-3 h-3 bg-[#ec4899] rounded-sm"></div>
-                                                    <span className="text-slate-400">Female</span>
+                                            <div className="flex gap-3 text-[9px] font-bold uppercase tracking-wider">
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-2.5 h-2.5 bg-[#ec4899] rounded-sm"></div>
+                                                    <span className="text-slate-400">F</span>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-3 h-3 bg-[#3b82f6] rounded-sm"></div>
-                                                    <span className="text-slate-400">Male</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-3 h-3 bg-[#94a3b8] rounded-sm"></div>
-                                                    <span className="text-slate-400">Others</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-2.5 h-2.5 bg-[#3b82f6] rounded-sm"></div>
+                                                    <span className="text-slate-400">M</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="h-64 w-full flex items-center justify-center">
+                                        <div className="h-[250px] md:h-64 w-full flex items-center justify-center">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <PieChart>
                                                     <Pie
                                                         data={genderData}
                                                         cx="50%"
                                                         cy="50%"
-                                                        innerRadius={60}
-                                                        outerRadius={80}
+                                                        innerRadius={50}
+                                                        outerRadius={70}
                                                         paddingAngle={5}
                                                         dataKey="value"
-                                                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                                        label={({ name, percent }) => window.innerWidth > 640 ? `${name} ${(percent * 100).toFixed(0)}%` : `${(percent * 100).toFixed(0)}%`}
                                                         onClick={(data) => {
                                                             if (data && data.name) {
                                                                 navigate(`/admin/members?gender=${data.name}`);
@@ -335,27 +343,26 @@ const StateDashboard = () => {
                                                         ))}
                                                     </Pie>
                                                     <Tooltip />
-
                                                 </PieChart>
                                             </ResponsiveContainer>
                                         </div>
-                                        {/* Gender Stat Cards - Super Admin Style */}
-                                        <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-                                            <div className="p-3 bg-slate-50 rounded-xl">
-                                                <p className="text-[10px] uppercase font-bold text-slate-400">Male</p>
-                                                <p className="text-lg font-bold text-blue-600">
+                                        {/* Gender Stat Cards */}
+                                        <div className="mt-4 grid grid-cols-3 gap-3 md:gap-4 text-center">
+                                            <div className="p-2 md:p-3 bg-slate-50 rounded-xl">
+                                                <p className="text-[9px] md:text-[10px] uppercase font-bold text-slate-400">Male</p>
+                                                <p className="text-base md:text-lg font-bold text-blue-600">
                                                     {analytics?.demographics?.gender?.find(g => g._id === 'Male')?.count || 0}
                                                 </p>
                                             </div>
-                                            <div className="p-3 bg-slate-50 rounded-xl">
-                                                <p className="text-[10px] uppercase font-bold text-slate-400">Female</p>
-                                                <p className="text-lg font-bold text-pink-500">
+                                            <div className="p-2 md:p-3 bg-slate-50 rounded-xl">
+                                                <p className="text-[9px] md:text-[10px] uppercase font-bold text-slate-400">Female</p>
+                                                <p className="text-base md:text-lg font-bold text-pink-500">
                                                     {analytics?.demographics?.gender?.find(g => g._id === 'Female')?.count || 0}
                                                 </p>
                                             </div>
-                                            <div className="p-3 bg-slate-50 rounded-xl">
-                                                <p className="text-[10px] uppercase font-bold text-slate-400">Others</p>
-                                                <p className="text-lg font-bold text-emerald-500">
+                                            <div className="p-2 md:p-3 bg-slate-50 rounded-xl">
+                                                <p className="text-[9px] md:text-[10px] uppercase font-bold text-slate-400">Others</p>
+                                                <p className="text-base md:text-lg font-bold text-emerald-500">
                                                     {analytics?.demographics?.gender?.find(g => g._id === 'Other' || g._id === 'Others')?.count || 0}
                                                 </p>
                                             </div>
@@ -366,28 +373,28 @@ const StateDashboard = () => {
 
                             {/* 3. DISTRICT PERFORMANCE GRID */}
                             <div className="space-y-4" id="district-breakdown">
-                                <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
-                                    <h2 className="text-xl font-bold text-[#1e2a4a] border-l-4 border-[#f59e0b] pl-3">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                    <h2 className="text-lg md:text-xl font-bold text-[#1e2a4a] border-l-4 border-[#f59e0b] pl-3">
                                         District Breakdown
                                     </h2>
 
-                                    {/* View Toggle */}
-                                    <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                                    {/* View Toggle - Scrollable on Mobile */}
+                                    <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm w-full md:w-auto overflow-x-auto no-scrollbar">
                                         <button
                                             onClick={() => setViewMode('cards')}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'cards' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-[10px] md:text-xs font-bold whitespace-nowrap transition-all ${viewMode === 'cards' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
                                         >
                                             <FaThLarge /> Cards
                                         </button>
                                         <button
                                             onClick={() => setViewMode('table')}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'table' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-[10px] md:text-xs font-bold whitespace-nowrap transition-all ${viewMode === 'table' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
                                         >
                                             <FaTable /> Table
                                         </button>
                                         <button
                                             onClick={() => setViewMode('map')}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'map' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-[10px] md:text-xs font-bold whitespace-nowrap transition-all ${viewMode === 'map' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
                                         >
                                             <FaMapMarkedAlt /> Map
                                         </button>
@@ -407,7 +414,7 @@ const StateDashboard = () => {
                                     <>
                                         {/* CARDS VIEW */}
                                         {viewMode === 'cards' && (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                                                 {stats.districts.map((dist, idx) => (
                                                     <DistrictPerformanceCard
                                                         key={idx}
@@ -426,38 +433,38 @@ const StateDashboard = () => {
                                         {viewMode === 'table' && (
                                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                                                 <div className="overflow-x-auto">
-                                                    <table className="w-full text-left text-sm">
+                                                    <table className="w-full text-left text-sm min-w-[600px]">
                                                         <thead>
-                                                            <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                                                <th className="px-6 py-4">District Name</th>
-                                                                <th className="px-6 py-4 text-center">Members</th>
-                                                                <th className="px-6 py-4 text-center">Institutions</th>
-                                                                <th className="px-6 py-4 text-center">Pending</th>
-                                                                <th className="px-6 py-4 text-center">Status</th>
+                                                            <tr className="bg-slate-50 border-b border-slate-200 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                                <th className="px-4 md:px-6 py-4">District</th>
+                                                                <th className="px-4 md:px-6 py-4 text-center">Members</th>
+                                                                <th className="px-4 md:px-6 py-4 text-center">Institutions</th>
+                                                                <th className="px-4 md:px-6 py-4 text-center">Pending</th>
+                                                                <th className="px-4 md:px-6 py-4 text-center">Status</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y divide-slate-100">
                                                             {stats.districts.map((dist, idx) => (
                                                                 <tr key={idx} className="hover:bg-blue-50/50 transition-colors group">
                                                                     <td
-                                                                        className="px-6 py-4 font-bold text-[#1e2a4a] hover:text-blue-600 cursor-pointer transition-colors"
+                                                                        className="px-4 md:px-6 py-4 font-bold text-[#1e2a4a] hover:text-blue-600 cursor-pointer transition-colors"
                                                                         onClick={() => navigate(`/admin/dashboard/district/${dist.id}`)}
                                                                     >
                                                                         {dist.name}
                                                                     </td>
-                                                                    <td className="px-6 py-4 text-center text-slate-600 font-medium">{dist.members}</td>
-                                                                    <td className="px-6 py-4 text-center text-slate-600 font-medium">{dist.institutions}</td>
-                                                                    <td className="px-6 py-4 text-center">
+                                                                    <td className="px-4 md:px-6 py-4 text-center text-slate-600 font-medium">{dist.members}</td>
+                                                                    <td className="px-4 md:px-6 py-4 text-center text-slate-600 font-medium">{dist.institutions}</td>
+                                                                    <td className="px-4 md:px-6 py-4 text-center">
                                                                         {dist.pending > 0 ? (
-                                                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 border border-orange-200">
+                                                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-200">
                                                                                 {dist.pending} Pending
                                                                             </span>
                                                                         ) : (
                                                                             <span className="text-slate-400">-</span>
                                                                         )}
                                                                     </td>
-                                                                    <td className="px-6 py-4 text-center">
-                                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${dist.status === 'Active' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                                                                    <td className="px-4 md:px-6 py-4 text-center">
+                                                                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide ${dist.status === 'Active' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
                                                                             {dist.status}
                                                                         </span>
                                                                     </td>
@@ -471,8 +478,8 @@ const StateDashboard = () => {
 
                                         {/* MAP VIEW */}
                                         {viewMode === 'map' && (
-                                            <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-200 h-[600px] overflow-hidden relative">
-                                                <MapContainer center={[17.0500, 79.2667]} zoom={7} style={{ height: '100%', width: '100%', borderRadius: '12px' }} scrollWheelZoom={false}>
+                                            <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-200 h-[400px] md:h-[600px] overflow-hidden relative">
+                                                <MapContainer center={[17.0500, 79.2667]} zoom={window.innerWidth < 640 ? 6 : 7} style={{ height: '100%', width: '100%', borderRadius: '12px' }} scrollWheelZoom={false}>
                                                     <LayersControl position="topright">
                                                         <LayersControl.BaseLayer checked name="Standard">
                                                             <TileLayer
@@ -490,13 +497,13 @@ const StateDashboard = () => {
                                                     {stats.districts.map((dist, idx) => (
                                                         <Marker key={idx} position={getCoordinates(dist.name)}>
                                                             <Popup>
-                                                                <div className="text-center p-2">
-                                                                    <h3 className="font-bold text-sm mb-1">{dist.name}</h3>
-                                                                    <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                                                                <div className="text-center p-1 md:p-2">
+                                                                    <h3 className="font-bold text-xs md:text-sm mb-1">{dist.name}</h3>
+                                                                    <div className="grid grid-cols-2 gap-2 text-[10px] mb-2">
                                                                         <div className="bg-blue-50 p-1 rounded">Mem: <b>{dist.members}</b></div>
                                                                         <div className="bg-slate-50 p-1 rounded">Inst: <b>{dist.institutions}</b></div>
                                                                     </div>
-                                                                    <Link to={`/admin/dashboard/district/${dist.id}`} className="block w-full bg-[#1e2a4a] text-white text-[10px] font-bold py-1 px-2 rounded hover:bg-blue-800 transition">
+                                                                    <Link to={`/admin/dashboard/district/${dist.id}`} className="block w-full bg-[#1e2a4a] text-white text-[9px] font-bold py-1 px-2 rounded hover:bg-blue-800 transition">
                                                                         View Dashboard
                                                                     </Link>
                                                                 </div>
@@ -513,6 +520,15 @@ const StateDashboard = () => {
                     </div>
                 </main>
             </div>
+            <style>{`
+                .no-scrollbar::-webkit-scrollbar {
+                    display: none;
+                }
+                .no-scrollbar {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+            `}</style>
         </div>
     );
 };

@@ -79,6 +79,26 @@ const VillagePerformanceCard = ({ id, name, members, institutions, status, pendi
 const MunicipalityDashboard = () => {
     const navigate = useNavigate();
     const { id } = useParams(); // URL Param if drill-down (from District Dashboard)
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [viewMode, setViewMode] = useState('cards'); // 'table', 'cards', 'map'
+    const [stats, setStats] = useState({
+        locationName: 'Municipality',
+        members: 0,
+        families: 0,
+        pendingMembers: 0,
+        institutions: 0,
+        sos: 0,
+        villages: [] 
+    });
+    
+    const [demographics, setDemographics] = useState({
+        gender: [], occupation: [], caste: [], marital: [], age: [], bloodGroup: [], voter: [], employment: []
+    });
+
+    const toggleSidebar = () => {
+        setIsSidebarOpen(!isSidebarOpen);
+        window.dispatchEvent(new CustomEvent('toggle-admin-sidebar'));
+    };
 
     const handleChartClick = (data, type) => {
         if (!data) return;
@@ -88,65 +108,25 @@ const MunicipalityDashboard = () => {
 
         let query = '';
         switch (type) {
-            case 'gender':
-                query = `?gender=${label}`;
-                break;
-            case 'marital':
-                query = `?maritalStatus=${label}`;
-                break;
-            case 'bloodGroup':
-                query = `?bloodGroup=${encodeURIComponent(label)}`;
-                break;
-            case 'community':
-                query = `?subCaste=${encodeURIComponent(label)}`;
-                break;
-            case 'age':
-                query = `?ageRange=${label}`;
-                break;
-            case 'occupation':
-                query = `?occupation=${encodeURIComponent(label)}`;
-                break;
-            case 'voter':
-                query = `?voterStatus=${encodeURIComponent(label)}`;
-                break;
-            case 'employment':
-                query = `?employmentStatus=${encodeURIComponent(label)}`;
-                break;
+            case 'gender': query = `?gender=${label}`; break;
+            case 'marital': query = `?maritalStatus=${label}`; break;
+            case 'bloodGroup': query = `?bloodGroup=${encodeURIComponent(label)}`; break;
+            case 'community': query = `?subCaste=${encodeURIComponent(label)}`; break;
+            case 'age': query = `?ageRange=${label}`; break;
+            case 'occupation': query = `?occupation=${encodeURIComponent(label)}`; break;
+            case 'voter': query = `?voterStatus=${encodeURIComponent(label)}`; break;
+            case 'employment': query = `?employmentStatus=${encodeURIComponent(label)}`; break;
         }
 
-        // Preserve Municipality Context when clicking charts
         if (query) {
-            // Using logic similar to VillageDashboard but setting 'municipality' param if backend supports it
-            // Assuming AdminMembers supports filtering by Municipality if implicit from context or if passed?
-            // Currently AdminMembers typically filters by context logic. 
-            // If we are drilled down, we need to pass locationId? 
-            if (id) {
-                query += `&locationId=${id}`;
-            }
+            if (id) query += `&locationId=${id}`;
             navigate(`/admin/members${query}`);
         }
     };
 
-    const [stats, setStats] = useState({
-        locationName: 'Municipality',
-        members: 0,
-        families: 0,
-        pendingMembers: 0,
-        institutions: 0,
-        sos: 0,
-        villages: [] // Initialize villages
-    });
-    
-    const [viewMode, setViewMode] = useState('cards'); // 'table', 'cards', 'map'
-
-    const [demographics, setDemographics] = useState({
-        gender: [], occupation: [], caste: [], marital: [], age: [], bloodGroup: [], voter: [], employment: []
-    });
-
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                // Parallel fetching of dashboard stats and analytics
                 const query = id ? `?locationId=${id}` : ''; // API Drill Down
 
                 const [statsRes, analyticsRes] = await Promise.all([
@@ -166,9 +146,7 @@ const MunicipalityDashboard = () => {
                 });
 
                 const analyticsData = analyticsRes.data;
-                console.log("Analytics Data Received:", analyticsData);
 
-                // Helper to sanitise data
                 const sanitize = (arr) => (arr || []).map(item => ({
                     ...item,
                     _id: item._id || 'Unknown'
@@ -176,12 +154,12 @@ const MunicipalityDashboard = () => {
 
                 const processAgeData = (backendData) => {
                     const categories = [
-                        { key: "Children", label: "Children (0-14)" },
-                        { key: "Youth", label: "Youth (15-24)" },
-                        { key: "Young Adults", label: "Young Adults (25-44)" },
-                        { key: "Middle Age", label: "Middle Age (45-59)" },
-                        { key: "Elderly", label: "Elderly (60-74)" },
-                        { key: "Senior", label: "Senior (75+)" }
+                        { key: "Children", label: "0-14" },
+                        { key: "Youth", label: "15-24" },
+                        { key: "Young Adults", label: "25-44" },
+                        { key: "Middle Age", label: "45-59" },
+                        { key: "Elderly", label: "60-74" },
+                        { key: "Senior", label: "75+" }
                     ];
 
                     return categories.map(cat => {
@@ -199,7 +177,6 @@ const MunicipalityDashboard = () => {
                     occupation: sanitize(analyticsData.demographics.occupation),
                     community: sanitize(analyticsData.demographics.caste).sort((a, b) => b.count - a.count),
                     marital: sanitize(analyticsData.demographics.marital),
-
                     age: processAgeData(analyticsData.demographics.age),
                     bloodGroup: sanitize(analyticsData.demographics.bloodGroup),
                     voter: sanitize(analyticsData.demographics.voter),
@@ -224,9 +201,7 @@ const MunicipalityDashboard = () => {
         color: g._id === 'Male' ? '#3b82f6' : g._id === 'Female' ? '#ec4899' : '#10b981'
     }));
 
-    // --- MAP HELPERS ---
     const getCoordinates = (inputString) => {
-        // Hash based generation as placeholder 
         let hash = 0;
         for (let i = 0; i < inputString.length; i++) hash = inputString.charCodeAt(i) + ((hash << 5) - hash);
         const latBase = ((hash % 1000) - 500) / 30000;
@@ -235,103 +210,75 @@ const MunicipalityDashboard = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
-            <AdminHeader locationName={stats.locationName} />
-            <div className="flex flex-1 overflow-hidden">
-                <AdminSidebar activePage="dashboard" />
+        <div className="min-h-screen bg-slate-50 font-sans flex flex-col overflow-hidden">
+            <AdminHeader onToggleSidebar={toggleSidebar} />
+            <div className="flex flex-1 overflow-hidden relative">
+                <AdminSidebar activePage="dashboard" showMobileHeader={false} />
 
-                {/* Main Content */}
-                <main id="admin-dashboard-content" className="flex-1 overflow-y-auto bg-slate-50">
-                    {/* Welcome Header with Gradient */}
-                    <div id="location-card-scroll-target">
-                        <DashboardHeader
-                            title={`${stats.locationName} Dashboard`}
-                            subtitle={`Here's what's happening in ${stats.locationName} today. You have ${stats.pendingMembers} new registrations to review.`}
-                        />
-                    </div>
+                <main className="flex-1 overflow-y-auto bg-slate-50">
+                    <DashboardHeader
+                        title="Municipality Overview"
+                        subtitle={stats.locationName}
+                    />
 
-                    <div className="px-4 md:px-8 -mt-10 pb-8 w-full">
-                        {/* Stats Row */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <div className="px-4 md:px-8 -mt-6 md:-mt-10 pb-12 w-full space-y-6 md:space-y-8 relative z-10">
+
+                        {/* 1. STATS OVERVIEW CARDS */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 animate-in slide-in-from-bottom-4 duration-500">
                             <StatCard
                                 title="Total Members"
                                 value={stats.members.toLocaleString()}
-                                subtext="Registered & Verified"
+                                subtext="Registered Citizens"
                                 icon={FaUsers}
                                 color="bg-emerald-500"
-                                onClick={() => {
-                                    const query = id ? `?locationId=${id}` : '';
-                                    navigate(`/admin/members${query}`);
-                                }}
+                                onClick={() => navigate(`/admin/members${id ? `?locationId=${id}` : ''}`)}
                             />
                             <StatCard
                                 title="Institutions"
                                 value={stats.institutions.toLocaleString()}
-                                subtext="Registered & Verified"
+                                subtext="Educational & Public"
                                 icon={FaBuilding}
                                 color="bg-blue-500"
-                                onClick={() => {
-                                    const query = id ? `?locationId=${id}` : '';
-                                    navigate(`/admin/institutions${query}`);
-                                }}
+                                onClick={() => navigate(`/admin/institutions${id ? `?locationId=${id}` : ''}`)}
                             />
                             <StatCard
                                 title="Total Families"
                                 value={stats.families.toLocaleString()}
-                                subtext="Registered Households"
+                                subtext="Active Households"
                                 icon={FaUsers}
                                 color="bg-orange-500"
-                                onClick={() => {
-                                    const query = id ? `?locationId=${id}` : '';
-                                    navigate(`/admin/members${query}`);
-                                }}
+                                onClick={() => navigate(`/admin/members${id ? `?locationId=${id}` : ''}`)}
                             />
                         </div>
 
-                        {/* Demographics Overview */}
-                        <div className="mb-8">
-                            <div className="flex items-center gap-3 mb-6 ml-1">
-                                <div className="p-2 bg-blue-100 text-blue-700 rounded-lg">
-                                    <FaChartPie size={20} />
+                        {/* 2. DEMOGRAPHICS GRID */}
+                        <div className="space-y-6 md:space-y-8">
+                            <div className="flex items-center gap-3 ml-1">
+                                <div className="p-2 bg-blue-100 text-blue-700 rounded-lg shadow-sm">
+                                    <FaChartPie size={18} />
                                 </div>
-                                <h2 className="text-xl font-bold text-slate-800">Analytics Overview</h2>
+                                <h2 className="text-lg md:text-xl font-bold text-slate-800">Population Insights</h2>
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                                 {/* Gender Distribution */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
-                                    <div className="flex items-center justify-between mb-6 border-b pb-4">
-                                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
-                                            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FaMale /></div>
-                                            Gender Distribution
-                                        </h3>
-                                        <div className="flex flex-col gap-1 text-[10px] font-bold uppercase tracking-wider">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 bg-[#ec4899] rounded-sm"></div>
-                                                <span className="text-slate-400">Female</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 bg-[#3b82f6] rounded-sm"></div>
-                                                <span className="text-slate-400">Male</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 bg-[#94a3b8] rounded-sm"></div>
-                                                <span className="text-slate-400">Others</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="h-64 w-full flex items-center justify-center">
+                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                                    <h3 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FaMale size={14} /></div>
+                                        Gender Distribution
+                                    </h3>
+                                    <div className="h-60 w-full flex items-center justify-center">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
                                                 <Pie
                                                     data={genderData}
                                                     cx="50%"
                                                     cy="50%"
-                                                    innerRadius={60}
-                                                    outerRadius={80}
+                                                    innerRadius={50}
+                                                    outerRadius={window.innerWidth < 640 ? 70 : 80}
                                                     paddingAngle={5}
                                                     dataKey="value"
-                                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                                                     onClick={(data) => handleChartClick(data, 'gender')}
                                                     style={{ cursor: 'pointer' }}
                                                 >
@@ -339,392 +286,305 @@ const MunicipalityDashboard = () => {
                                                         <Cell key={`cell-${index}`} fill={entry.color} />
                                                     ))}
                                                 </Pie>
-                                                <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-
+                                                <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                                             </PieChart>
                                         </ResponsiveContainer>
                                     </div>
-                                    {/* Gender Stat Cards - Super Admin Style */}
-                                    <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-                                        <div className="p-3 bg-slate-50 rounded-xl">
-                                            <p className="text-[10px] uppercase font-bold text-slate-400">Male</p>
-                                            <p className="text-lg font-bold text-blue-600">
+                                    <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                                        <div className="p-2 bg-slate-50 rounded-xl">
+                                            <p className="text-[9px] uppercase font-bold text-slate-400">Male</p>
+                                            <p className="text-sm md:text-lg font-black text-blue-600">
                                                 {demographics.gender.find(g => (g._id || '').toLowerCase() === 'male')?.count || 0}
                                             </p>
                                         </div>
-                                        <div className="p-3 bg-slate-50 rounded-xl">
-                                            <p className="text-[10px] uppercase font-bold text-slate-400">Female</p>
-                                            <p className="text-lg font-bold text-pink-500">
+                                        <div className="p-2 bg-slate-50 rounded-xl">
+                                            <p className="text-[9px] uppercase font-bold text-slate-400">Female</p>
+                                            <p className="text-sm md:text-lg font-black text-pink-500">
                                                 {demographics.gender.find(g => (g._id || '').toLowerCase() === 'female')?.count || 0}
                                             </p>
                                         </div>
-                                        <div className="p-3 bg-slate-50 rounded-xl">
-                                            <p className="text-[10px] uppercase font-bold text-slate-400">Others</p>
-                                            <p className="text-lg font-bold text-emerald-500">
-                                                {demographics.gender.find(g => (g._id || '').toLowerCase() === 'other' || (g._id || '').toLowerCase() === 'others')?.count || 0}
+                                        <div className="p-2 bg-slate-50 rounded-xl">
+                                            <p className="text-[9px] uppercase font-bold text-slate-400">Other</p>
+                                            <p className="text-sm md:text-lg font-black text-emerald-500">
+                                                {demographics.gender.find(g => ['other', 'others'].includes((g._id || '').toLowerCase()))?.count || 0}
                                             </p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Marital Status */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
-                                        <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><FaChartBar /></div>
+                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                                    <h3 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><FaRing size={14} /></div>
                                         Marital Status
                                     </h3>
-                                    <div className="h-72 w-full">
+                                    <div className="h-60 w-full">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
                                                 <Pie
-                                                    data={demographics.marital || []}
+                                                    data={(demographics.marital || []).length > 0 ? demographics.marital : [{_id: 'N/A', count: 0}]}
                                                     cx="50%"
                                                     cy="50%"
                                                     innerRadius={0}
-                                                    outerRadius={90}
+                                                    outerRadius={window.innerWidth < 640 ? 70 : 80}
                                                     dataKey="count"
                                                     nameKey="_id"
-                                                    label={{ fill: '#475569', fontSize: 12, fontWeight: 600 }}
+                                                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                                                 >
                                                     {(demographics.marital || []).map((entry, index) => (
                                                         <Cell key={`cell-${index}`} fill={getColor(index + 2)} strokeWidth={2} stroke="#fff" onClick={() => handleChartClick(entry, 'marital')} style={{ cursor: 'pointer' }} />
                                                     ))}
                                                 </Pie>
-                                                <RechartsTooltip
-                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                                />
-                                                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                                <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                                             </PieChart>
                                         </ResponsiveContainer>
                                     </div>
                                 </div>
 
-
-                                {/* Blood Group Chart (Replaces Registration Status) */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
-                                        <div className="p-2 bg-red-50 text-red-600 rounded-lg"><FaChartPie /></div>
-                                        Blood Group Distribution
+                                {/* Blood Group */}
+                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                                    <h3 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-red-50 text-red-600 rounded-lg"><FaHandHoldingUsd size={14} /></div>
+                                        Blood Groups
                                     </h3>
-                                    <div className="h-72 w-full">
+                                    <div className="h-60 w-full">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
                                                 <Pie
                                                     data={demographics.bloodGroup || []}
                                                     cx="50%"
                                                     cy="50%"
-                                                    innerRadius={60}
-                                                    outerRadius={90}
+                                                    innerRadius={50}
+                                                    outerRadius={window.innerWidth < 640 ? 70 : 80}
                                                     paddingAngle={2}
                                                     dataKey="count"
                                                     nameKey="_id"
-                                                    label={{ fill: '#475569', fontSize: 12, fontWeight: 600 }}
+                                                    label={({ name }) => name}
                                                 >
                                                     {(demographics.bloodGroup || []).map((entry, index) => (
                                                         <Cell key={`cell-${index}`} fill={getColor(index)} strokeWidth={0} onClick={() => handleChartClick(entry, 'bloodGroup')} style={{ cursor: 'pointer' }} />
                                                     ))}
                                                 </Pie>
-                                                <RechartsTooltip
-                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                                />
-                                                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                                <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                                             </PieChart>
                                         </ResponsiveContainer>
                                     </div>
                                 </div>
                             </div>
 
-
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                            {/* Top Occupations (Converted from Bar to Pie) */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
-                                    <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><FaBuilding /></div>
-                                    Occupation Distribution
-                                </h3>
-                                <div className="h-80 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={demographics.occupation || []}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={60}
-                                                outerRadius={100}
-                                                dataKey="count"
-                                                nameKey="_id"
-                                                label={({ _id, percent }) => `${_id} (${(percent * 100).toFixed(0)}%)`}
-                                            >
-                                                {(demographics.occupation || []).map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={getColor(index + 3)} onClick={() => handleChartClick(entry, 'occupation')} style={{ cursor: 'pointer' }} />
-                                                ))}
-                                            </Pie>
-                                            <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-
-                            {/* Employment Status */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
-                                    <div className="p-2 bg-cyan-50 text-cyan-600 rounded-lg"><FaUsers /></div>
-                                    Employment Status
-                                </h3>
-                                <div className="h-80 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={demographics.employment || []}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={0}
-                                                outerRadius={100}
-                                                dataKey="count"
-                                                nameKey="_id"
-                                                label={({ _id, percent }) => `${_id} (${(percent * 100).toFixed(0)}%)`}
-                                            >
-                                                {(demographics.employment || []).map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry._id === 'Employed' ? '#3b82f6' : '#94a3b8'} strokeWidth={2} stroke="#fff" onClick={() => handleChartClick(entry, 'employment')} style={{ cursor: 'pointer' }} />
-                                                ))}
-                                            </Pie>
-                                            <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-
-                            {/* Total Voters (Moved Here) */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
-                                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><FaTable /></div>
-                                    Total Voters
-                                </h3>
-                                <div className="h-80 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={demographics.voter || []}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={0}
-                                                outerRadius={90}
-                                                dataKey="count"
-                                                nameKey="_id"
-                                                label={({ _id, count }) => `${_id}: ${count}`}
-                                            >
-                                                {(demographics.voter || []).map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry._id === 'Voter' ? '#10b981' : '#f43f5e'} strokeWidth={2} stroke="#fff" onClick={() => handleChartClick(entry, 'voter')} style={{ cursor: 'pointer' }} />
-                                                ))}
-                                            </Pie>
-                                            <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                            {/* Caste Distribution */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
-                                    Community - Sub Castes
-                                </h3>
-                                <div className="h-80 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={demographics.community || []} barSize={40}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                            <XAxis dataKey="_id" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
-                                            <RechartsTooltip
-                                                cursor={{ fill: '#f1f5f9' }}
-                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                            />
-                                            <Bar dataKey="count" name="Members" radius={[6, 6, 0, 0]} onClick={(data) => handleChartClick(data, 'community')} style={{ cursor: 'pointer' }}>
-                                                {(demographics.community || []).map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={getColor(index)} />
-                                                ))}
-                                                <LabelList dataKey="count" position="top" fill="#64748b" fontSize={12} />
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-
-                            {/* Age Groups */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
-                                    Age Demographics
-                                </h3>
-                                <div className="h-80 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={demographics.age || []} barSize={40}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                            <XAxis dataKey="_id" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} domain={[0, dataMax => dataMax + 2]} />
-                                            <RechartsTooltip
-                                                cursor={{ fill: '#f1f5f9' }}
-                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                            />
-                                            <Bar dataKey="count" name="Members" fill="#10b981" radius={[6, 6, 0, 0]} onClick={(data) => handleChartClick(data, 'age')} style={{ cursor: 'pointer' }}>
-                                                <LabelList dataKey="count" position="top" fill="#64748b" fontSize={12} />
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-                            </div>
-
-                            {/* VILLAGE PERFORMANCE GRID */}
-                            <div className="space-y-4" id="village-breakdown">
-                                <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
-                                    <h2 className="text-xl font-bold text-[#1e2a4a] border-l-4 border-[#f59e0b] pl-3">
-                                        Village Breakdown
-                                    </h2>
-
-                                    {/* View Toggle */}
-                                    <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-                                        <button
-                                            onClick={() => setViewMode('cards')}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'cards' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
-                                        >
-                                            <FaThLarge /> Cards
-                                        </button>
-                                        <button
-                                            onClick={() => setViewMode('table')}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'table' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
-                                        >
-                                            <FaTable /> Table
-                                        </button>
-                                        <button
-                                            onClick={() => setViewMode('map')}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'map' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
-                                        >
-                                            <FaMapMarkedAlt /> Map
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* CONTENT AREA */}
-                                {!stats.villages || stats.villages.length === 0 ? (
-                                    <div className="p-12 text-center text-slate-400 bg-white rounded-xl border border-dashed border-slate-300">
-                                        No villages found in this municipality.
-                                    </div>
-                                ) : (
-                                    <>
-                                        {/* CARDS VIEW */}
-                                        {viewMode === 'cards' && (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                                {stats.villages.map((village, idx) => (
-                                                    <VillagePerformanceCard
-                                                        key={`vill-${idx}`}
-                                                        id={village.id}
-                                                        name={village.name}
-                                                        members={village.members}
-                                                        institutions={village.institutions}
-                                                        status={village.status}
-                                                        pending={village.pending}
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* TABLE VIEW */}
-                                        {viewMode === 'table' && (
-                                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                                                <div className="overflow-x-auto">
-                                                    <table className="w-full text-left text-sm">
-                                                        <thead>
-                                                            <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                                                <th className="px-6 py-4">Village/Ward Name</th>
-                                                                <th className="px-6 py-4 text-center">Members</th>
-                                                                <th className="px-6 py-4 text-center">Institutions</th>
-                                                                <th className="px-6 py-4 text-center">Pending Verifications</th>
-                                                                <th className="px-6 py-4 text-center">Status</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="divide-y divide-slate-100">
-                                                            {stats.villages.map((village, idx) => (
-                                                                <tr key={idx} className="hover:bg-blue-50/50 transition-colors group">
-                                                                    <td
-                                                                        className="px-6 py-4 font-bold text-[#1e2a4a] hover:text-blue-600 cursor-pointer transition-colors"
-                                                                        onClick={() => navigate(`/admin/dashboard/village/${village.id}`)}
-                                                                    >
-                                                                        {village.name}
-                                                                    </td>
-                                                                    <td className="px-6 py-4 text-center text-slate-600 font-medium">{village.members}</td>
-                                                                    <td className="px-6 py-4 text-center text-slate-600 font-medium">{village.institutions}</td>
-                                                                    <td className="px-6 py-4 text-center">
-                                                                        {village.pending > 0 ? (
-                                                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 border border-orange-200">
-                                                                                {village.pending} Pending
-                                                                            </span>
-                                                                        ) : (
-                                                                            <span className="text-slate-400">-</span>
-                                                                        )}
-                                                                    </td>
-                                                                    <td className="px-6 py-4 text-center">
-                                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${village.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
-                                                                            {village.status}
-                                                                        </span>
-                                                                    </td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* MAP VIEW */}
-                                        {viewMode === 'map' && (
-                                            <div className="bg-white p-1 rounded-xl shadow-sm border border-slate-200 h-[600px] overflow-hidden relative">
-                                                <MapContainer center={[17.0500, 79.2667]} zoom={10} style={{ height: '100%', width: '100%', borderRadius: '12px' }} scrollWheelZoom={false}>
-                                                    <LayersControl position="topright">
-                                                        <LayersControl.BaseLayer checked name="Standard">
-                                                            <TileLayer
-                                                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                            />
-                                                        </LayersControl.BaseLayer>
-                                                        <LayersControl.BaseLayer name="Satellite">
-                                                            <TileLayer
-                                                                attribution='Esri'
-                                                                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                                                            />
-                                                        </LayersControl.BaseLayer>
-                                                    </LayersControl>
-                                                    {stats.villages.map((village, idx) => (
-                                                        <Marker key={idx} position={getCoordinates(village.name)}>
-                                                            <Popup>
-                                                                <div className="text-center p-2">
-                                                                    <h3 className="font-bold text-sm mb-1">{village.name}</h3>
-                                                                    <div className="grid grid-cols-2 gap-2 text-xs mb-2">
-                                                                        <div className="bg-blue-50 p-1 rounded">Mem: <b>{village.members}</b></div>
-                                                                        <div className="bg-slate-50 p-1 rounded">Inst: <b>{village.institutions}</b></div>
-                                                                    </div>
-                                                                    <Link to={`/admin/dashboard/village/${village.id}`} className="block w-full bg-[#1e2a4a] text-white text-[10px] font-bold py-1 px-2 rounded hover:bg-blue-800 transition">
-                                                                        View Dashboard
-                                                                    </Link>
-                                                                </div>
-                                                            </Popup>
-                                                        </Marker>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                                {/* Caste Distribution */}
+                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                                    <h3 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><FaUsers size={14} /></div>
+                                        Caste Distribution
+                                    </h3>
+                                    <div className="h-72 w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={demographics.community || []} barSize={window.innerWidth < 640 ? 20 : 40}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                <XAxis 
+                                                    dataKey="_id" 
+                                                    tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} 
+                                                    axisLine={false} 
+                                                    tickLine={false} 
+                                                    interval={0}
+                                                    angle={window.innerWidth < 640 ? -45 : 0}
+                                                    textAnchor={window.innerWidth < 640 ? "end" : "middle"}
+                                                    height={window.innerWidth < 640 ? 60 : 30}
+                                                />
+                                                <YAxis hide />
+                                                <RechartsTooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none' }} />
+                                                <Bar dataKey="count" radius={[4, 4, 0, 0]} onClick={(data) => handleChartClick(data, 'community')} style={{ cursor: 'pointer' }}>
+                                                    {(demographics.community || []).map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={getColor(index)} />
                                                     ))}
-                                                </MapContainer>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
+                                                    <LabelList dataKey="count" position="top" fill="#64748b" fontSize={10} fontWeight={700} />
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                {/* Age Demographics */}
+                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                                    <h3 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><FaCalendarAlt size={14} /></div>
+                                        Age Demographics
+                                    </h3>
+                                    <div className="h-72 w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={demographics.age || []} barSize={window.innerWidth < 640 ? 20 : 40}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                <XAxis 
+                                                    dataKey="_id" 
+                                                    tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} 
+                                                    axisLine={false} 
+                                                    tickLine={false} 
+                                                    interval={0}
+                                                    angle={window.innerWidth < 640 ? -45 : 0}
+                                                    textAnchor={window.innerWidth < 640 ? "end" : "middle"}
+                                                    height={window.innerWidth < 640 ? 60 : 30}
+                                                />
+                                                <YAxis hide />
+                                                <RechartsTooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none' }} />
+                                                <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} onClick={(data) => handleChartClick(data, 'age')} style={{ cursor: 'pointer' }}>
+                                                    <LabelList dataKey="count" position="top" fill="#64748b" fontSize={10} fontWeight={700} />
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </main >
-            </div >
-        </div >
+
+                        {/* 3. VILLAGE/WARD BREAKDOWN */}
+                        <div className="space-y-4" id="village-breakdown">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <h2 className="text-lg md:text-xl font-bold text-[#1e2a4a] border-l-4 border-[#f59e0b] pl-3">
+                                    Village/Ward Overview
+                                </h2>
+
+                                {/* View Toggle */}
+                                <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm w-full md:w-auto overflow-x-auto no-scrollbar">
+                                    <button
+                                        onClick={() => setViewMode('cards')}
+                                        className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-[10px] md:text-xs font-bold transition-all whitespace-nowrap ${viewMode === 'cards' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                                    >
+                                        <FaThLarge size={10} /> Cards
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('table')}
+                                        className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-[10px] md:text-xs font-bold transition-all whitespace-nowrap ${viewMode === 'table' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                                    >
+                                        <FaTable size={10} /> Table
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('map')}
+                                        className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-[10px] md:text-xs font-bold transition-all whitespace-nowrap ${viewMode === 'map' ? 'bg-[#1e2a4a] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                                    >
+                                        <FaMapMarkedAlt size={10} /> Map
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* CONTENT AREA */}
+                            {!stats.villages || stats.villages.length === 0 ? (
+                                <div className="p-12 text-center text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200 text-sm">
+                                    No villages found in this municipality.
+                                </div>
+                            ) : (
+                                <>
+                                    {/* CARDS VIEW */}
+                                    {viewMode === 'cards' && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                                            {stats.villages.map((village, idx) => (
+                                                <VillagePerformanceCard
+                                                    key={`vill-${idx}`}
+                                                    id={village.id}
+                                                    name={village.name}
+                                                    members={village.members}
+                                                    institutions={village.institutions}
+                                                    status={village.status}
+                                                    pending={village.pending}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* TABLE VIEW */}
+                                    {viewMode === 'table' && (
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left min-w-[600px]">
+                                                    <thead>
+                                                        <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                            <th className="px-6 py-4">Name</th>
+                                                            <th className="px-6 py-4 text-center">Members</th>
+                                                            <th className="px-6 py-4 text-center">Institutions</th>
+                                                            <th className="px-6 py-4 text-center">Pending</th>
+                                                            <th className="px-6 py-4 text-center">Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-50">
+                                                        {stats.villages.map((village, idx) => (
+                                                            <tr key={idx} className="hover:bg-blue-50/50 transition-colors group">
+                                                                <td
+                                                                    className="px-6 py-4 font-bold text-sm text-[#1e2a4a] hover:text-blue-600 cursor-pointer transition-colors"
+                                                                    onClick={() => navigate(`/admin/dashboard/village/${village.id}`)}
+                                                                >
+                                                                    {village.name}
+                                                                </td>
+                                                                <td className="px-6 py-4 text-center text-sm text-slate-600 font-medium">{village.members}</td>
+                                                                <td className="px-6 py-4 text-center text-sm text-slate-600 font-medium">{village.institutions}</td>
+                                                                <td className="px-6 py-4 text-center">
+                                                                    {village.pending > 0 ? (
+                                                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-600 border border-orange-100">
+                                                                            {village.pending} Pending
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-slate-300 text-xs">-</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-6 py-4 text-center">
+                                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide ${village.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                                                                        {village.status}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* MAP VIEW */}
+                                    {viewMode === 'map' && (
+                                        <div className="bg-white p-1 rounded-2xl shadow-sm border border-slate-100 h-[400px] md:h-[600px] overflow-hidden relative">
+                                            <MapContainer center={[17.0500, 79.2667]} zoom={10} style={{ height: '100%', width: '100%', borderRadius: '12px' }} scrollWheelZoom={false}>
+                                                <LayersControl position="topright">
+                                                    <LayersControl.BaseLayer checked name="Standard">
+                                                        <TileLayer
+                                                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                        />
+                                                    </LayersControl.BaseLayer>
+                                                    <LayersControl.BaseLayer name="Satellite">
+                                                        <TileLayer
+                                                            attribution='Esri'
+                                                            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                                        />
+                                                    </LayersControl.BaseLayer>
+                                                </LayersControl>
+                                                {stats.villages.map((village, idx) => (
+                                                    <Marker key={idx} position={getCoordinates(village.name)}>
+                                                        <Popup>
+                                                            <div className="text-center p-2">
+                                                                <h3 className="font-bold text-sm mb-1">{village.name}</h3>
+                                                                <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                                                                    <div className="bg-blue-50 p-1 rounded">Mem: <b>{village.members}</b></div>
+                                                                    <div className="bg-slate-50 p-1 rounded">Inst: <b>{village.institutions}</b></div>
+                                                                </div>
+                                                                <Link to={`/admin/dashboard/village/${village.id}`} className="block w-full bg-[#1e2a4a] text-white text-[10px] font-bold py-1 px-2 rounded hover:bg-blue-800 transition">
+                                                                    View Dashboard
+                                                                </Link>
+                                                            </div>
+                                                        </Popup>
+                                                    </Marker>
+                                                ))}
+                                            </MapContainer>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
     );
 };
 

@@ -13,8 +13,8 @@ const NotificationTable = ({ notifications, title, showCount = false }) => (
         <h2 className="text-lg font-bold text-gray-900 mb-6">
             {title}{showCount ? ` (${notifications.length})` : ''}
         </h2>
-        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
+        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm overflow-x-auto">
+            <div className="min-w-[800px]">
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-gray-50/50 text-gray-500 text-[10px] uppercase tracking-wider border-b border-gray-100">
@@ -104,7 +104,7 @@ const NotificationItem = ({
     return (
         <div 
             onClick={onClick}
-            className={`p-5 border-b border-gray-100 hover:bg-gray-50 transition-all duration-300 flex gap-4 cursor-pointer relative overflow-hidden ${active ? 'bg-blue-50/60 shadow-md z-10 ring-1 ring-blue-100 mb-2 rounded-lg mx-2 my-1' : (!isRead ? 'bg-blue-50/40' : 'bg-white')} ${(!isRead || active) ? 'before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-blue-600' : ''} ${active ? 'before:w-1.5' : ''}`}
+            className={`p-4 md:p-6 border-b border-gray-100 hover:bg-gray-50 transition-all duration-300 flex flex-col sm:flex-row gap-4 cursor-pointer relative overflow-hidden ${active ? 'bg-blue-50/60 shadow-md z-10 ring-1 ring-blue-100 mb-2 rounded-lg mx-1 md:mx-2 my-1' : (!isRead ? 'bg-blue-50/40' : 'bg-white')} ${(!isRead || active) ? 'before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-blue-600' : ''} ${active ? 'before:w-1.5' : ''}`}
         >
             {isSelectable && (
                 <div onClick={(e) => { e.stopPropagation(); onToggleSelect(id); }} className="flex items-center justify-center shrink-0 pr-2">
@@ -119,8 +119,8 @@ const NotificationItem = ({
             <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm ${!isRead ? 'bg-white text-blue-600' : 'bg-gray-50 text-gray-400'}`}>
                 {getIcon()}
             </div>
-            <div className="flex-1">
-                <div className="flex justify-between items-start mb-1.5">
+            <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2">
                     <div className="flex flex-col">
                         <h4 className={`text-base ${!isRead ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'}`}>{title}</h4>
                         <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tighter">{assistanceType}</span>
@@ -212,7 +212,7 @@ const NotificationItem = ({
                     )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4 border-t border-gray-50 pt-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 border-t border-gray-50 pt-4 mt-2">
                     {!isRead && (
                         <button
                             onClick={(e) => { e.stopPropagation(); onRead(id); }}
@@ -223,18 +223,18 @@ const NotificationItem = ({
                     )}
 
                     {showActions && (
-                        <div className="flex flex-wrap gap-3">
+                        <div className="grid grid-cols-1 xs:grid-cols-2 lg:flex lg:flex-wrap gap-2 md:gap-3 w-full lg:w-auto">
                             {/* Enhanced Approve Button */}
                             <button
                                 onClick={(e) => { e.stopPropagation(); onToggleAction(id, 'APPROVE'); }}
-                                className={`px-4 py-2 border rounded-xl flex items-center gap-3 transition-all duration-300 relative overflow-hidden ${isApproveSelected ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-200 scale-[1.02]' : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'}`}
+                                className={`px-4 py-2 border rounded-xl flex items-center gap-3 transition-all duration-300 relative overflow-hidden w-full lg:w-auto ${isApproveSelected ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-200 scale-[1.02]' : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'}`}
                             >
-                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isApproveSelected ? 'border-white bg-white/20' : 'border-green-300'}`}>
+                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${isApproveSelected ? 'border-white bg-white/20' : 'border-green-300'}`}>
                                     {isApproveSelected && <div className="w-2.5 h-2.5 rounded-full bg-white animate-in zoom-in duration-200" />}
                                 </div>
                                 <div className="flex flex-col items-start leading-tight">
                                     <span className="text-xs font-black uppercase tracking-tight">Approve</span>
-                                    <span className={`text-[9px] font-bold ${isApproveSelected ? 'text-green-100' : 'text-green-600/70'}`}>
+                                    <span className={`text-[9px] font-bold truncate max-w-[120px] ${isApproveSelected ? 'text-green-100' : 'text-green-600/70'}`}>
                                         for this {cleanMandal} Mandal
                                     </span>
                                 </div>
@@ -243,14 +243,14 @@ const NotificationItem = ({
                             {/* New Forward To Button */}
                             <button
                                 onClick={(e) => { e.stopPropagation(); onToggleAction(id, 'FORWARD'); }}
-                                className={`px-4 py-2 border rounded-xl flex items-center gap-3 transition-all duration-300 relative overflow-hidden ${isForwardSelected ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200 scale-[1.02]' : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-green-100'}`}
+                                className={`px-4 py-2 border rounded-xl flex items-center gap-3 transition-all duration-300 relative overflow-hidden w-full lg:w-auto ${isForwardSelected ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200 scale-[1.02]' : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-green-100'}`}
                             >
-                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isForwardSelected ? 'border-white bg-white/20' : 'border-blue-300'}`}>
+                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${isForwardSelected ? 'border-white bg-white/20' : 'border-blue-300'}`}>
                                     {isForwardSelected && <div className="w-2.5 h-2.5 rounded-full bg-white animate-in zoom-in duration-200" />}
                                 </div>
                                 <div className="flex flex-col items-start leading-tight">
                                     <span className="text-xs font-black uppercase tracking-tight">Forward To</span>
-                                    <span className={`text-[9px] font-bold ${isForwardSelected ? 'text-blue-100' : 'text-blue-600/70'}`}>
+                                    <span className={`text-[9px] font-bold truncate max-w-[120px] ${isForwardSelected ? 'text-blue-100' : 'text-blue-600/70'}`}>
                                         {cleanDistrict} District
                                     </span>
                                 </div>
@@ -259,7 +259,7 @@ const NotificationItem = ({
                             {/* Original Reject Button - Unchanged functionalily */}
                             <button
                                 onClick={(e) => { e.stopPropagation(); onReject(id); }}
-                                className="px-3 py-2 bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                                className="px-3 py-2 bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 w-full xs:col-span-2 lg:col-auto lg:w-auto"
                             >
                                 <FaExclamationCircle size={12} /> Reject
                             </button>
@@ -474,6 +474,11 @@ const Notifications = ({ isAdminView = false }) => {
 
     const filteredNotifications = (filter === 'all' ? notifications : notifications.filter(n => !n.isRead))
         .filter(n => {
+            // Scrutiny Admin should only see Announcements and System messages
+            if (userRole === 'SCRUTINY_ADMIN') {
+                return n.notificationType === 'ANNOUNCEMENT' || n.relatedModel === 'Announcement' || n.notificationType === 'SYSTEM';
+            }
+
             if (!showTabs) return true;
 
             const isAnnouncement = n.notificationType === 'ANNOUNCEMENT' || n.relatedModel === 'Announcement' || n.notificationType === 'SYSTEM';

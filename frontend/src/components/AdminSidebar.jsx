@@ -174,7 +174,7 @@ const AdminSidebar = ({ activePage, showMobileHeader = true }) => {
                         </button>
                     </div>
 
-                    {userRole !== 'SCRUTINY_ADMIN' && (
+                    {(userRole && userRole !== 'SCRUTINY_ADMIN') && (
                         <>
                             <SidebarItem to="/admin/members/new" icon={FaUserPlus} label="Add Member" active={activePage === 'register-member'} />
                             <SidebarItem to="/admin/institutions/new" icon={FaBuilding} label="Add Institution" active={activePage === 'register-institution'} />
@@ -201,7 +201,9 @@ const AdminSidebar = ({ activePage, showMobileHeader = true }) => {
                     )}
 
                     {userRole === 'SCRUTINY_ADMIN' && (
-                        <SidebarItem to="/admin/authorization" icon={FaShieldAlt} label="Authorization" active={activePage === 'authorization'} />
+                        <div className="hidden">
+                            <SidebarItem to="/admin/authorization" icon={FaShieldAlt} label="Authorization" active={activePage === 'authorization'} />
+                        </div>
                     )}
 
                     {(userRole === 'SUPER_ADMIN' || userRole === 'STATE_ADMIN' || userRole === 'DISTRICT_ADMIN' || userRole === 'MANDAL_ADMIN' || userRole === 'VILLAGE_ADMIN' || userRole === 'MUNICIPALITY_ADMIN' || userRole === 'WARD_ADMIN') && (

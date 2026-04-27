@@ -28,6 +28,7 @@ const VillageDashboard = () => {
         institutions: 0,
         sos: 0
     });
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const [demographics, setDemographics] = useState({
         gender: [], occupation: [], caste: [], marital: [], age: [], bloodGroup: [], voter: [], employment: []
@@ -39,9 +40,6 @@ const VillageDashboard = () => {
 
     const handleChartClick = (data, type) => {
         if (!data) return;
-        // Recharts payload structure check
-        // Pie chart click returns the data object directly usually? Or { payload: ... }?
-        // Let's assume data has _id. Use defensive check.
         const label = data.originalKey || data._id || data.payload?._id || data.name;
 
         if (!label) return;
@@ -74,11 +72,7 @@ const VillageDashboard = () => {
                 break;
         }
 
-        // Preserve Village Context when clicking charts
         if (query) {
-            // If we are viewing a specific village (via drill-down `id` or just implicit),
-            // we should ideally filter the members list by this village.
-            // Using stats.locationName to set 'villages' filter which AdminMembers supports.
             if (stats.locationName && stats.locationName !== label) {
                 query += `&villages=${encodeURIComponent(stats.locationName)}`;
             }
@@ -86,11 +80,9 @@ const VillageDashboard = () => {
         }
     };
 
-
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                // Parallel fetching of dashboard stats and analytics
                 const query = id ? `?locationId=${id}` : ''; // API Drill Down
 
                 const [statsRes, analyticsRes] = await Promise.all([
@@ -102,16 +94,14 @@ const VillageDashboard = () => {
                 setStats({
                     locationName: data.locationName || 'Village',
                     members: data.members,
-                    families: data.families || data.members, // Fallback to members if families not sent
+                    families: data.families || data.members, 
                     pendingMembers: data.pendingMembers || 0,
                     institutions: data.institutions || 0,
                     sos: data.sosAlerts || 0
                 });
 
                 const analyticsData = analyticsRes.data;
-                console.log("Analytics Data Received:", analyticsData);
 
-                // Helper to sanitise data (handle null _ids)
                 const sanitize = (arr) => (arr || []).map(item => ({
                     ...item,
                     _id: item._id || 'Unknown'
@@ -119,12 +109,12 @@ const VillageDashboard = () => {
 
                 const processAgeData = (backendData) => {
                     const categories = [
-                        { key: "Children", label: "Children (0-14)" },
-                        { key: "Youth", label: "Youth (15-24)" },
-                        { key: "Young Adults", label: "Young Adults (25-44)" },
-                        { key: "Middle Age", label: "Middle Age (45-59)" },
-                        { key: "Elderly", label: "Elderly (60-74)" },
-                        { key: "Senior", label: "Senior (75+)" }
+                        { key: "Children", label: "0-14" },
+                        { key: "Youth", label: "15-24" },
+                        { key: "Young Adults", label: "25-44" },
+                        { key: "Middle Age", label: "45-59" },
+                        { key: "Elderly", label: "60-74" },
+                        { key: "Senior", label: "75+" }
                     ];
 
                     return categories.map(cat => {
@@ -132,7 +122,7 @@ const VillageDashboard = () => {
                         return {
                             _id: cat.label,
                             count: found ? found.count : 0,
-                            originalKey: cat.key // For click handling
+                            originalKey: cat.key 
                         };
                     });
                 };
@@ -153,7 +143,12 @@ const VillageDashboard = () => {
             }
         };
         fetchStats();
-    }, []);
+    }, [id]);
+
+    const toggleSidebar = () => {
+        setIsSidebarOpen(!isSidebarOpen);
+        window.dispatchEvent(new CustomEvent('toggle-admin-sidebar'));
+    };
 
     const getColor = (index) => {
         const colors = ['#3b82f6', '#ec4899', '#8b5cf6', '#10b981', '#f97316', '#6366f1', '#f43f5e'];
@@ -167,45 +162,36 @@ const VillageDashboard = () => {
     }));
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
-            <AdminHeader locationName={stats.locationName} />
-            <div className="flex flex-1 overflow-hidden">
-                <AdminSidebar activePage="dashboard" />
+        <div className="min-h-screen bg-slate-50 font-sans flex flex-col overflow-hidden">
+            <AdminHeader onToggleSidebar={toggleSidebar} />
+            <div className="flex flex-1 overflow-hidden relative">
+                <AdminSidebar activePage="dashboard" showMobileHeader={false} />
 
-                {/* Main Content */}
-                <main id="admin-dashboard-content" className="flex-1 overflow-y-auto">
-                    {/* Welcome Header with Gradient */}
-                    <div id="location-card-scroll-target">
-                        <DashboardHeader
-                            title={`${stats.locationName} Dashboard`}
-                            subtitle={`Here's what's happening in ${stats.locationName} today. You have ${stats.pendingMembers} new registrations to review.`}
-                        />
-                    </div>
+                <main className="flex-1 overflow-y-auto bg-slate-50">
+                    <DashboardHeader
+                        title={`${stats.locationName} Overview`}
+                        subtitle={isWard ? "Ward Administration Panel" : "Village Administration Panel"}
+                    />
 
-                    <div className="px-4 md:px-8 -mt-10 pb-8 w-full">
-                        {/* Stats Row */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <div className="px-4 md:px-8 -mt-6 md:-mt-10 pb-12 w-full space-y-6 md:space-y-8 relative z-10">
+
+                        {/* 1. STATS OVERVIEW CARDS */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 animate-in slide-in-from-bottom-4 duration-500">
                             <StatCard
                                 title="Total Members"
                                 value={(Number(stats.members) || 0).toLocaleString()}
-                                subtext="Registered & Verified"
+                                subtext="Verified Residents"
                                 icon={FaUsers}
                                 color="bg-emerald-500"
-                                onClick={() => {
-                                    const query = stats.locationName && stats.locationName !== 'Village' ? `?villages=${encodeURIComponent(stats.locationName)}` : '';
-                                    navigate(`/admin/members${query}`);
-                                }}
+                                onClick={() => navigate(`/admin/members?villages=${encodeURIComponent(stats.locationName)}`)}
                             />
                             <StatCard
                                 title="Institutions"
                                 value={(Number(stats.institutions) || 0).toLocaleString()}
-                                subtext="Registered & Verified"
+                                subtext="Local Facilities"
                                 icon={FaBuilding}
                                 color="bg-blue-500"
-                                onClick={() => {
-                                    const query = stats.locationName && stats.locationName !== 'Village' ? `?villages=${encodeURIComponent(stats.locationName)}` : '';
-                                    navigate(`/admin/institutions${query}`);
-                                }}
+                                onClick={() => navigate(`/admin/institutions?villages=${encodeURIComponent(stats.locationName)}`)}
                             />
                             <StatCard
                                 title="Total Families"
@@ -213,70 +199,38 @@ const VillageDashboard = () => {
                                 subtext="Registered Households"
                                 icon={FaUsers}
                                 color="bg-orange-500"
-                                onClick={() => {
-                                    const query = stats.locationName && stats.locationName !== label ? `?villages=${encodeURIComponent(stats.locationName)}` : '';
-                                    navigate(`/admin/members${query}`);
-                                }}
+                                onClick={() => navigate(`/admin/members?villages=${encodeURIComponent(stats.locationName)}`)}
                             />
                         </div>
 
-                        {/* [WARD DETAILS FALLBACK] */}
-                        {isWard && (
-                            <div className="mb-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                                <div>
-                                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Ward Information</h3>
-                                    <p className="text-2xl font-black text-[#1e2a4a]">{stats.locationName}</p>
+                        {/* 2. DEMOGRAPHICS GRID */}
+                        <div className="space-y-6 md:space-y-8">
+                            <div className="flex items-center gap-3 ml-1">
+                                <div className="p-2 bg-blue-100 text-blue-700 rounded-lg shadow-sm">
+                                    <FaChartPie size={18} />
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full inline-block">Urban Sector</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Demographics Overview */}
-                        <div className="mb-8">
-                            <div className="flex items-center gap-3 mb-6 ml-1">
-                                <div className="p-2 bg-blue-100 text-blue-700 rounded-lg">
-                                    <FaChartPie size={20} />
-                                </div>
-                                <h2 className="text-xl font-bold text-slate-800">Analytics Overview</h2>
+                                <h2 className="text-lg md:text-xl font-bold text-slate-800">Population Analytics</h2>
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                                 {/* Gender Distribution */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
-                                    <div className="flex items-center justify-between mb-6 border-b pb-4">
-                                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
-                                            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FaMale /></div>
-                                            Gender Distribution
-                                        </h3>
-                                        <div className="flex flex-col gap-1 text-[10px] font-bold uppercase tracking-wider">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 bg-[#ec4899] rounded-sm"></div>
-                                                <span className="text-slate-400">Female</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 bg-[#3b82f6] rounded-sm"></div>
-                                                <span className="text-slate-400">Male</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 bg-[#94a3b8] rounded-sm"></div>
-                                                <span className="text-slate-400">Others</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="h-64 w-full flex items-center justify-center">
+                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                                    <h3 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FaMale size={14} /></div>
+                                        Gender Distribution
+                                    </h3>
+                                    <div className="h-60 w-full flex items-center justify-center">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
                                                 <Pie
                                                     data={genderData}
                                                     cx="50%"
                                                     cy="50%"
-                                                    innerRadius={60}
-                                                    outerRadius={80}
+                                                    innerRadius={50}
+                                                    outerRadius={window.innerWidth < 640 ? 70 : 80}
                                                     paddingAngle={5}
                                                     dataKey="value"
-                                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                                                     onClick={(data) => handleChartClick(data, 'gender')}
                                                     style={{ cursor: 'pointer' }}
                                                 >
@@ -284,41 +238,39 @@ const VillageDashboard = () => {
                                                         <Cell key={`cell-${index}`} fill={entry.color} />
                                                     ))}
                                                 </Pie>
-                                                <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-
+                                                <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                                             </PieChart>
                                         </ResponsiveContainer>
                                     </div>
-                                    {/* Gender Stat Cards - Super Admin Style */}
-                                    <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-                                        <div className="p-3 bg-slate-50 rounded-xl">
-                                            <p className="text-[10px] uppercase font-bold text-slate-400">Male</p>
-                                            <p className="text-lg font-bold text-blue-600">
+                                    <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                                        <div className="p-2 bg-slate-50 rounded-xl">
+                                            <p className="text-[9px] uppercase font-bold text-slate-400">Male</p>
+                                            <p className="text-sm md:text-lg font-black text-blue-600">
                                                 {demographics.gender.find(g => (g._id || '').toLowerCase() === 'male')?.count || 0}
                                             </p>
                                         </div>
-                                        <div className="p-3 bg-slate-50 rounded-xl">
-                                            <p className="text-[10px] uppercase font-bold text-slate-400">Female</p>
-                                            <p className="text-lg font-bold text-pink-500">
+                                        <div className="p-2 bg-slate-50 rounded-xl">
+                                            <p className="text-[9px] uppercase font-bold text-slate-400">Female</p>
+                                            <p className="text-sm md:text-lg font-black text-pink-500">
                                                 {demographics.gender.find(g => (g._id || '').toLowerCase() === 'female')?.count || 0}
                                             </p>
                                         </div>
-                                        <div className="p-3 bg-slate-50 rounded-xl">
-                                            <p className="text-[10px] uppercase font-bold text-slate-400">Others</p>
-                                            <p className="text-lg font-bold text-emerald-500">
-                                                {demographics.gender.find(g => (g._id || '').toLowerCase() === 'other' || (g._id || '').toLowerCase() === 'others')?.count || 0}
+                                        <div className="p-2 bg-slate-50 rounded-xl">
+                                            <p className="text-[9px] uppercase font-bold text-slate-400">Other</p>
+                                            <p className="text-sm md:text-lg font-black text-emerald-500">
+                                                {demographics.gender.find(g => ['other', 'others'].includes((g._id || '').toLowerCase()))?.count || 0}
                                             </p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Marital Status */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
-                                        <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><FaChartBar /></div>
+                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                                    <h3 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><FaRing size={14} /></div>
                                         Marital Status
                                     </h3>
-                                    <div className="h-72 w-full">
+                                    <div className="h-60 w-full">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
                                                 <Pie
@@ -326,208 +278,214 @@ const VillageDashboard = () => {
                                                     cx="50%"
                                                     cy="50%"
                                                     innerRadius={0}
-                                                    outerRadius={90}
+                                                    outerRadius={window.innerWidth < 640 ? 70 : 80}
                                                     dataKey="count"
                                                     nameKey="_id"
-                                                    label={{ fill: '#475569', fontSize: 12, fontWeight: 600 }}
+                                                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                                                 >
                                                     {(demographics.marital || []).map((entry, index) => (
                                                         <Cell key={`cell-${index}`} fill={getColor(index + 2)} strokeWidth={2} stroke="#fff" onClick={() => handleChartClick(entry, 'marital')} style={{ cursor: 'pointer' }} />
                                                     ))}
                                                 </Pie>
-                                                <RechartsTooltip
-                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                                />
-                                                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                                <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                                             </PieChart>
                                         </ResponsiveContainer>
                                     </div>
                                 </div>
 
-
-                                {/* Blood Group Chart (Replaces Registration Status) */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
-                                        <div className="p-2 bg-red-50 text-red-600 rounded-lg"><FaChartPie /></div>
-                                        Blood Group Distribution
+                                {/* Blood Group */}
+                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                                    <h3 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-red-50 text-red-600 rounded-lg"><FaHandHoldingUsd size={14} /></div>
+                                        Blood Groups
                                     </h3>
-                                    <div className="h-72 w-full">
+                                    <div className="h-60 w-full">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
                                                 <Pie
                                                     data={demographics.bloodGroup || []}
                                                     cx="50%"
                                                     cy="50%"
-                                                    innerRadius={60}
-                                                    outerRadius={90}
+                                                    innerRadius={50}
+                                                    outerRadius={window.innerWidth < 640 ? 70 : 80}
                                                     paddingAngle={2}
                                                     dataKey="count"
                                                     nameKey="_id"
-                                                    label={{ fill: '#475569', fontSize: 12, fontWeight: 600 }}
+                                                    label={({ name }) => name}
                                                 >
                                                     {(demographics.bloodGroup || []).map((entry, index) => (
                                                         <Cell key={`cell-${index}`} fill={getColor(index)} strokeWidth={0} onClick={() => handleChartClick(entry, 'bloodGroup')} style={{ cursor: 'pointer' }} />
                                                     ))}
                                                 </Pie>
-                                                <RechartsTooltip
-                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                                />
-                                                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                                <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
                                             </PieChart>
                                         </ResponsiveContainer>
                                     </div>
                                 </div>
                             </div>
 
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                                {/* Sub-Castes Bar Chart */}
+                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                                    <h3 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><FaUsers size={14} /></div>
+                                        Sub-Caste Distribution
+                                    </h3>
+                                    <div className="h-72 w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={demographics.community || []} barSize={window.innerWidth < 640 ? 20 : 30}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                <XAxis 
+                                                    dataKey="_id" 
+                                                    tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} 
+                                                    axisLine={false} 
+                                                    tickLine={false} 
+                                                    interval={0}
+                                                    angle={window.innerWidth < 640 ? -45 : 0}
+                                                    textAnchor={window.innerWidth < 640 ? "end" : "middle"}
+                                                    height={window.innerWidth < 640 ? 60 : 30}
+                                                />
+                                                <YAxis hide />
+                                                <RechartsTooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none' }} />
+                                                <Bar dataKey="count" radius={[4, 4, 0, 0]} onClick={(data) => handleChartClick(data, 'community')} style={{ cursor: 'pointer' }}>
+                                                    {(demographics.community || []).map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={getColor(index)} />
+                                                    ))}
+                                                    <LabelList dataKey="count" position="top" fill="#64748b" fontSize={10} fontWeight={700} />
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
 
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                            {/* Top Occupations (Converted from Bar to Pie) */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
-                                    <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><FaBuilding /></div>
-                                    Occupation Distribution
-                                </h3>
-                                <div className="h-80 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={demographics.occupation || []}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={60}
-                                                outerRadius={100}
-                                                dataKey="count"
-                                                nameKey="_id"
-                                                label={({ _id, percent }) => `${_id} (${(percent * 100).toFixed(0)}%)`}
-                                            >
-                                                {(demographics.occupation || []).map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={getColor(index + 3)} onClick={() => handleChartClick(entry, 'occupation')} style={{ cursor: 'pointer' }} />
-                                                ))}
-                                            </Pie>
-                                            <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                                        </PieChart>
-                                    </ResponsiveContainer>
+                                {/* Age Demographics Bar Chart */}
+                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                                    <h3 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><FaCalendarAlt size={14} /></div>
+                                        Age Groups
+                                    </h3>
+                                    <div className="h-72 w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={demographics.age || []} barSize={window.innerWidth < 640 ? 20 : 30}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                <XAxis 
+                                                    dataKey="_id" 
+                                                    tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} 
+                                                    axisLine={false} 
+                                                    tickLine={false} 
+                                                    interval={0}
+                                                    angle={window.innerWidth < 640 ? -45 : 0}
+                                                    textAnchor={window.innerWidth < 640 ? "end" : "middle"}
+                                                    height={window.innerWidth < 640 ? 60 : 30}
+                                                />
+                                                <YAxis hide />
+                                                <RechartsTooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none' }} />
+                                                <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} onClick={(data) => handleChartClick(data, 'age')} style={{ cursor: 'pointer' }}>
+                                                    <LabelList dataKey="count" position="top" fill="#64748b" fontSize={10} fontWeight={700} />
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Employment Status */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
-                                    <div className="p-2 bg-cyan-50 text-cyan-600 rounded-lg"><FaUsers /></div>
-                                    Employment Status
-                                </h3>
-                                <div className="h-80 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={demographics.employment || []}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={0}
-                                                outerRadius={100}
-                                                dataKey="count"
-                                                nameKey="_id"
-                                                label={({ _id, percent }) => `${_id} (${(percent * 100).toFixed(0)}%)`}
-                                            >
-                                                {(demographics.employment || []).map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry._id === 'Employed' ? '#3b82f6' : '#94a3b8'} strokeWidth={2} stroke="#fff" onClick={() => handleChartClick(entry, 'employment')} style={{ cursor: 'pointer' }} />
-                                                ))}
-                                            </Pie>
-                                            <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                                        </PieChart>
-                                    </ResponsiveContainer>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                                {/* Occupation Pie */}
+                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                                    <h3 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><FaBuilding size={14} /></div>
+                                        Occupations
+                                    </h3>
+                                    <div className="h-60 w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={demographics.occupation || []}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={50}
+                                                    outerRadius={window.innerWidth < 640 ? 70 : 80}
+                                                    dataKey="count"
+                                                    nameKey="_id"
+                                                >
+                                                    {(demographics.occupation || []).map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={getColor(index + 3)} onClick={() => handleChartClick(entry, 'occupation')} style={{ cursor: 'pointer' }} />
+                                                    ))}
+                                                </Pie>
+                                                <RechartsTooltip contentStyle={{ borderRadius: '12px' }} />
+                                                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Total Voters (Moved Here) */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
-                                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><FaTable /></div>
-                                    Total Voters
-                                </h3>
-                                <div className="h-80 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={demographics.voter || []}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={0}
-                                                outerRadius={90}
-                                                dataKey="count"
-                                                nameKey="_id"
-                                                label={({ _id, count }) => `${_id}: ${count}`}
-                                            >
-                                                {(demographics.voter || []).map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry._id === 'Voter' ? '#10b981' : '#f43f5e'} strokeWidth={2} stroke="#fff" onClick={() => handleChartClick(entry, 'voter')} style={{ cursor: 'pointer' }} />
-                                                ))}
-                                            </Pie>
-                                            <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                                        </PieChart>
-                                    </ResponsiveContainer>
+                                {/* Employment Status Pie */}
+                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                                    <h3 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-cyan-50 text-cyan-600 rounded-lg"><FaUsers size={14} /></div>
+                                        Employment
+                                    </h3>
+                                    <div className="h-60 w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={demographics.employment || []}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={0}
+                                                    outerRadius={window.innerWidth < 640 ? 70 : 80}
+                                                    dataKey="count"
+                                                    nameKey="_id"
+                                                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                                                >
+                                                    {(demographics.employment || []).map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry._id === 'Employed' ? '#3b82f6' : '#94a3b8'} strokeWidth={2} stroke="#fff" onClick={() => handleChartClick(entry, 'employment')} style={{ cursor: 'pointer' }} />
+                                                    ))}
+                                                </Pie>
+                                                <RechartsTooltip contentStyle={{ borderRadius: '12px' }} />
+                                                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                            {/* Caste Distribution */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
-                                    Mala Community - Sub Castes
-                                </h3>
-                                <div className="h-80 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={demographics.community || []} barSize={40}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                            <XAxis dataKey="_id" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} domain={[0, 'auto']} />
-                                            <RechartsTooltip
-                                                cursor={{ fill: '#f1f5f9' }}
-                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                            />
-                                            <Bar dataKey="count" name="Members" radius={[6, 6, 0, 0]} onClick={(data) => handleChartClick(data, 'community')} style={{ cursor: 'pointer' }}>
-                                                {(demographics.community || []).map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={getColor(index)} />
-                                                ))}
-                                                <LabelList dataKey="count" position="top" fill="#64748b" fontSize={12} />
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-
-                            {/* Age Groups */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-w-0">
-                                <h3 className="font-bold text-slate-700 mb-6 text-sm uppercase tracking-wide border-b pb-4">
-                                    Age Demographics
-                                </h3>
-                                <div className="h-80 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={demographics.age || []} barSize={40}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                            <XAxis dataKey="_id" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} domain={[0, dataMax => dataMax + 2]} />
-                                            <RechartsTooltip
-                                                cursor={{ fill: '#f1f5f9' }}
-                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                            />
-                                            <Bar dataKey="count" name="Members" fill="#10b981" radius={[6, 6, 0, 0]} onClick={(data) => handleChartClick(data, 'age')} style={{ cursor: 'pointer' }}>
-                                                <LabelList dataKey="count" position="top" fill="#64748b" fontSize={12} />
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                                {/* Voter Status Pie */}
+                                <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                                    <h3 className="text-sm md:text-base font-bold text-slate-800 flex items-center gap-3 mb-6 border-b pb-4">
+                                        <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><FaTable size={14} /></div>
+                                        Voters
+                                    </h3>
+                                    <div className="h-60 w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={demographics.voter || []}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={0}
+                                                    outerRadius={window.innerWidth < 640 ? 70 : 80}
+                                                    dataKey="count"
+                                                    nameKey="_id"
+                                                    label={({ count }) => count}
+                                                >
+                                                    {(demographics.voter || []).map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry._id === 'Voter' ? '#10b981' : '#f43f5e'} strokeWidth={2} stroke="#fff" onClick={() => handleChartClick(entry, 'voter')} style={{ cursor: 'pointer' }} />
+                                                    ))}
+                                                </Pie>
+                                                <RechartsTooltip contentStyle={{ borderRadius: '12px' }} />
+                                                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </main >
-            </div >
-        </div >
+                </main>
+            </div>
+        </div>
     );
 };
 

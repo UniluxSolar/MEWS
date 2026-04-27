@@ -20,6 +20,7 @@ const AdminHeader = ({ locationName: propLocationName, onToggleSidebar }) => { /
     const [userName, setUserName] = useState('Admin'); // For dropdown name
     const [profileLogo, setProfileLogo] = useState('/assets/images/user-profile.png');
     const [showNotifications, setShowNotifications] = useState(false);
+    const [userRole, setUserRole] = useState('');
 
     useEffect(() => {
         const loadInfo = () => {
@@ -121,6 +122,7 @@ const AdminHeader = ({ locationName: propLocationName, onToggleSidebar }) => { /
             ].includes(role);
             setShowNotifications(isAnyAdmin);
             setUserName(finalDropdownName);
+            setUserRole(role);
 
             // Dynamic Profile Image Logic
             const photo = info.photoUrl || info.photo || info.photo_url;
@@ -242,15 +244,17 @@ const AdminHeader = ({ locationName: propLocationName, onToggleSidebar }) => { /
                         }
                     `}</style>
 
-                    {/* Search Bar */}
-                    <div className="relative hidden lg:block w-96">
-                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            className="w-full bg-white border border-slate-200 rounded-lg py-2 pl-10 pr-4 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-slate-400 shadow-sm"
-                        />
-                    </div>
+                    {/* Search Bar - Hidden for Scrutiny Admin */}
+                    {userRole !== 'SCRUTINY_ADMIN' && (
+                        <div className="relative hidden lg:block w-96">
+                            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+                            <input
+                                type="text"
+                                placeholder="Search..."
+                                className="w-full bg-white border border-slate-200 rounded-lg py-2 pl-10 pr-4 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-slate-400 shadow-sm"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-2 md:gap-6">

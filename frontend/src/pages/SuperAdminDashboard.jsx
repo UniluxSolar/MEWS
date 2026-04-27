@@ -77,6 +77,7 @@ const SuperAdminDashboard = () => {
     });
     const [loading, setLoading] = useState(true);
     const [adminName, setAdminName] = useState('Super Admin');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -143,6 +144,7 @@ const SuperAdminDashboard = () => {
     };
 
     const toggleSidebar = () => {
+        setIsSidebarOpen(!isSidebarOpen);
         window.dispatchEvent(new CustomEvent('toggle-admin-sidebar'));
     };
 
@@ -152,10 +154,10 @@ const SuperAdminDashboard = () => {
                 <AdminHeader />
                 <div className="flex flex-1 overflow-hidden">
                     <AdminSidebar activePage="dashboard" />
-                    <main className="flex-1 overflow-y-auto p-12 flex items-center justify-center">
+                    <main className="flex-1 overflow-y-auto p-6 md:p-12 flex items-center justify-center">
                         <div className="flex flex-col items-center gap-4">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900"></div>
-                            <p className="text-slate-500 font-bold animate-pulse">Loading Platform Overview...</p>
+                            <p className="text-slate-500 font-bold animate-pulse text-sm">Loading Platform Overview...</p>
                         </div>
                     </main>
                 </div>
@@ -164,24 +166,24 @@ const SuperAdminDashboard = () => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
+        <div className="min-h-screen bg-slate-50 font-sans flex flex-col overflow-hidden">
             <AdminHeader onToggleSidebar={toggleSidebar} />
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-1 overflow-hidden relative">
                 <AdminSidebar activePage="dashboard" showMobileHeader={false} />
 
                 <main className="flex-1 overflow-y-auto bg-slate-50">
                     <DashboardHeader
-                        title="All Locations Dashboard"
-                        subtitle="Here's what's happening in All Locations today. You have 0 new registrations to review."
+                        title="Platform Overview"
+                        subtitle="Detailed analytics and performance across all locations."
                     />
 
-                    <div className="px-3 md:px-8 -mt-6 md:-mt-10 pb-12 w-full space-y-6 md:space-y-8">
+                    <div className="px-4 md:px-8 -mt-6 md:-mt-10 pb-12 w-full space-y-6 md:space-y-8 relative z-10">
                         {/* Summary Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 animate-in slide-in-from-bottom-4 duration-500">
                             <StatCard
                                 title="Total Members"
                                 value={(stats.members || 0).toLocaleString()}
-                                subtext="Registered across state"
+                                subtext="Across all districts"
                                 icon={FaUsers}
                                 color="bg-blue-600"
                                 onClick={() => navigate('/admin/members')}
@@ -207,40 +209,36 @@ const SuperAdminDashboard = () => {
                         {/* Charts Section - Row 1 */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                             {/* Gender Distribution */}
-                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
+                            <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
                                 <div className="flex items-center justify-between mb-6">
-                                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
-                                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FaMale /></div>
+                                    <h3 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-3">
+                                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FaMale size={14} /></div>
                                         Gender Distribution
                                     </h3>
-                                    <div className="flex flex-col gap-1 text-[10px] font-bold uppercase tracking-wider">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 bg-[#ec4899] rounded-sm"></div>
-                                            <span className="text-slate-400">Female</span>
+                                    <div className="flex gap-3 text-[9px] font-bold uppercase tracking-wider">
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-2.5 h-2.5 bg-[#ec4899] rounded-sm"></div>
+                                            <span className="text-slate-400">F</span>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 bg-[#3b82f6] rounded-sm"></div>
-                                            <span className="text-slate-400">Male</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 bg-[#94a3b8] rounded-sm"></div>
-                                            <span className="text-slate-400">Others</span>
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-2.5 h-2.5 bg-[#3b82f6] rounded-sm"></div>
+                                            <span className="text-slate-400">M</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="h-64 md:h-72 w-full flex items-center justify-center">
+                                <div className="h-[250px] md:h-72 w-full flex items-center justify-center">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie
                                                 data={demographics.gender}
                                                 cx="50%"
                                                 cy="50%"
-                                                innerRadius={60}
-                                                outerRadius={90}
+                                                innerRadius={50}
+                                                outerRadius={window.innerWidth < 640 ? 70 : 90}
                                                 paddingAngle={5}
                                                 dataKey="count"
                                                 nameKey="_id"
-                                                label={({ _id, percent }) => `${_id} ${(percent * 100).toFixed(0)}%`}
+                                                label={({ _id, percent }) => window.innerWidth > 640 ? `${_id} ${(percent * 100).toFixed(0)}%` : `${(percent * 100).toFixed(0)}%`}
                                                 onClick={(data) => handleChartClick('gender', data._id)}
                                                 style={{ cursor: 'pointer' }}
                                             >
@@ -249,41 +247,40 @@ const SuperAdminDashboard = () => {
                                                 ))}
                                             </Pie>
                                             <RechartsTooltip />
-
                                         </PieChart>
                                     </ResponsiveContainer>
                                 </div>
-                                <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-                                    <div className="p-3 bg-slate-50 rounded-xl">
-                                        <p className="text-[10px] uppercase font-bold text-slate-400">Male</p>
-                                        <p className="text-lg font-bold text-blue-600">{demographics.gender.find(g => g._id === 'Male')?.count || 0}</p>
+                                <div className="mt-4 grid grid-cols-3 gap-3 md:gap-4 text-center">
+                                    <div className="p-2 md:p-3 bg-slate-50 rounded-xl">
+                                        <p className="text-[9px] md:text-[10px] uppercase font-bold text-slate-400">Male</p>
+                                        <p className="text-base md:text-lg font-bold text-blue-600">{demographics.gender.find(g => g._id === 'Male')?.count || 0}</p>
                                     </div>
-                                    <div className="p-3 bg-slate-50 rounded-xl">
-                                        <p className="text-[10px] uppercase font-bold text-slate-400">Female</p>
-                                        <p className="text-lg font-bold text-pink-500">{demographics.gender.find(g => g._id === 'Female')?.count || 0}</p>
+                                    <div className="p-2 md:p-3 bg-slate-50 rounded-xl">
+                                        <p className="text-[9px] md:text-[10px] uppercase font-bold text-slate-400">Female</p>
+                                        <p className="text-base md:text-lg font-bold text-pink-500">{demographics.gender.find(g => g._id === 'Female')?.count || 0}</p>
                                     </div>
-                                    <div className="p-3 bg-slate-50 rounded-xl">
-                                        <p className="text-[10px] uppercase font-bold text-slate-400">Others</p>
-                                        <p className="text-lg font-bold text-emerald-500">{demographics.gender.find(g => g._id === 'Other' || g._id === 'Others')?.count || 0}</p>
+                                    <div className="p-2 md:p-3 bg-slate-50 rounded-xl">
+                                        <p className="text-[9px] md:text-[10px] uppercase font-bold text-slate-400">Others</p>
+                                        <p className="text-base md:text-lg font-bold text-emerald-500">{demographics.gender.find(g => g._id === 'Other' || g._id === 'Others')?.count || 0}</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Marital Status */}
-                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
-                                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
-                                    <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><FaChartBar /></div>
+                            <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
+                                <h3 className="text-base md:text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
+                                    <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><FaChartBar size={14} /></div>
                                     Marital Status
                                 </h3>
-                                <div className="h-64 md:h-72 w-full">
+                                <div className="h-[250px] md:h-72 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={demographics.marital}>
+                                        <BarChart data={demographics.marital} margin={{ bottom: 20 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                                            <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} hide={window.innerWidth < 640} />
                                             <RechartsTooltip cursor={{ fill: '#f8fafc' }} />
                                             <Bar dataKey="count" fill="#8b5cf6" radius={[6, 6, 0, 0]} onClick={(data) => handleChartClick('maritalStatus', data._id)} style={{ cursor: 'pointer' }}>
-                                                <LabelList dataKey="count" position="top" style={{ fontSize: '10px', fontWeight: 'bold' }} />
+                                                <LabelList dataKey="count" position="top" style={{ fontSize: '9px', fontWeight: 'bold' }} />
                                             </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
@@ -294,23 +291,23 @@ const SuperAdminDashboard = () => {
                         {/* Charts Section - Row 2 */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                             {/* Blood Group Distribution */}
-                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
-                                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
-                                    <div className="p-2 bg-red-50 text-red-600 rounded-lg"><FaChartPie /></div>
-                                    Blood Group Distribution
+                            <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
+                                <h3 className="text-base md:text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
+                                    <div className="p-2 bg-red-50 text-red-600 rounded-lg"><FaChartPie size={14} /></div>
+                                    Blood Groups
                                 </h3>
-                                <div className="h-64 md:h-72 w-full">
+                                <div className="h-[300px] md:h-72 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie
                                                 data={demographics.bloodGroup}
                                                 cx="50%"
                                                 cy="50%"
-                                                innerRadius={0}
-                                                outerRadius={90}
+                                                innerRadius={window.innerWidth < 640 ? 40 : 0}
+                                                outerRadius={window.innerWidth < 640 ? 70 : 90}
                                                 dataKey="count"
                                                 nameKey="_id"
-                                                label={({ _id }) => _id}
+                                                label={({ _id }) => window.innerWidth > 640 ? _id : null}
                                                 onClick={(data) => handleChartClick('bloodGroup', data._id)}
                                                 style={{ cursor: 'pointer' }}
                                             >
@@ -319,27 +316,39 @@ const SuperAdminDashboard = () => {
                                                 ))}
                                             </Pie>
                                             <RechartsTooltip />
-                                            <Legend layout="vertical" align="right" verticalAlign="middle" />
+                                            <Legend 
+                                                layout={window.innerWidth < 640 ? 'horizontal' : 'vertical'} 
+                                                align={window.innerWidth < 640 ? 'center' : 'right'} 
+                                                verticalAlign={window.innerWidth < 640 ? 'bottom' : 'middle'} 
+                                                wrapperStyle={{ fontSize: '10px' }}
+                                            />
                                         </PieChart>
                                     </ResponsiveContainer>
                                 </div>
                             </div>
 
                             {/* Occupation Distribution */}
-                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
-                                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
-                                    <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><FaBuilding /></div>
+                            <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
+                                <h3 className="text-base md:text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
+                                    <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><FaBuilding size={14} /></div>
                                     Top Occupations
                                 </h3>
-                                <div className="h-64 md:h-72 w-full">
+                                <div className="h-[300px] md:h-72 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={demographics.occupation} layout="vertical" margin={{ left: 30 }}>
+                                        <BarChart data={demographics.occupation} layout="vertical" margin={{ left: 10, right: 30 }}>
                                             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
                                             <XAxis type="number" hide />
-                                            <YAxis dataKey="_id" type="category" axisLine={false} tickLine={false} width={100} tick={{ fontSize: 10, fill: '#64748b', fontWeight: 'bold' }} />
+                                            <YAxis 
+                                                dataKey="_id" 
+                                                type="category" 
+                                                axisLine={false} 
+                                                tickLine={false} 
+                                                width={window.innerWidth < 640 ? 80 : 100} 
+                                                tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }} 
+                                            />
                                             <RechartsTooltip cursor={{ fill: '#f8fafc' }} />
                                             <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]} onClick={(data) => handleChartClick('occupation', data._id)} style={{ cursor: 'pointer' }}>
-                                                <LabelList dataKey="count" position="right" style={{ fontSize: '10px', fontWeight: 'bold' }} />
+                                                <LabelList dataKey="count" position="right" style={{ fontSize: '9px', fontWeight: 'bold' }} />
                                             </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
@@ -350,24 +359,24 @@ const SuperAdminDashboard = () => {
                         {/* Charts Section - Row 3 */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                             {/* Employment Status */}
-                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
-                                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
-                                    <div className="p-2 bg-cyan-50 text-cyan-600 rounded-lg"><FaUsers /></div>
+                            <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
+                                <h3 className="text-base md:text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
+                                    <div className="p-2 bg-cyan-50 text-cyan-600 rounded-lg"><FaUsers size={14} /></div>
                                     Employment Status
                                 </h3>
-                                <div className="h-64 md:h-72 w-full">
+                                <div className="h-[250px] md:h-72 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie
                                                 data={demographics.employment}
                                                 cx="50%"
                                                 cy="50%"
-                                                innerRadius={60}
-                                                outerRadius={90}
+                                                innerRadius={50}
+                                                outerRadius={window.innerWidth < 640 ? 70 : 90}
                                                 paddingAngle={5}
                                                 dataKey="count"
                                                 nameKey="_id"
-                                                label={({ _id, percent }) => `${(percent * 100).toFixed(0)}%`}
+                                                label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                                                 onClick={(data) => handleChartClick('occupation', data._id === 'Employed' ? 'Farmer' : 'none')}
                                                 style={{ cursor: 'pointer' }}
                                             >
@@ -376,27 +385,27 @@ const SuperAdminDashboard = () => {
                                                 ))}
                                             </Pie>
                                             <RechartsTooltip />
-                                            <Legend verticalAlign="bottom" />
+                                            <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '10px' }} />
                                         </PieChart>
                                     </ResponsiveContainer>
                                 </div>
                             </div>
 
                             {/* Voter Statistics */}
-                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
-                                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
-                                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><FaTable /></div>
+                            <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow">
+                                <h3 className="text-base md:text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
+                                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><FaTable size={14} /></div>
                                     Voter Statistics (18+)
                                 </h3>
-                                <div className="h-64 md:h-72 w-full">
+                                <div className="h-[250px] md:h-72 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={demographics.voter}>
+                                        <BarChart data={demographics.voter} margin={{ bottom: 20 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                                            <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} hide={window.innerWidth < 640} />
                                             <RechartsTooltip cursor={{ fill: '#f8fafc' }} />
                                             <Bar dataKey="count" fill="#10b981" radius={[6, 6, 0, 0]} onClick={(data) => handleChartClick('age', data._id === 'Voter' ? '25' : '10')} style={{ cursor: 'pointer' }}>
-                                                <LabelList dataKey="count" position="top" style={{ fontSize: '10px', fontWeight: 'bold' }} />
+                                                <LabelList dataKey="count" position="top" style={{ fontSize: '9px', fontWeight: 'bold' }} />
                                             </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
@@ -407,21 +416,21 @@ const SuperAdminDashboard = () => {
                         {/* Districts Breakdown Table */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                             <div className="p-4 md:p-6 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
-                                    <div className="p-2 bg-orange-50 text-orange-600 rounded-lg"><FaMapMarkedAlt /></div>
-                                    District Wise Performance
+                                <h3 className="text-base md:text-lg font-bold text-slate-800 flex items-center gap-3">
+                                    <div className="p-2 bg-orange-50 text-orange-600 rounded-lg"><FaMapMarkedAlt size={14} /></div>
+                                    District Breakdown
                                 </h3>
                                 <button
                                     onClick={() => navigate('/admin/management')}
-                                    className="text-sm font-bold text-blue-600 hover:text-blue-800 transition"
+                                    className="text-xs md:sm font-bold text-blue-600 hover:text-blue-800 transition"
                                 >
                                     Manage Districts
                                 </button>
                             </div>
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left">
+                                <table className="w-full text-left min-w-[600px]">
                                     <thead>
-                                        <tr className="bg-slate-50/50 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                        <tr className="bg-slate-50/50 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-wider">
                                             <th className="px-6 py-4">District</th>
                                             <th className="px-6 py-4 text-center">Members</th>
                                             <th className="px-6 py-4 text-center">Institutions</th>
@@ -433,22 +442,22 @@ const SuperAdminDashboard = () => {
                                         {stats.districts.map((dist, idx) => (
                                             <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
                                                 <td className="px-6 py-4">
-                                                    <p className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{dist.name}</p>
-                                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Active District</p>
+                                                    <p className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{dist.name}</p>
+                                                    <p className="text-[9px] text-slate-400 font-bold uppercase">Active</p>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className="font-bold text-slate-700">{(dist.members || 0).toLocaleString()}</span>
+                                                    <span className="text-sm font-bold text-slate-700">{(dist.members || 0).toLocaleString()}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className="font-bold text-slate-600">{dist.institutions || 0}</span>
+                                                    <span className="text-sm font-bold text-slate-600">{dist.institutions || 0}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     {dist.pending > 0 ? (
-                                                        <span className="px-2 py-1 rounded-full bg-orange-50 text-orange-600 text-[10px] font-bold border border-orange-100">
+                                                        <span className="px-2 py-0.5 rounded-full bg-orange-50 text-orange-600 text-[9px] font-bold border border-orange-100">
                                                             {dist.pending} Pending
                                                         </span>
                                                     ) : (
-                                                        <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100">
+                                                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[9px] font-bold border border-emerald-100">
                                                             Verified
                                                         </span>
                                                     )}
@@ -458,7 +467,7 @@ const SuperAdminDashboard = () => {
                                                         onClick={() => navigate(`/admin/dashboard/district/${dist.id}`)}
                                                         className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                                                     >
-                                                        <FaChevronRight />
+                                                        <FaChevronRight size={12} />
                                                     </button>
                                                 </td>
                                             </tr>
@@ -471,20 +480,20 @@ const SuperAdminDashboard = () => {
                         {/* Charts Section - Final Row (Community & Age) */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                             {/* Community / Sub-Castes */}
-                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow lg:col-span-1">
-                                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
-                                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><FaUsers /></div>
-                                    Community / Sub-Castes
+                            <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow lg:col-span-1">
+                                <h3 className="text-base md:text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
+                                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><FaUsers size={14} /></div>
+                                    Sub-Castes
                                 </h3>
-                                <div className="h-64 md:h-72 w-full">
+                                <div className="h-[350px] md:h-72 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={demographics.community}>
+                                        <BarChart data={demographics.community} margin={{ bottom: 50 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }} interval={0} angle={-30} textAnchor="end" height={60} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                                            <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{ fontSize: 8, fill: '#64748b', fontWeight: 'bold' }} interval={0} angle={-45} textAnchor="end" height={60} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} hide={window.innerWidth < 640} />
                                             <RechartsTooltip cursor={{ fill: '#f8fafc' }} />
                                             <Bar dataKey="count" fill="#4f46e5" radius={[4, 4, 0, 0]} onClick={(data) => handleChartClick('caste', data._id)} style={{ cursor: 'pointer' }}>
-                                                <LabelList dataKey="count" position="top" style={{ fontSize: '10px', fontWeight: 'bold' }} />
+                                                <LabelList dataKey="count" position="top" style={{ fontSize: '9px', fontWeight: 'bold' }} />
                                             </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
@@ -492,20 +501,20 @@ const SuperAdminDashboard = () => {
                             </div>
 
                             {/* Age Demographics */}
-                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow lg:col-span-1">
-                                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
-                                    <div className="p-2 bg-pink-50 text-pink-600 rounded-lg"><FaChartBar /></div>
-                                    Age Demographics
+                            <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-md transition-shadow lg:col-span-1">
+                                <h3 className="text-base md:text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
+                                    <div className="p-2 bg-pink-50 text-pink-600 rounded-lg"><FaChartBar size={14} /></div>
+                                    Age Groups
                                 </h3>
-                                <div className="h-64 md:h-72 w-full">
+                                <div className="h-[250px] md:h-72 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={demographics.age}>
+                                        <BarChart data={demographics.age} margin={{ bottom: 20 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                                            <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} hide={window.innerWidth < 640} />
                                             <RechartsTooltip cursor={{ fill: '#f8fafc' }} />
                                             <Bar dataKey="count" fill="#ec4899" radius={[6, 6, 0, 0]} style={{ cursor: 'pointer' }}>
-                                                <LabelList dataKey="count" position="top" style={{ fontSize: '10px', fontWeight: 'bold' }} />
+                                                <LabelList dataKey="count" position="top" style={{ fontSize: '9px', fontWeight: 'bold' }} />
                                             </Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
